@@ -1,75 +1,90 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { CityLogTitle } from '@/components/CityLogTitle';
+import { TravelPostCard } from '@/components/TravelPostCard';
+import { useThemeColor } from '@/hooks/useThemeColor';
+
+// Données de test pour les posts
+const mockPosts = [
+  {
+    id: '1',
+    city: 'Paris',
+    country: 'France',
+    photo: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop',
+    userPhoto: 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face',
+    userName: 'Marie',
+    rating: 9,
+    description: 'Une ville magnifique ! La Tour Eiffel était encore plus impressionnante que je ne l\'imaginais. Les cafés parisiens ont un charme unique.',
+  },
+  {
+    id: '2',
+    city: 'Tokyo',
+    country: 'Japan',
+    photo: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop',
+    userPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+    userName: 'Alex',
+    rating: 10,
+    description: 'Tokyo est incroyable ! Le mélange entre tradition et modernité est fascinant. Les ramen étaient délicieux.',
+  },
+  {
+    id: '3',
+    city: 'New York',
+    country: 'USA',
+    photo: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop',
+    userPhoto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+    userName: 'Sophie',
+    rating: 8,
+    description: 'La ville qui ne dort jamais ! Times Square était bondé mais l\'énergie était électrisante. Central Park parfait pour se détendre.',
+  },
+];
 
 export default function HomeScreen() {
+  const backgroundColor = useThemeColor({}, 'background');
+  const beigeColor = '#D4B896'; // Couleur beige pour la ligne
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Titre CityLog */}
+        <CityLogTitle />
+        
+        {/* Ligne de séparation beige */}
+        <View style={styles.separatorContainer}>
+          <View style={[styles.separatorLine, { backgroundColor: beigeColor }]} />
+        </View>
+        
+        {/* Liste des posts */}
+        <View style={styles.postsContainer}>
+          {mockPosts.map((post) => (
+            <TravelPostCard 
+              key={post.id} 
+              post={post}
+            />
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  scrollView: {
+    flex: 1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  separatorContainer: {
+    paddingVertical: 16, // Espace au-dessus et en-dessous
+    paddingHorizontal: 32, // Espacement des bords de l'écran
+  },
+  separatorLine: {
+    height: 1, // Ligne fine
+    width: '100%',
+  },
+  postsContainer: {
+    paddingBottom: 20,
   },
 });
