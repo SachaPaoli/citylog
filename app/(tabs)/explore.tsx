@@ -1,7 +1,7 @@
+import { useThemeColor } from '@/hooks/useThemeColor';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Données des pays et villes pour la recherche
 const countriesData = {
