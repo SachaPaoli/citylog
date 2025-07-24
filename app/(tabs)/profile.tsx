@@ -70,7 +70,7 @@ const countryVisits: CountryVisit[] = [
 export default function ProfileScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#D4B896'; // Couleur beige pour les notes
+  const beigeColor = '#E5C9A6'; // Couleur beige pour les notes
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
 

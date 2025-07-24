@@ -2,14 +2,14 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -77,7 +77,7 @@ interface TripPost {
 export default function CreateTripScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#D4B896';
+  const beigeColor = '#E5C9A6';
   
   const [tripTitle, setTripTitle] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#D4B896',
+    borderColor: '#E5C9A6',
     borderRadius: 16,
   },
   moveButtonText: {

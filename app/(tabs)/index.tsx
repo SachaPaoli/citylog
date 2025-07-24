@@ -42,7 +42,7 @@ const mockPosts = [
 
 export default function HomeScreen() {
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#D4B896'; // Couleur beige pour la ligne
+  const beigeColor = '#E5C9A6'; // Couleur beige pour la ligne
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>

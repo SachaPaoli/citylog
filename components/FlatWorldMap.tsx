@@ -69,7 +69,7 @@ const mockPosts: CountryPost[] = [
 export function FlatWorldMap({ visitedCountries }: FlatWorldMapProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = useThemeColor({ light: '#D4B896', dark: '#D4B896' }, 'beige');
+  const beigeColor = useThemeColor({ light: '#E5C9A6', dark: '#E5C9A6' }, 'beige');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 

@@ -5,25 +5,25 @@
 
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
-const beigeColor = '#D4B896'; // Couleur beige
+const beigeColor = '#E5C9A6'; // Couleur beige plus claire
 
 export const Colors = {
   light: {
-    text: '#D4B896', // Beige pour tous les textes
+    text: '#E5C9A6', // Beige plus clair pour tous les textes
     background: '#1A1A1A', // Gris très foncé
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
-    beige: '#D4B896', // Couleur beige disponible
+    beige: '#E5C9A6', // Couleur beige plus claire disponible
   },
   dark: {
-    text: '#D4B896', // Beige pour tous les textes
+    text: '#E5C9A6', // Beige plus clair pour tous les textes
     background: '#1A1A1A', // Gris très foncé
     tint: tintColorDark,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
-    beige: '#D4B896', // Couleur beige disponible
+    beige: '#E5C9A6', // Couleur beige plus claire disponible
   },
 };

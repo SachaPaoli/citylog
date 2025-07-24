@@ -23,5 +23,5 @@ export function useThemeColor(
 
 // Hook personnalisé pour la couleur beige
 export function useBeigeColor() {
-  return '#D4B896';
+  return '#E5C9A6';
 }

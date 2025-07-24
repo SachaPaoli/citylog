@@ -2,14 +2,14 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    Alert,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface Trip {
@@ -75,7 +75,7 @@ const tripsData: Trip[] = [
 export default function TripsScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const beigeColor = '#D4B896';
+  const beigeColor = '#E5C9A6';
   
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = (screenWidth - 60) / 2; // 20px padding + 20px gap
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   tripPostsCount: {
     fontSize: 12,
-    color: '#D4B896',
+    color: '#E5C9A6',
     fontWeight: '600',
   },
 });

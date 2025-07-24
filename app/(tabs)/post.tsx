@@ -2,15 +2,15 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,7 +32,7 @@ type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
 export default function PostScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#D4B896';
+  const beigeColor = '#E5C9A6';
   
   const [activeTab, setActiveTab] = useState<TabType>('staying');
   const [stayingItems, setStayingItems] = useState<TripItem[]>([]);
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     bottom: 100,
     left: '50%',
     transform: [{ translateX: -75 }],
-    backgroundColor: '#D4B896',
+    backgroundColor: '#E5C9A6',
     borderRadius: 25,
     paddingVertical: 15,
     paddingHorizontal: 25,

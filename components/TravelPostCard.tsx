@@ -22,7 +22,7 @@ interface TravelPostCardProps {
 export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#D4B896'; // Couleur beige pour les notes
+  const beigeColor = '#E5C9A6'; // Couleur beige pour les notes
 
   return (
     <TouchableOpacity 

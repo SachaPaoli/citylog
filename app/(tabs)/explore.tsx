@@ -20,7 +20,7 @@ const countriesData = {
 export default function ExploreScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#D4B896';
+  const beigeColor = '#E5C9A6';
   
   const [activeTab, setActiveTab] = useState<'places' | 'members'>('places');
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(212, 184, 150, 0.05)',
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#D4B896',
+    borderLeftColor: '#E5C9A6',
   },
   cityName: {
     fontSize: 15,

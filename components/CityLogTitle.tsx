@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 export function CityLogTitle() {
   const textColor = useThemeColor({}, 'text');
-  const beigeColor = useThemeColor({ light: '#D4B896', dark: '#D4B896' }, 'beige');
+  const beigeColor = useThemeColor({ light: '#E5C9A6', dark: '#E5C9A6' }, 'beige');
 
   return (
     <View style={styles.container}>

@@ -1,11 +1,11 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import React from 'react';
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -65,7 +65,7 @@ const rankingData: RankingUser[] = [
 export default function RankingScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const beigeColor = '#D4B896';
+  const beigeColor = '#E5C9A6';
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
