@@ -10,7 +10,7 @@ const beigeColor = '#D4B896'; // Couleur beige
 export const Colors = {
   light: {
     text: '#D4B896', // Beige pour tous les textes
-    background: '#fff',
+    background: '#1A1A1A', // Gris très foncé
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
@@ -19,7 +19,7 @@ export const Colors = {
   },
   dark: {
     text: '#D4B896', // Beige pour tous les textes
-    background: '#000000', // Noir profond
+    background: '#1A1A1A', // Gris très foncé
     tint: tintColorDark,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',

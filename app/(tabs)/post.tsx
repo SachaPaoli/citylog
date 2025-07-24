@@ -2,15 +2,15 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,216 +19,329 @@ interface SelectedImage {
   uri: string;
 }
 
+interface TripItem {
+  id: string;
+  name: string;
+  rating: number;
+  description: string;
+  images: SelectedImage[];
+}
+
+type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
+
 export default function PostScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const beigeColor = '#D4B896';
   
-  const [cityName, setCityName] = useState('');
-  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
-  const [rating, setRating] = useState('');
-  const [placesVisited, setPlacesVisited] = useState('');
-  const [restaurants, setRestaurants] = useState('');
-  const [description, setDescription] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('staying');
+  const [stayingItems, setStayingItems] = useState<TripItem[]>([]);
+  const [restaurantItems, setRestaurantItems] = useState<TripItem[]>([]);
+  const [activitiesItems, setActivitiesItems] = useState<TripItem[]>([]);
+  const [otherItems, setOtherItems] = useState<TripItem[]>([]);
+  const [showPostModal, setShowPostModal] = useState(false);
 
-  // Demander les permissions pour accéder à la galerie
-  const requestPermission = async () => {
-    if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission requise', 'Nous avons besoin d\'accéder à votre galerie pour sélectionner des photos.');
-        return false;
-      }
+  // Ajouter un nouvel item
+  const addNewItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other') => {
+    const newItem: TripItem = {
+      id: Date.now().toString(),
+      name: '',
+      rating: 5,
+      description: '',
+      images: []
+    };
+
+    if (tabType === 'staying') {
+      setStayingItems([...stayingItems, newItem]);
+    } else if (tabType === 'restaurant') {
+      setRestaurantItems([...restaurantItems, newItem]);
+    } else if (tabType === 'activities') {
+      setActivitiesItems([...activitiesItems, newItem]);
+    } else {
+      setOtherItems([...otherItems, newItem]);
     }
-    return true;
   };
 
-  // Sélectionner des images depuis la galerie
-  const pickImages = async () => {
-    const hasPermission = await requestPermission();
-    if (!hasPermission) return;
+  // Mettre à jour un item
+  const updateItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string, field: 'name' | 'rating' | 'description', value: string | number) => {
+    const updateItems = (items: TripItem[]) =>
+      items.map(item => item.id === itemId ? { ...item, [field]: value } : item);
 
+    if (tabType === 'staying') {
+      setStayingItems(updateItems(stayingItems));
+    } else if (tabType === 'restaurant') {
+      setRestaurantItems(updateItems(restaurantItems));
+    } else if (tabType === 'activities') {
+      setActivitiesItems(updateItems(activitiesItems));
+    } else {
+      setOtherItems(updateItems(otherItems));
+    }
+  };
+
+  // Ajouter une photo
+  const pickImage = async (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
+      allowsEditing: true,
       aspect: [4, 3],
+      quality: 1,
     });
 
-    if (!result.canceled && result.assets) {
-      const newImages: SelectedImage[] = result.assets.map((asset: any, index: number) => ({
-        id: `${Date.now()}_${index}`,
-        uri: asset.uri,
-      }));
-      setSelectedImages(prev => [...prev, ...newImages]);
-    }
-  };
+    if (!result.canceled && result.assets[0]) {
+      const newImage: SelectedImage = {
+        id: Date.now().toString(),
+        uri: result.assets[0].uri
+      };
 
-  // Supprimer une image
-  const removeImage = (imageId: string) => {
-    setSelectedImages(prev => prev.filter(img => img.id !== imageId));
-  };
+      const updateItems = (items: TripItem[]) =>
+        items.map(item => 
+          item.id === itemId 
+            ? { ...item, images: [...item.images, newImage] }
+            : item
+        );
 
-  // Valider et poster
-  const handlePost = () => {
-    if (!cityName.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer le nom de la ville');
-      return;
-    }
-    if (selectedImages.length === 0) {
-      Alert.alert('Erreur', 'Veuillez sélectionner au moins une photo');
-      return;
-    }
-    if (!rating || isNaN(Number(rating)) || Number(rating) < 1 || Number(rating) > 10) {
-      Alert.alert('Erreur', 'Veuillez entrer une note entre 1 et 10');
-      return;
-    }
-    if (!description.trim()) {
-      Alert.alert('Erreur', 'Veuillez ajouter une description');
-      return;
-    }
-
-    // Ici tu peux ajouter la logique pour sauvegarder le post
-    Alert.alert('Succès', 'Votre post a été publié !', [
-      {
-        text: 'OK',
-        onPress: () => {
-          // Reset du formulaire
-          setCityName('');
-          setSelectedImages([]);
-          setRating('');
-          setPlacesVisited('');
-          setRestaurants('');
-          setDescription('');
-        }
+      if (tabType === 'staying') {
+        setStayingItems(updateItems(stayingItems));
+      } else if (tabType === 'restaurant') {
+        setRestaurantItems(updateItems(restaurantItems));
+      } else if (tabType === 'activities') {
+        setActivitiesItems(updateItems(activitiesItems));
+      } else {
+        setOtherItems(updateItems(otherItems));
       }
-    ]);
+    }
+  };
+
+  // Supprimer une photo
+  const removeImage = (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string, imageId: string) => {
+    const updateItems = (items: TripItem[]) =>
+      items.map(item => 
+        item.id === itemId 
+          ? { ...item, images: item.images.filter(img => img.id !== imageId) }
+          : item
+      );
+
+    if (tabType === 'staying') {
+      setStayingItems(updateItems(stayingItems));
+    } else if (tabType === 'restaurant') {
+      setRestaurantItems(updateItems(restaurantItems));
+    } else if (tabType === 'activities') {
+      setActivitiesItems(updateItems(activitiesItems));
+    } else {
+      setOtherItems(updateItems(otherItems));
+    }
+  };
+
+  // Supprimer un item
+  const removeItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string) => {
+    if (tabType === 'staying') {
+      setStayingItems(stayingItems.filter(item => item.id !== itemId));
+    } else if (tabType === 'restaurant') {
+      setRestaurantItems(restaurantItems.filter(item => item.id !== itemId));
+    } else if (tabType === 'activities') {
+      setActivitiesItems(activitiesItems.filter(item => item.id !== itemId));
+    } else {
+      setOtherItems(otherItems.filter(item => item.id !== itemId));
+    }
+  };
+
+  // Calculer la note moyenne
+  const calculateAverageRating = () => {
+    const allItems = [...stayingItems, ...restaurantItems, ...activitiesItems, ...otherItems];
+    if (allItems.length === 0) return 0;
+    
+    const totalRating = allItems.reduce((sum, item) => sum + item.rating, 0);
+    return Math.round((totalRating / allItems.length) * 10) / 10;
+  };
+
+  // Poster le voyage
+  const handlePost = () => {
+    const averageRating = calculateAverageRating();
+    Alert.alert(
+      'Voyage posté !', 
+      `Votre voyage a été publié avec une note moyenne de ${averageRating}/10`
+    );
+    setShowPostModal(false);
+  };
+
+  // Contenu de chaque onglet
+  const renderTabContent = () => {
+    const currentItems = activeTab === 'staying' ? stayingItems : 
+                        activeTab === 'restaurant' ? restaurantItems : 
+                        activeTab === 'activities' ? activitiesItems : otherItems;
+
+    return (
+      <View style={styles.tabContent}>
+        {currentItems.map(item => (
+          <View key={item.id} style={[styles.itemCard, { borderColor: beigeColor }]}>
+            {/* Bouton supprimer */}
+            <TouchableOpacity 
+              style={[styles.deleteItemButton, { backgroundColor: beigeColor }]}
+              onPress={() => removeItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id)}
+            >
+              <Text style={styles.deleteItemText}>×</Text>
+            </TouchableOpacity>
+
+            {/* Photos */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
+              {item.images.map(image => (
+                <View key={image.id} style={styles.imageContainer}>
+                  <Image source={{ uri: image.uri }} style={styles.itemImage} />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, image.id)}
+                  >
+                    <Text style={styles.removeImageText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity 
+                style={[styles.addImageButton, { borderColor: beigeColor }]}
+                onPress={() => pickImage(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id)}
+              >
+                <Text style={[styles.addImageText, { color: beigeColor }]}>+</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            {/* Nom */}
+            <TextInput
+              style={[styles.nameInput, { color: textColor, borderColor: beigeColor }]}
+              placeholder={`Nom ${activeTab === 'staying' ? 'du logement' : 
+                             activeTab === 'restaurant' ? 'du restaurant' : 
+                             activeTab === 'activities' ? 'de l\'activité' : 'de l\'autre'}`}
+              placeholderTextColor="#999"
+              value={item.name}
+              onChangeText={(text) => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'name', text)}
+            />
+
+            {/* Note */}
+            <View style={styles.ratingContainer}>
+              <Text style={[styles.ratingLabel, { color: textColor }]}>Note sur 10:</Text>
+              <View style={styles.ratingButtonsGrid}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (
+                  <TouchableOpacity
+                    key={rating}
+                    style={[
+                      styles.ratingButton, 
+                      { borderColor: beigeColor },
+                      item.rating === rating && { backgroundColor: beigeColor }
+                    ]}
+                    onPress={() => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'rating', rating)}
+                  >
+                    <Text style={[
+                      styles.ratingButtonText,
+                      { color: item.rating === rating ? '#000' : textColor }
+                    ]}>
+                      {rating}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Description */}
+            <TextInput
+              style={[styles.descriptionInput, { color: textColor, borderColor: beigeColor }]}
+              placeholder="Description (optionnelle)"
+              placeholderTextColor="#999"
+              value={item.description}
+              onChangeText={(text) => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'description', text)}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        ))}
+
+        {/* Bouton ajouter */}
+        <TouchableOpacity 
+          style={[styles.addButton, { backgroundColor: beigeColor }]}
+          onPress={() => addNewItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other')}
+        >
+          <Text style={styles.addButtonText}>
+            + Ajouter {activeTab === 'staying' ? 'un logement' : 
+                      activeTab === 'restaurant' ? 'un restaurant' : 
+                      activeTab === 'activities' ? 'une activité' : 'autre chose'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Espacement pour le bouton flottant */}
+        <View style={styles.bottomSpacing} />
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Titre */}
-        <Text style={[styles.title, { color: textColor }]}>
-          Créer un nouveau post
-        </Text>
-
-        {/* Nom de la ville */}
-        <View style={styles.inputSection}>
-          <Text style={[styles.label, { color: textColor }]}>Ville visitée *</Text>
-          <TextInput
-            style={[styles.textInput, { color: textColor, borderColor: beigeColor }]}
-            placeholder="Ex: Paris, Londres, Tokyo..."
-            placeholderTextColor={`${beigeColor}80`}
-            value={cityName}
-            onChangeText={setCityName}
-          />
-        </View>
-
-        {/* Sélection des photos */}
-        <View style={styles.inputSection}>
-          <Text style={[styles.label, { color: textColor }]}>Photos *</Text>
-          
-          {/* Bouton pour ajouter des photos */}
-          <TouchableOpacity 
-            style={[styles.photoButton, { borderColor: beigeColor }]}
-            onPress={pickImages}
-          >
-            <Text style={[styles.photoButtonText, { color: beigeColor }]}>
-              Ajouter des photos
-            </Text>
-          </TouchableOpacity>
-
-          {/* Aperçu des photos sélectionnées */}
-          {selectedImages.length > 0 && (
-            <ScrollView 
-              horizontal 
-              style={styles.imagesPreview}
-              showsHorizontalScrollIndicator={false}
+      {/* Onglets */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Nouveau Voyage</Text>
+        <View style={styles.tabsContainer}>
+          {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, activeTab === tab && { borderBottomColor: beigeColor }]}
+              onPress={() => setActiveTab(tab)}
             >
-              {selectedImages.map((image) => (
-                <View key={image.id} style={styles.imageContainer}>
-                  <Image source={{ uri: image.uri }} style={styles.previewImage} />
-                  <TouchableOpacity 
-                    style={styles.removeButton}
-                    onPress={() => removeImage(image.id)}
-                  >
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          )}
+              <Text style={[styles.tabText, { color: activeTab === tab ? beigeColor : textColor }]}>
+                {tab === 'staying' ? 'Staying' : 
+                 tab === 'restaurant' ? 'Restaurant' : 
+                 tab === 'activities' ? 'Activities' : 'Other'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
+      </View>
 
-        {/* Note */}
-        <View style={styles.inputSection}>
-          <Text style={[styles.label, { color: textColor }]}>Note (1-10) *</Text>
-          <TextInput
-            style={[styles.textInput, { color: textColor, borderColor: beigeColor }]}
-            placeholder="Ex: 8"
-            placeholderTextColor={`${beigeColor}80`}
-            value={rating}
-            onChangeText={setRating}
-            keyboardType="numeric"
-            maxLength={2}
-          />
-        </View>
-
-        {/* Lieux visités */}
-        <View style={styles.inputSection}>
-          <Text style={[styles.label, { color: textColor }]}>Lieux visités</Text>
-          <TextInput
-            style={[styles.textAreaInput, { color: textColor, borderColor: beigeColor }]}
-            placeholder="Ex: Tour Eiffel, Louvre, Notre-Dame..."
-            placeholderTextColor={`${beigeColor}80`}
-            value={placesVisited}
-            onChangeText={setPlacesVisited}
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        {/* Restaurants */}
-        <View style={styles.inputSection}>
-          <Text style={[styles.label, { color: textColor }]}>Restaurants recommandés</Text>
-          <TextInput
-            style={[styles.textAreaInput, { color: textColor, borderColor: beigeColor }]}
-            placeholder="Ex: Le Comptoir du Relais, L'Ami Jean..."
-            placeholderTextColor={`${beigeColor}80`}
-            value={restaurants}
-            onChangeText={setRestaurants}
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        {/* Description */}
-        <View style={[styles.inputSection, styles.lastInputSection]}>
-          <Text style={[styles.label, { color: textColor }]}>Description *</Text>
-          <TextInput
-            style={[styles.textAreaInput, { color: textColor, borderColor: beigeColor }]}
-            placeholder="Racontez votre expérience, vos impressions..."
-            placeholderTextColor={`${beigeColor}80`}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-          />
-        </View>
+      {/* Contenu */}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {renderTabContent()}
       </ScrollView>
 
-      {/* Bouton fixé en bas */}
-      <View style={styles.fixedButtonContainer}>
-        <TouchableOpacity 
-          style={[styles.postButton, { backgroundColor: beigeColor }]}
-          onPress={handlePost}
-        >
-          <Text style={styles.postButtonText}>
-            Publier mon voyage
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Bouton flottant */}
+      <TouchableOpacity 
+        style={[styles.floatingButton, { backgroundColor: beigeColor }]}
+        onPress={() => setShowPostModal(true)}
+      >
+        <Text style={styles.floatingButtonText}>Log your city</Text>
+      </TouchableOpacity>
+
+      {/* Modal de post */}
+      <Modal
+        visible={showPostModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPostModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowPostModal(false)}
+              >
+                <Text style={[styles.closeButtonText, { color: textColor }]}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.postModalContent}>
+              <Text style={[styles.postTitle, { color: textColor }]}>
+                Post when you finished your visit!
+              </Text>
+              <View style={styles.averageRatingContainer}>
+                <Text style={[styles.averageRatingLabel, { color: textColor }]}>
+                  Note moyenne:
+                </Text>
+                <Text style={[styles.averageRating, { color: beigeColor }]}>
+                  {calculateAverageRating()}/10
+                </Text>
+              </View>
+              <TouchableOpacity style={[styles.postButton, { backgroundColor: beigeColor }]} onPress={handlePost}>
+                <Text style={styles.postButtonText}>Poster le voyage</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -237,129 +350,255 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    paddingHorizontal: 0,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 0,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    marginHorizontal: -4,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 180, // Assez d'espace pour voir complètement le champ description au-dessus du bouton
+    padding: 16,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
+  tabContent: {
+    flex: 1,
   },
-  inputSection: {
-    marginBottom: 25,
-  },
-  lastInputSection: {
-    marginBottom: 40, // Plus d'espace avant le bouton fixé
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  textInput: {
-    height: 50,
-    borderWidth: 1.5,
+  itemCard: {
     borderRadius: 12,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: 'rgba(212, 184, 150, 0.1)',
-  },
-  textAreaInput: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: 'rgba(212, 184, 150, 0.1)',
-    textAlignVertical: 'top',
-  },
-  photoButton: {
-    height: 50,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(212, 184, 150, 0.1)',
-  },
-  photoButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  imagesPreview: {
-    marginTop: 15,
-  },
-  imageContainer: {
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
     position: 'relative',
-    marginRight: 12,
   },
-  previewImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: '#333',
-  },
-  removeButton: {
+  deleteItemButton: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: 8,
+    right: 8,
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#ff4444',
-    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 2,
-    elevation: 3,
+    justifyContent: 'center',
+    zIndex: 1,
   },
-  removeButtonText: {
+  deleteItemText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  imagesContainer: {
+    marginBottom: 12,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  itemImage: {
+    width: 80,
+    height: 60,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  fixedButtonContainer: {
-    position: 'absolute',
-    bottom: 90, // Au-dessus de la tab bar (environ 80px de hauteur + 10px de marge)
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 10,
+  addImageButton: {
+    width: 80,
+    height: 60,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addImageText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  descriptionInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 12,
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  ratingContainer: {
+    flexDirection: 'column',
+    marginBottom: 12,
+  },
+  ratingLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  ratingButtons: {
+    flexDirection: 'row',
+  },
+  ratingButtonsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  ratingButton: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    width: '18%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addButton: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  addButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  postTabContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  postTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  averageRatingContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  averageRatingLabel: {
+    fontSize: 18,
+    marginBottom: 8,
+  },
+  averageRating: {
+    fontSize: 36,
+    fontWeight: 'bold',
   },
   postButton: {
-    height: 55,
-    borderRadius: 15,
-    justifyContent: 'center',
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   postButtonText: {
     color: '#000',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 100,
+    left: '50%',
+    transform: [{ translateX: -75 }],
+    backgroundColor: '#D4B896',
+    borderRadius: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  floatingButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    height: '75%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingVertical: 15,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  postModalContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  bottomSpacing: {
+    height: 120,
   },
 });

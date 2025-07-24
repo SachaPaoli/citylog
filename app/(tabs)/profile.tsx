@@ -131,6 +131,14 @@ export default function ProfileScreen() {
                   <Text style={[styles.statLabel, { color: textColor }]}>Following</Text>
                 </View>
               </View>
+
+              {/* Bouton Trips */}
+              <TouchableOpacity 
+                style={[styles.tripsButton, { backgroundColor: beigeColor }]}
+                onPress={() => router.push('../trips')}
+              >
+                <Text style={styles.tripsButtonText}>🧳 Mes Trips</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Carte du monde en flat design */}
@@ -262,6 +270,18 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 14,
     opacity: 0.7,
+  },
+  tripsButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  tripsButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   mapSection: {
     padding: 16,
