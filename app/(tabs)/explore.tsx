@@ -74,6 +74,11 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Ligne de séparation grise */}
+      <View style={styles.separatorContainer}>
+        <View style={[styles.separatorLine, { backgroundColor: '#333333' }]} />
+      </View>
+
       {/* Contenu selon l'onglet sélectionné */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeTab === 'places' ? (
@@ -142,7 +147,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 15,
+    paddingBottom: 5, // Réduire l'espace vers les onglets
   },
   searchInput: {
     height: 45,
@@ -155,7 +160,7 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 15,
+    paddingBottom: 20,
   },
   tab: {
     flex: 1,
@@ -171,6 +176,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 31,
   },
   placesContent: {
     paddingBottom: 20,
@@ -234,5 +240,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     opacity: 0.7,
+  },
+  separatorContainer: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  separatorLine: {
+    height: 0.5,
+    width: '100%',
   },
 });

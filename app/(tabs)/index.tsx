@@ -50,9 +50,9 @@ export default function HomeScreen() {
         {/* Titre CityLog */}
         <CityLogTitle />
         
-        {/* Ligne de séparation beige */}
+        {/* Ligne de séparation grise */}
         <View style={styles.separatorContainer}>
-          <View style={[styles.separatorLine, { backgroundColor: beigeColor }]} />
+          <View style={[styles.separatorLine, { backgroundColor: '#333333' }]} />
         </View>
         
         {/* Liste des posts */}
@@ -77,11 +77,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   separatorContainer: {
-    paddingVertical: 16, // Espace au-dessus et en-dessous
-    paddingHorizontal: 32, // Espacement des bords de l'écran
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   separatorLine: {
-    height: 1, // Ligne fine
+    height: 0.5,
     width: '100%',
   },
   postsContainer: {

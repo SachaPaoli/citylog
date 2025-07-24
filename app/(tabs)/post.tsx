@@ -40,6 +40,7 @@ export default function PostScreen() {
   const [activitiesItems, setActivitiesItems] = useState<TripItem[]>([]);
   const [otherItems, setOtherItems] = useState<TripItem[]>([]);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
 
   // Ajouter un nouvel item
   const addNewItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other') => {
@@ -154,14 +155,33 @@ export default function PostScreen() {
     return Math.round((totalRating / allItems.length) * 10) / 10;
   };
 
+  // Sélectionner la photo de couverture
+  const pickCoverImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setCoverImage(result.assets[0].uri);
+    }
+  };
+
   // Poster le voyage
   const handlePost = () => {
     const averageRating = calculateAverageRating();
+    if (!coverImage) {
+      Alert.alert('Photo manquante', 'Veuillez ajouter une photo de couverture pour votre post.');
+      return;
+    }
     Alert.alert(
       'Voyage posté !', 
       `Votre voyage a été publié avec une note moyenne de ${averageRating}/10`
     );
     setShowPostModal(false);
+    setCoverImage(null); // Reset la photo de couverture
   };
 
   // Contenu de chaque onglet
@@ -292,6 +312,11 @@ export default function PostScreen() {
         </View>
       </View>
 
+      {/* Ligne de séparation grise */}
+      <View style={styles.separatorContainer}>
+        <View style={[styles.separatorLine, { backgroundColor: '#333333' }]} />
+      </View>
+
       {/* Contenu */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderTabContent()}
@@ -327,9 +352,35 @@ export default function PostScreen() {
               <Text style={[styles.postTitle, { color: textColor }]}>
                 Post when you finished your visit!
               </Text>
+              
+              {/* Photo de couverture */}
+              <View style={styles.coverImageSection}>
+                <Text style={[styles.coverImageLabel, { color: textColor }]}>
+                  Photo de couverture:
+                </Text>
+                {coverImage ? (
+                  <View style={styles.coverImageContainer}>
+                    <Image source={{ uri: coverImage }} style={styles.coverImage} />
+                    <TouchableOpacity 
+                      style={styles.removeCoverImageButton}
+                      onPress={() => setCoverImage(null)}
+                    >
+                      <Text style={styles.removeCoverImageText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity 
+                    style={[styles.addCoverImageButton, { borderColor: beigeColor }]}
+                    onPress={pickCoverImage}
+                  >
+                    <Text style={[styles.addCoverImageText, { color: beigeColor }]}>+ Ajouter une photo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              
               <View style={styles.averageRatingContainer}>
                 <Text style={[styles.averageRatingLabel, { color: textColor }]}>
-                  Note moyenne:
+                  Note finale:
                 </Text>
                 <Text style={[styles.averageRating, { color: beigeColor }]}>
                   {calculateAverageRating()}/10
@@ -353,6 +404,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 0,
     paddingVertical: 12,
+    paddingBottom: 5, // Réduire l'espace vers la ligne
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
@@ -366,6 +418,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 0,
+    paddingBottom: 20,
   },
   tab: {
     flex: 1,
@@ -373,7 +426,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
-    marginHorizontal: -4,
+    marginHorizontal: -6,
   },
   tabText: {
     fontSize: 14,
@@ -383,6 +436,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+    paddingTop: 31, // Ajouter de l'espace après la ligne (16 + 15 = 31)
   },
   tabContent: {
     flex: 1,
@@ -518,11 +572,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 25,
   },
   averageRatingContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   averageRatingLabel: {
     fontSize: 18,
@@ -594,11 +648,65 @@ const styles = StyleSheet.create({
   },
   postModalContent: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
   },
   bottomSpacing: {
     height: 120,
+  },
+  coverImageSection: {
+    marginBottom: 30,
+    alignItems: 'center',
+  },
+  coverImageLabel: {
+    fontSize: 16,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  coverImageContainer: {
+    position: 'relative',
+  },
+  coverImage: {
+    width: 200,
+    height: 120,
+    borderRadius: 12,
+  },
+  removeCoverImageButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: 'red',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeCoverImageText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  addCoverImageButton: {
+    width: 200,
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  addCoverImageText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  separatorContainer: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  separatorLine: {
+    height: 0.5,
+    width: '100%',
   },
 });
