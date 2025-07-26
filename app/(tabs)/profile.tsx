@@ -1,11 +1,12 @@
 import { FlatWorldMap } from '@/components/FlatWorldMap';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface UserProfile {
+interface LocalUserProfile {
   name: string;
   photo: string;
   followers: number;
@@ -24,8 +25,8 @@ interface CountryVisit {
   }>;
 }
 
-// Données de test
-const userProfile: UserProfile = {
+// Données de test - on va les remplacer progressivement par les vraies données
+const testUserProfile: LocalUserProfile = {
   name: 'Marie Dubois',
   photo: 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
   followers: 234,
@@ -73,6 +74,35 @@ export default function ProfileScreen() {
   const beigeColor = '#E5C9A6'; // Couleur beige pour les notes
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
+  
+  const { logout, userProfile: authUserProfile } = useAuth();
+
+  // Combine les données du contexte auth avec les données de test
+  const displayProfile = {
+    name: authUserProfile?.displayName || testUserProfile.name,
+    photo: testUserProfile.photo, // Garde la photo de test pour l'instant
+    followers: testUserProfile.followers,
+    following: testUserProfile.following,
+    visitedCountries: testUserProfile.visitedCountries
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Déconnexion',
+      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Déconnexion',
+          style: 'destructive',
+          onPress: logout,
+        },
+      ]
+    );
+  };
 
   const screenWidth = Dimensions.get('window').width;
 
@@ -80,9 +110,9 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       {/* Barre de navigation en haut */}
       <View style={styles.topNavBar}>
-        {/* Icône settings à gauche */}
-        <TouchableOpacity style={styles.navIcon}>
-          <Text style={[styles.iconText, { color: beigeColor }]}>⚙️</Text>
+        {/* Bouton déconnexion à gauche */}
+        <TouchableOpacity style={styles.navIcon} onPress={handleLogout}>
+          <Text style={[styles.iconText, { color: beigeColor }]}>🚪</Text>
         </TouchableOpacity>
         
         {/* Onglets Profile / Wishlist au centre */}
@@ -117,17 +147,17 @@ export default function ProfileScreen() {
           <>
             {/* Header du profil */}
             <View style={styles.profileHeader}>
-              <Image source={{ uri: userProfile.photo }} style={styles.profilePhoto} />
-              <Text style={[styles.userName, { color: textColor }]}>{userProfile.name}</Text>
+              <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
+              <Text style={[styles.userName, { color: textColor }]}>{displayProfile.name}</Text>
               
               {/* Stats followers/following */}
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: textColor }]}>{userProfile.followers}</Text>
+                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.followers}</Text>
                   <Text style={[styles.statLabel, { color: textColor }]}>Followers</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: textColor }]}>{userProfile.following}</Text>
+                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.following}</Text>
                   <Text style={[styles.statLabel, { color: textColor }]}>Following</Text>
                 </View>
               </View>
@@ -144,7 +174,7 @@ export default function ProfileScreen() {
             {/* Carte du monde en flat design */}
             <View style={styles.mapSection}>
               <FlatWorldMap 
-                visitedCountries={userProfile.visitedCountries}
+                visitedCountries={displayProfile.visitedCountries}
               />
             </View>
 
