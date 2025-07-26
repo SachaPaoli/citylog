@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { router } from 'expo-router';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 interface AuthGuardProps {
   children: React.ReactNode;

@@ -6,8 +6,8 @@ import React, { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import SplashScreen from './SplashScreen';
 
 export default function RootLayout() {

@@ -1,16 +1,18 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,6 +36,10 @@ export default function PostScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const beigeColor = '#E5C9A6';
   
+  // Hooks pour Firebase
+  const { createPost } = usePosts();
+  const { userProfile } = useAuth();
+  
   const [activeTab, setActiveTab] = useState<TabType>('staying');
   const [stayingItems, setStayingItems] = useState<TripItem[]>([]);
   const [restaurantItems, setRestaurantItems] = useState<TripItem[]>([]);
@@ -41,6 +47,24 @@ export default function PostScreen() {
   const [otherItems, setOtherItems] = useState<TripItem[]>([]);
   const [showPostModal, setShowPostModal] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  
+  // Nouveaux champs pour le post
+  const [cityName, setCityName] = useState('');
+  const [countryName, setCountryName] = useState('');
+  const [tripDescription, setTripDescription] = useState('');
+
+  // Réinitialiser le formulaire
+  const resetForm = () => {
+    setStayingItems([]);
+    setRestaurantItems([]);
+    setActivitiesItems([]);
+    setOtherItems([]);
+    setCoverImage(null);
+    setCityName('');
+    setCountryName('');
+    setTripDescription('');
+    setActiveTab('staying');
+  };
 
   // Ajouter un nouvel item
   const addNewItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other') => {
@@ -170,18 +194,55 @@ export default function PostScreen() {
   };
 
   // Poster le voyage
-  const handlePost = () => {
-    const averageRating = calculateAverageRating();
+  const handlePost = async () => {
+    // Validation
     if (!coverImage) {
       Alert.alert('Photo manquante', 'Veuillez ajouter une photo de couverture pour votre post.');
       return;
     }
-    Alert.alert(
-      'Voyage posté !', 
-      `Votre voyage a été publié avec une note moyenne de ${averageRating}/10`
-    );
-    setShowPostModal(false);
-    setCoverImage(null); // Reset la photo de couverture
+    
+    if (!cityName.trim() || !countryName.trim()) {
+      Alert.alert('Informations manquantes', 'Veuillez renseigner la ville et le pays.');
+      return;
+    }
+
+    if (!userProfile) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour poster.');
+      return;
+    }
+
+    const averageRating = calculateAverageRating();
+    
+    try {
+      await createPost({
+        city: cityName.trim(),
+        country: countryName.trim(),
+        photo: coverImage,
+        rating: averageRating,
+        description: tripDescription.trim() || `Voyage à ${cityName}, ${countryName}`,
+        stayingItems,
+        restaurantItems,
+        activitiesItems,
+        otherItems,
+      });
+
+      Alert.alert(
+        'Voyage posté !', 
+        `Votre voyage à ${cityName} a été publié avec succès !`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowPostModal(false);
+              resetForm(); // Réinitialiser le formulaire
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erreur lors de la publication:', error);
+      Alert.alert('Erreur', 'Impossible de publier votre voyage. Veuillez réessayer.');
+    }
   };
 
   // Contenu de chaque onglet
@@ -378,6 +439,46 @@ export default function PostScreen() {
                 )}
               </View>
               
+              {/* Ville et Pays */}
+              <View style={styles.locationSection}>
+                <Text style={[styles.locationLabel, { color: textColor }]}>
+                  Ville et Pays:
+                </Text>
+                <View style={styles.locationInputs}>
+                  <TextInput
+                    style={[styles.locationInput, { color: textColor, borderColor: beigeColor }]}
+                    placeholder="Ville"
+                    placeholderTextColor="#666"
+                    value={cityName}
+                    onChangeText={setCityName}
+                  />
+                  <TextInput
+                    style={[styles.locationInput, { color: textColor, borderColor: beigeColor }]}
+                    placeholder="Pays"
+                    placeholderTextColor="#666"
+                    value={countryName}
+                    onChangeText={setCountryName}
+                  />
+                </View>
+              </View>
+
+              {/* Description optionnelle */}
+              <View style={styles.descriptionSection}>
+                <Text style={[styles.descriptionLabel, { color: textColor }]}>
+                  Description (optionnelle):
+                </Text>
+                <TextInput
+                  style={[styles.descriptionTextArea, { color: textColor, borderColor: beigeColor }]}
+                  placeholder="Racontez votre voyage..."
+                  placeholderTextColor="#666"
+                  value={tripDescription}
+                  onChangeText={setTripDescription}
+                  multiline
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                />
+              </View>
+              
               <View style={styles.averageRatingContainer}>
                 <Text style={[styles.averageRatingLabel, { color: textColor }]}>
                   Note finale:
@@ -386,8 +487,12 @@ export default function PostScreen() {
                   {calculateAverageRating()}/10
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.postButton, { backgroundColor: beigeColor }]} onPress={handlePost}>
-                <Text style={styles.postButtonText}>Poster le voyage</Text>
+            </View>
+            
+            {/* Bouton flottant dans le modal */}
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: beigeColor }]} onPress={handlePost}>
+                <Text style={styles.modalPostButtonText}>Poster le voyage</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -623,7 +728,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '75%',
+    height: '85%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
@@ -651,24 +756,46 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 20,
   },
+  modalButtonContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
+    backgroundColor: 'transparent',
+  },
+  modalPostButton: {
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalPostButtonText: {
+    color: '#000',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   bottomSpacing: {
     height: 120,
   },
   coverImageSection: {
-    marginBottom: 30,
+    marginBottom: 20,
     alignItems: 'center',
   },
   coverImageLabel: {
     fontSize: 16,
-    marginBottom: 15,
+    marginBottom: 10,
     textAlign: 'center',
   },
   coverImageContainer: {
     position: 'relative',
   },
   coverImage: {
-    width: 200,
-    height: 120,
+    width: 160,
+    height: 90,
     borderRadius: 12,
   },
   removeCoverImageButton: {
@@ -688,8 +815,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   addCoverImageButton: {
-    width: 200,
-    height: 120,
+    width: 160,
+    height: 90,
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
@@ -708,5 +835,42 @@ const styles = StyleSheet.create({
   separatorLine: {
     height: 0.5,
     width: '100%',
+  },
+  locationSection: {
+    marginBottom: 15,
+  },
+  locationLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  locationInputs: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  locationInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  descriptionSection: {
+    marginBottom: 15,
+  },
+  descriptionLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  descriptionTextArea: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    height: 60,
+    textAlignVertical: 'top',
   },
 });

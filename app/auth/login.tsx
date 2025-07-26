@@ -1,19 +1,19 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
   const textColor = useThemeColor({}, 'text');

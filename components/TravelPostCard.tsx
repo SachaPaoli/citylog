@@ -1,33 +1,29 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { Post } from '@/types/Post';
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-interface TravelPost {
-  id: string;
-  city: string;
-  country: string;
-  photo: string;
-  userPhoto: string;
-  userName: string;
-  rating: number;
-  description: string;
-}
-
 interface TravelPostCardProps {
-  post: TravelPost;
+  post: Post;
   onPress?: () => void;
+  onLike?: () => void;
 }
 
-export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
+export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const beigeColor = '#E5C9A6'; // Couleur beige pour les notes
+  const { user } = useAuth();
+
+  const isLiked = user ? post.likes.includes(user.uid) : false;
+  const likesCount = post.likes.length;
 
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor }]} 
-      onPress={() => router.push('/post-detail')}
+      onPress={() => router.push(`/post-detail?postId=${post.id}`)}
     >
       <View style={styles.content}>
         {/* Photo principale de la ville */}
@@ -44,7 +40,7 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
           {/* Photo de profil et nom */}
           <View style={styles.userInfo}>
             <Image 
-              source={{ uri: post.userPhoto }} 
+              source={{ uri: post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face' }} 
               style={styles.userPhoto}
               defaultSource={require('@/assets/images/placeholder.png')}
             />
@@ -69,6 +65,25 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
           <Text style={[styles.description, { color: textColor }]} numberOfLines={2}>
             {post.description}
           </Text>
+          
+          {/* Actions */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity 
+              style={styles.likeButton}
+              onPress={onLike}
+            >
+              <Text style={[styles.likeIcon, { color: isLiked ? beigeColor : textColor }]}>
+                {isLiked ? '❤️' : '🤍'}
+              </Text>
+              <Text style={[styles.likeCount, { color: textColor }]}>
+                {likesCount}
+              </Text>
+            </TouchableOpacity>
+            
+            <Text style={[styles.dateText, { color: textColor }]}>
+              {post.createdAt.toLocaleDateString('fr-FR')}
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -139,5 +154,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.8,
     lineHeight: 16,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  likeIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  likeCount: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  dateText: {
+    fontSize: 10,
+    opacity: 0.5,
   },
 });
