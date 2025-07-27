@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { PostService } from '../services/PostService';
-import { Post } from '../types/Post';
 
 export interface UserTravelData {
   visitedCountries: string[];
