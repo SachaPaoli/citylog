@@ -11,6 +11,7 @@ interface UserProfile {
   displayName: string;
   username: string;
   profileImage?: string;
+  photoURL?: string;
   createdAt: Date;
   visitedCities: string[];
   totalTrips: number;
@@ -23,6 +24,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 // Contexte
@@ -93,6 +95,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signOut(auth);
   };
 
+  // Mettre à jour le profil utilisateur
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+    if (!user || !userProfile) {
+      throw new Error('Aucun utilisateur connecté');
+    }
+
+    try {
+      // Mettre à jour le profil Firebase Auth si nécessaire
+      if (updates.displayName) {
+        await updateProfile(user, { 
+          displayName: updates.displayName,
+          photoURL: updates.photoURL 
+        });
+      }
+
+      // Mettre à jour le profil dans Firestore
+      const updatedProfile = { ...userProfile, ...updates };
+      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      
+      // Mettre à jour l'état local
+      setUserProfile(updatedProfile);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -100,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signUp,
     logout,
+    updateUserProfile,
   };
 
   return (

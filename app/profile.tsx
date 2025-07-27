@@ -143,7 +143,7 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                       key={city.id}
                       style={styles.cityCard}
-                      onPress={() => router.push('/post-detail')}
+                      onPress={() => router.push('/trip-detail')}
                     >
                       <Image source={{ uri: city.photo }} style={styles.cityPhoto} />
                       <View style={styles.cityInfo}>

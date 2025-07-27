@@ -23,7 +23,7 @@ export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor }]} 
-      onPress={() => router.push(`/post-detail?postId=${post.id}`)}
+      onPress={() => router.push(`/trip-detail?postId=${post.id}`)}
     >
       <View style={styles.content}>
         {/* Photo principale de la ville */}

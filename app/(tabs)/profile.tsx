@@ -80,7 +80,7 @@ export default function ProfileScreen() {
   // Combine les données du contexte auth avec les données de test
   const displayProfile = {
     name: authUserProfile?.displayName || testUserProfile.name,
-    photo: testUserProfile.photo, // Garde la photo de test pour l'instant
+    photo: authUserProfile?.photoURL || authUserProfile?.profileImage || testUserProfile.photo,
     followers: testUserProfile.followers,
     following: testUserProfile.following,
     visitedCountries: testUserProfile.visitedCountries
@@ -137,7 +137,10 @@ export default function ProfileScreen() {
         </View>
         
         {/* Icône édition à droite */}
-        <TouchableOpacity style={styles.navIcon}>
+        <TouchableOpacity 
+          style={styles.navIcon}
+          onPress={() => router.push('/edit-profile')}
+        >
           <Text style={[styles.iconText, { color: beigeColor }]}>✏️</Text>
         </TouchableOpacity>
       </View>
@@ -192,7 +195,7 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                           key={city.id}
                           style={styles.cityCard}
-                          onPress={() => router.push('/post-detail')}
+                          onPress={() => router.push('/trip-detail')}
                         >
                           <Image source={{ uri: city.photo }} style={styles.cityPhoto} />
                           <View style={styles.cityInfo}>
