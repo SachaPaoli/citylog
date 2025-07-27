@@ -4,6 +4,7 @@ import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 interface FlatWorldMapProps {
   visitedCountries: string[];
+  onCountryPress?: (country: string) => void;
 }
 
 interface CountryPost {
@@ -66,7 +67,7 @@ const mockPosts: CountryPost[] = [
   }
 ];
 
-export function FlatWorldMap({ visitedCountries }: FlatWorldMapProps) {
+export function FlatWorldMap({ visitedCountries, onCountryPress }: FlatWorldMapProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const beigeColor = useThemeColor({ light: '#E5C9A6', dark: '#E5C9A6' }, 'beige');
@@ -74,8 +75,14 @@ export function FlatWorldMap({ visitedCountries }: FlatWorldMapProps) {
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleCountryPress = (countryId: string) => {
-    setSelectedCountry(countryId);
-    setModalVisible(true);
+    if (onCountryPress) {
+      // Si on a une fonction de callback, on l'utilise
+      onCountryPress(countryId);
+    } else {
+      // Sinon, on utilise le comportement par défaut (modal)
+      setSelectedCountry(countryId);
+      setModalVisible(true);
+    }
   };
 
   const getCountryPosts = (countryId: string) => {

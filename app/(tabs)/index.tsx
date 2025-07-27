@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CityLogTitle } from '@/components/CityLogTitle';
@@ -14,6 +14,7 @@ export default function HomeScreen() {
   
   const { posts, loading, error, refreshPosts, toggleLike } = usePosts();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<'cities' | 'trips'>('cities');
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -32,6 +33,33 @@ export default function HomeScreen() {
       >
         {/* Titre CityLog */}
         <CityLogTitle />
+        
+        {/* Onglets */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'cities' && { borderBottomColor: beigeColor }]}
+            onPress={() => setActiveTab('cities')}
+          >
+            <Text style={[
+              styles.tabText, 
+              { color: activeTab === 'cities' ? beigeColor : textColor }
+            ]}>
+              Cities
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'trips' && { borderBottomColor: beigeColor }]}
+            onPress={() => setActiveTab('trips')}
+          >
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'trips' ? beigeColor : textColor }
+            ]}>
+              Trips
+            </Text>
+          </TouchableOpacity>
+        </View>
         
         {/* Ligne de séparation grise */}
         <View style={styles.separatorContainer}>
@@ -58,24 +86,39 @@ export default function HomeScreen() {
 
         {/* Posts */}
         <View style={styles.postsContainer}>
-          {!loading && posts.length === 0 && (
+          {activeTab === 'cities' && (
+            <>
+              {!loading && posts.length === 0 && (
+                <View style={styles.centerContent}>
+                  <Text style={[styles.emptyText, { color: textColor }]}>
+                    Aucun voyage partagé pour le moment.
+                  </Text>
+                  <Text style={[styles.emptySubtext, { color: textColor }]}>
+                    Soyez le premier à partager votre aventure ! ✈️
+                  </Text>
+                </View>
+              )}
+
+              {posts.map((post) => (
+                <TravelPostCard 
+                  key={post.id} 
+                  post={post}
+                  onLike={() => toggleLike(post.id)}
+                />
+              ))}
+            </>
+          )}
+
+          {activeTab === 'trips' && (
             <View style={styles.centerContent}>
               <Text style={[styles.emptyText, { color: textColor }]}>
-                Aucun voyage partagé pour le moment.
+                Gros trips à venir ! 🌍
               </Text>
               <Text style={[styles.emptySubtext, { color: textColor }]}>
-                Soyez le premier à partager votre aventure ! ✈️
+                Cette section affichera vos grands voyages créés depuis votre profil.
               </Text>
             </View>
           )}
-
-          {posts.map((post) => (
-            <TravelPostCard 
-              key={post.id} 
-              post={post}
-              onLike={() => toggleLike(post.id)}
-            />
-          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -88,6 +131,26 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    marginTop: 5,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    marginHorizontal: -6,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   separatorContainer: {
     paddingVertical: 0,

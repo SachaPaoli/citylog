@@ -1,72 +1,11 @@
 import { FlatWorldMap } from '@/components/FlatWorldMap';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUserTravels } from '@/hooks/useUserTravels';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-interface LocalUserProfile {
-  name: string;
-  photo: string;
-  followers: number;
-  following: number;
-  visitedCountries: string[];
-}
-
-interface CountryVisit {
-  country: string;
-  cities: Array<{
-    id: string;
-    name: string;
-    photo: string;
-    rating: number;
-    description: string;
-  }>;
-}
-
-// Données de test - on va les remplacer progressivement par les vraies données
-const testUserProfile: LocalUserProfile = {
-  name: 'Marie Dubois',
-  photo: 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
-  followers: 234,
-  following: 89,
-  visitedCountries: ['France', 'Japan', 'USA', 'Italy', 'Spain']
-};
-
-const countryVisits: CountryVisit[] = [
-  {
-    country: 'France',
-    cities: [
-      {
-        id: '1',
-        name: 'Paris',
-        photo: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=200&h=150&fit=crop',
-        rating: 9,
-        description: 'Ville magnifique avec une architecture incroyable'
-      },
-      {
-        id: '2',
-        name: 'Lyon',
-        photo: 'https://images.unsplash.com/photo-1549144511-f099e773c147?w=200&h=150&fit=crop',
-        rating: 8,
-        description: 'Excellente gastronomie et vieille ville charmante'
-      }
-    ]
-  },
-  {
-    country: 'Japan',
-    cities: [
-      {
-        id: '3',
-        name: 'Tokyo',
-        photo: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=200&h=150&fit=crop',
-        rating: 10,
-        description: 'Mélange parfait entre tradition et modernité'
-      }
-    ]
-  }
-];
 
 export default function ProfileScreen() {
   const textColor = useThemeColor({}, 'text');
@@ -76,14 +15,21 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
   
   const { logout, userProfile: authUserProfile } = useAuth();
+  const { travelData, loading: travelLoading } = useUserTravels();
 
-  // Combine les données du contexte auth avec les données de test
+  // Combine les données du contexte auth avec les vraies données de voyage
   const displayProfile = {
-    name: authUserProfile?.displayName || testUserProfile.name,
-    photo: authUserProfile?.photoURL || authUserProfile?.profileImage || testUserProfile.photo,
-    followers: testUserProfile.followers,
-    following: testUserProfile.following,
-    visitedCountries: testUserProfile.visitedCountries
+    name: authUserProfile?.displayName || 'Utilisateur',
+    photo: authUserProfile?.photoURL || authUserProfile?.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
+    followers: 0, // À implémenter plus tard
+    following: 0, // À implémenter plus tard
+    visitedCountries: travelData.visitedCountries,
+    totalCities: travelData.totalCities
+  };
+
+  // Fonction pour gérer le clic sur un pays
+  const handleCountryPress = (country: string) => {
+    setSelectedCountry(country);
   };
 
   const handleLogout = () => {
@@ -156,12 +102,12 @@ export default function ProfileScreen() {
               {/* Stats followers/following */}
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.followers}</Text>
-                  <Text style={[styles.statLabel, { color: textColor }]}>Followers</Text>
+                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.totalCities}</Text>
+                  <Text style={[styles.statLabel, { color: textColor }]}>Villes</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.following}</Text>
-                  <Text style={[styles.statLabel, { color: textColor }]}>Following</Text>
+                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.visitedCountries.length}</Text>
+                  <Text style={[styles.statLabel, { color: textColor }]}>Pays</Text>
                 </View>
               </View>
 
@@ -178,16 +124,25 @@ export default function ProfileScreen() {
             <View style={styles.mapSection}>
               <FlatWorldMap 
                 visitedCountries={displayProfile.visitedCountries}
+                onCountryPress={handleCountryPress}
               />
             </View>
 
-            {/* Villes visitées pour le pays sélectionné */}
+            {/* Villes visitées pour le pays sélectionné - affiché seulement après clic */}
             {selectedCountry && (
               <View style={styles.citiesSection}>
-                <Text style={[styles.sectionTitle, { color: textColor }]}>
-                  Villes visitées en {selectedCountry}
-                </Text>
-                {countryVisits
+                <View style={styles.citiesSectionHeader}>
+                  <Text style={[styles.sectionTitle, { color: textColor }]}>
+                    Villes visitées en {selectedCountry}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setSelectedCountry(null)}
+                  >
+                    <Text style={[styles.closeButtonText, { color: beigeColor }]}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                {travelData.countryVisits
                   .filter(visit => visit.country === selectedCountry)
                   .map(visit => (
                     <View key={visit.country}>
@@ -195,7 +150,7 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                           key={city.id}
                           style={styles.cityCard}
-                          onPress={() => router.push('/trip-detail')}
+                          onPress={() => router.push(`/trip-detail?postId=${city.postId}`)}
                         >
                           <Image source={{ uri: city.photo }} style={styles.cityPhoto} />
                           <View style={styles.cityInfo}>
@@ -326,6 +281,24 @@ const styles = StyleSheet.create({
   },
   citiesSection: {
     padding: 16,
+  },
+  citiesSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2a2a2a',
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   cityCard: {
     flexDirection: 'row',

@@ -6,7 +6,6 @@ import AuthGuard from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
@@ -16,7 +15,7 @@ export default function TabLayout() {
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: '#E5C9A6', // Couleur beige pour les icônes actives
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
