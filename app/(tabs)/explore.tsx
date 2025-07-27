@@ -1,138 +1,150 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useWorldData } from '@/hooks/useWorldData';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// Données des pays et villes pour la recherche
-const countriesData = {
-  'France': ['Paris', 'Lyon', 'Marseille', 'Nice', 'Toulouse', 'Bordeaux', 'Lille', 'Nantes'],
-  'Spain': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao', 'Malaga', 'Zaragoza'],
-  'Italy': ['Rome', 'Milan', 'Naples', 'Turin', 'Florence', 'Venice', 'Bologna', 'Genoa'],
-  'Germany': ['Berlin', 'Munich', 'Hamburg', 'Cologne', 'Frankfurt', 'Stuttgart', 'Dresden'],
-  'UK': ['London', 'Manchester', 'Birmingham', 'Liverpool', 'Edinburgh', 'Glasgow', 'Bristol'],
-  'USA': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio'],
-  'Canada': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg'],
-  'Japan': ['Tokyo', 'Osaka', 'Yokohama', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kyoto'],
-  'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Newcastle'],
-  'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte'],
-};
 
 export default function ExploreScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const beigeColor = '#E5C9A6';
   
-  const [activeTab, setActiveTab] = useState<'places' | 'members'>('places');
+  const [activeTab, setActiveTab] = useState<'countries' | 'cities'>('countries');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
+  
+  const { 
+    countries, 
+    selectedCountry, 
+    cities, 
+    loading, 
+    error,
+    loadCitiesForCountry,
+    searchCountries,
+    searchCities 
+  } = useWorldData();
 
-  // Filtrer les pays selon la recherche
-  const filteredCountries = Object.keys(countriesData)
-    .filter(country => 
-      country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      countriesData[country as keyof typeof countriesData].some(city => 
-        city.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    )
-    .sort();
+  // Filtrer selon la recherche
+  const filteredCountries = searchCountries(searchQuery);
+  const filteredCities = searchCities(searchQuery);
 
-  const toggleCountry = (country: string) => {
-    setExpandedCountry(expandedCountry === country ? null : country);
+  const handleCountryPress = (country: any) => {
+    loadCitiesForCountry(country);
+    setActiveTab('cities');
+  };
+
+  const handleBackToCountries = () => {
+    setActiveTab('countries');
+    setSearchQuery('');
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      {/* Header avec navigation */}
+      <View style={styles.header}>
+        {selectedCountry && activeTab === 'cities' && (
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackToCountries}
+          >
+            <Text style={[styles.backButtonText, { color: beigeColor }]}>← Retour</Text>
+          </TouchableOpacity>
+        )}
+        
+        <Text style={[styles.headerTitle, { color: textColor }]}>
+          {activeTab === 'countries' ? 'Explorer le Monde' : `Villes de ${selectedCountry?.name}`}
+        </Text>
+      </View>
+
       {/* Barre de recherche */}
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { color: textColor, borderColor: beigeColor }]}
-          placeholder="Rechercher des lieux ou membres..."
+          placeholder={activeTab === 'countries' ? "Rechercher un pays..." : "Rechercher une ville..."}
           placeholderTextColor={`${beigeColor}80`}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
-      {/* Onglets Places / Members */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'places' && { borderBottomColor: beigeColor }]}
-          onPress={() => setActiveTab('places')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'places' ? beigeColor : textColor }]}>
-            Places
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'members' && { borderBottomColor: beigeColor }]}
-          onPress={() => setActiveTab('members')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'members' ? beigeColor : textColor }]}>
-            Members
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Ligne de séparation grise */}
-      <View style={styles.separatorContainer}>
-        <View style={[styles.separatorLine, { backgroundColor: '#333333' }]} />
-      </View>
-
-      {/* Contenu selon l'onglet sélectionné */}
+      {/* Contenu principal */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'places' ? (
-          <View style={styles.placesContent}>
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={beigeColor} />
+            <Text style={[styles.loadingText, { color: textColor }]}>
+              Chargement...
+            </Text>
+          </View>
+        )}
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: 'red' }]}>{error}</Text>
+          </View>
+        )}
+
+        {/* Liste des pays */}
+        {activeTab === 'countries' && !loading && (
+          <View style={styles.countriesList}>
             {filteredCountries.map((country) => (
-              <View key={country} style={styles.countrySection}>
-                <TouchableOpacity 
-                  style={styles.countryHeader}
-                  onPress={() => toggleCountry(country)}
-                >
+              <TouchableOpacity
+                key={country.code}
+                style={[styles.countryCard, { borderColor: beigeColor }]}
+                onPress={() => handleCountryPress(country)}
+              >
+                <Text style={styles.flagEmoji}>{country.flag}</Text>
+                <View style={styles.countryInfo}>
                   <Text style={[styles.countryName, { color: textColor }]}>
-                    🌍 {country}
+                    {country.name}
                   </Text>
-                  <Text style={[styles.expandIcon, { color: beigeColor }]}>
-                    {expandedCountry === country ? '▼' : '▶'}
+                  <Text style={[styles.countryRegion, { color: textColor }]}>
+                    {country.region}
                   </Text>
-                </TouchableOpacity>
-                
-                {expandedCountry === country && (
-                  <View style={styles.citiesContainer}>
-                    {countriesData[country as keyof typeof countriesData]
-                      .filter(city => 
-                        searchQuery === '' || 
-                        city.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      .map((city) => (
-                        <TouchableOpacity 
-                          key={city}
-                          style={styles.cityItem}
-                        >
-                          <Text style={[styles.cityName, { color: textColor }]}>
-                            📍 {city}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                )}
-              </View>
+                  {country.capital && (
+                    <Text style={[styles.countryCapital, { color: beigeColor }]}>
+                      Capitale: {country.capital}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.arrowIcon, { color: beigeColor }]}>→</Text>
+              </TouchableOpacity>
             ))}
           </View>
-        ) : (
-          /* Contenu Members */
-          <View style={styles.membersContent}>
-            <Text style={[styles.membersTitle, { color: textColor }]}>
-              👥 Membres CityLog
-            </Text>
-            <View style={styles.membersPlaceholder}>
-              <Text style={[styles.membersText, { color: textColor }]}>
-                Ici tu pourras rechercher et découvrir d'autres voyageurs !
-              </Text>
-              <Text style={[styles.membersSubtext, { color: textColor }]}>
-                Fonctionnalité à venir... 🚀
-              </Text>
-            </View>
+        )}
+
+        {/* Liste des villes */}
+        {activeTab === 'cities' && !loading && (
+          <View style={styles.citiesList}>
+            {filteredCities.map((city) => (
+              <TouchableOpacity
+                key={city.name}
+                style={[styles.cityCard, { backgroundColor: '#2a2a2a' }]}
+              >
+                <Image source={{ uri: city.imageUrl }} style={styles.cityImage} />
+                <View style={styles.cityInfo}>
+                  <Text style={[styles.cityName, { color: textColor }]}>
+                    {city.name}
+                  </Text>
+                  <Text style={[styles.cityPopulation, { color: beigeColor }]}>
+                    {city.population.toLocaleString()} habitants
+                  </Text>
+                  <Text style={[styles.cityDescription, { color: textColor }]} numberOfLines={3}>
+                    {city.description}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            
+            {filteredCities.length === 0 && !loading && (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
+                  Aucune ville trouvée pour ce pays.
+                </Text>
+                <Text style={[styles.emptySubtext, { color: textColor }]}>
+                  Notre base de données s'enrichit régulièrement !
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -144,10 +156,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  backButton: {
+    paddingVertical: 5,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    flex: 1,
+  },
   searchContainer: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 5, // Réduire l'espace vers les onglets
+    paddingBottom: 15,
   },
   searchInput: {
     height: 45,
@@ -157,96 +187,109 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: 'rgba(212, 184, 150, 0.1)',
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 15,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 31,
   },
-  placesContent: {
-    paddingBottom: 20,
-  },
-  countrySection: {
-    marginBottom: 15,
-  },
-  countryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    backgroundColor: 'rgba(212, 184, 150, 0.1)',
-    borderRadius: 10,
+    justifyContent: 'center',
+    paddingVertical: 50,
   },
-  countryName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  expandIcon: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  citiesContainer: {
+  loadingText: {
     marginTop: 10,
-    paddingLeft: 15,
-  },
-  cityItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    marginBottom: 5,
-    backgroundColor: 'rgba(212, 184, 150, 0.05)',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#E5C9A6',
-  },
-  cityName: {
-    fontSize: 15,
-  },
-  membersContent: {
-    alignItems: 'center',
-    paddingTop: 40,
-  },
-  membersTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
-  },
-  membersPlaceholder: {
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  membersText: {
     fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 15,
-    lineHeight: 22,
-  },
-  membersSubtext: {
-    fontSize: 14,
-    textAlign: 'center',
     opacity: 0.7,
   },
-  separatorContainer: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
+  errorContainer: {
+    alignItems: 'center',
+    padding: 20,
   },
-  separatorLine: {
-    height: 0.5,
-    width: '100%',
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  countriesList: {
+    paddingBottom: 20,
+  },
+  countryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    marginBottom: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: 'rgba(212, 184, 150, 0.05)',
+  },
+  flagEmoji: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  countryInfo: {
+    flex: 1,
+  },
+  countryName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  countryRegion: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginBottom: 2,
+  },
+  countryCapital: {
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  arrowIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  citiesList: {
+    paddingBottom: 20,
+  },
+  cityCard: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    marginBottom: 15,
+    overflow: 'hidden',
+  },
+  cityImage: {
+    width: 100,
+    height: 80,
+  },
+  cityInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  cityName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  cityPopulation: {
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  cityDescription: {
+    fontSize: 12,
+    opacity: 0.8,
+    lineHeight: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
   },
 });
