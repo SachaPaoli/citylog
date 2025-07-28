@@ -10,7 +10,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 export default function HomeScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const beigeColor = '#E5C9A6'; // Couleur beige pour la ligne
+  const textActiveColor = useThemeColor({}, 'textActive');
+  const borderColor = useThemeColor({}, 'borderColor');
   
   const { posts, loading, error, refreshPosts, toggleLike } = usePosts();
   const [refreshing, setRefreshing] = React.useState(false);
@@ -37,24 +38,24 @@ export default function HomeScreen() {
         {/* Onglets */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'cities' && { borderBottomColor: beigeColor }]}
+            style={[styles.tab, activeTab === 'cities' && { borderBottomColor: borderColor }]}
             onPress={() => setActiveTab('cities')}
           >
             <Text style={[
               styles.tabText, 
-              { color: activeTab === 'cities' ? beigeColor : textColor }
+              { color: activeTab === 'cities' ? textActiveColor : textColor }
             ]}>
               Cities
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'trips' && { borderBottomColor: beigeColor }]}
+            style={[styles.tab, activeTab === 'trips' && { borderBottomColor: borderColor }]}
             onPress={() => setActiveTab('trips')}
           >
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'trips' ? beigeColor : textColor }
+              { color: activeTab === 'trips' ? textActiveColor : textColor }
             ]}>
               Trips
             </Text>
@@ -69,7 +70,7 @@ export default function HomeScreen() {
         {/* Messages d'état */}
         {loading && !refreshing && (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color={beigeColor} />
+            <ActivityIndicator size="large" color={textActiveColor} />
             <Text style={[styles.loadingText, { color: textColor }]}>
               Chargement des voyages...
             </Text>

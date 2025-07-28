@@ -3,22 +3,24 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const textColor = useThemeColor({}, 'text');
+  const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6';
+  const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
+  const borderColor = useThemeColor({}, 'borderColor');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,7 +67,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {/* Logo/Titre */}
           <View style={styles.headerContainer}>
-            <Text style={[styles.title, { color: beigeColor }]}>
+            <Text style={[styles.title, { color: textActiveColor }]}>
               CityLog
             </Text>
             <Text style={[styles.subtitle, { color: textColor }]}>
@@ -77,9 +79,9 @@ export default function LoginScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: borderColor }]}
                 placeholder="Email"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textColor}80`}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -90,9 +92,9 @@ export default function LoginScreen() {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: borderColor }]}
                 placeholder="Mot de passe"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textColor}80`}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -101,7 +103,7 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity 
-              style={[styles.loginButton, { backgroundColor: beigeColor }]}
+              style={[styles.loginButton, { backgroundColor: buttonBackgroundColor }]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -116,7 +118,7 @@ export default function LoginScreen() {
                 Pas encore de compte ?{' '}
               </Text>
               <TouchableOpacity onPress={() => router.push('./register')}>
-                <Text style={[styles.signupLink, { color: beigeColor }]}>
+                <Text style={[styles.signupLink, { color: textActiveColor }]}>
                   Créer un compte
                 </Text>
               </TouchableOpacity>

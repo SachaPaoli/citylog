@@ -70,7 +70,8 @@ const mockPosts: CountryPost[] = [
 export function FlatWorldMap({ visitedCountries, onCountryPress }: FlatWorldMapProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = useThemeColor({ light: '#E5C9A6', dark: '#E5C9A6' }, 'beige');
+  const ratingColor = useThemeColor({}, 'rating');
+  const textActiveColor = useThemeColor({}, 'textActive');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -110,7 +111,7 @@ export function FlatWorldMap({ visitedCountries, onCountryPress }: FlatWorldMapP
             return (
               <TouchableOpacity 
                 key={countryId}
-                style={[styles.countryCard, { borderColor: beigeColor }]}
+                style={[styles.countryCard, { borderColor: textActiveColor }]}
                 onPress={() => handleCountryPress(countryId)}
               >
                 <Text style={styles.flagIcon}>{country.flag}</Text>
@@ -168,7 +169,7 @@ export function FlatWorldMap({ visitedCountries, onCountryPress }: FlatWorldMapP
                     <Text style={[styles.postCity, { color: textColor }]}>
                       📍 {post.city}
                     </Text>
-                    <Text style={[styles.postRating, { color: beigeColor }]}>
+                    <Text style={[styles.postRating, { color: ratingColor }]}>
                       {post.rating}/10
                     </Text>
                   </View>

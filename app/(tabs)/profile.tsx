@@ -9,8 +9,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const textColor = useThemeColor({}, 'text');
+  const textActiveColor = useThemeColor({}, 'textActive');
+  const ratingColor = useThemeColor({}, 'rating');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6'; // Couleur beige pour les notes
+  const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
+  const borderColor = useThemeColor({}, 'borderColor');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
   
@@ -58,25 +61,25 @@ export default function ProfileScreen() {
       <View style={styles.topNavBar}>
         {/* Bouton déconnexion à gauche */}
         <TouchableOpacity style={styles.navIcon} onPress={handleLogout}>
-          <Text style={[styles.iconText, { color: beigeColor }]}>🚪</Text>
+          <Text style={[styles.iconText, { color: buttonBackgroundColor }]}>🚪</Text>
         </TouchableOpacity>
         
         {/* Onglets Profile / Wishlist au centre */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'profile' && { borderBottomColor: beigeColor }]}
+            style={[styles.tab, activeTab === 'profile' && { borderBottomColor: borderColor }]}
             onPress={() => setActiveTab('profile')}
           >
-            <Text style={[styles.tabText, { color: activeTab === 'profile' ? beigeColor : textColor }]}>
+            <Text style={[styles.tabText, { color: activeTab === 'profile' ? textActiveColor : textColor }]}>
               Profile
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'wishlist' && { borderBottomColor: beigeColor }]}
+            style={[styles.tab, activeTab === 'wishlist' && { borderBottomColor: borderColor }]}
             onPress={() => setActiveTab('wishlist')}
           >
-            <Text style={[styles.tabText, { color: activeTab === 'wishlist' ? beigeColor : textColor }]}>
+            <Text style={[styles.tabText, { color: activeTab === 'wishlist' ? textActiveColor : textColor }]}>
               Wishlist
             </Text>
           </TouchableOpacity>
@@ -87,7 +90,7 @@ export default function ProfileScreen() {
           style={styles.navIcon}
           onPress={() => router.push('/edit-profile')}
         >
-          <Text style={[styles.iconText, { color: beigeColor }]}>✏️</Text>
+          <Text style={[styles.iconText, { color: buttonBackgroundColor }]}>✏️</Text>
         </TouchableOpacity>
       </View>
 
@@ -113,7 +116,7 @@ export default function ProfileScreen() {
 
               {/* Bouton Trips */}
               <TouchableOpacity 
-                style={[styles.tripsButton, { backgroundColor: beigeColor }]}
+                style={[styles.tripsButton, { backgroundColor: buttonBackgroundColor }]}
                 onPress={() => router.push('../trips')}
               >
                 <Text style={styles.tripsButtonText}>🧳 Mes Trips</Text>
@@ -139,7 +142,7 @@ export default function ProfileScreen() {
                     style={styles.closeButton}
                     onPress={() => setSelectedCountry(null)}
                   >
-                    <Text style={[styles.closeButtonText, { color: beigeColor }]}>✕</Text>
+                    <Text style={[styles.closeButtonText, { color: textActiveColor }]}>✕</Text>
                   </TouchableOpacity>
                 </View>
                 {travelData.countryVisits
@@ -155,7 +158,7 @@ export default function ProfileScreen() {
                           <Image source={{ uri: city.photo }} style={styles.cityPhoto} />
                           <View style={styles.cityInfo}>
                             <Text style={[styles.cityName, { color: textColor }]}>{city.name}</Text>
-                            <Text style={[styles.cityRating, { color: beigeColor }]}>
+                            <Text style={[styles.cityRating, { color: ratingColor }]}>
                               {city.rating}/10
                             </Text>
                             <Text style={[styles.cityDescription, { color: textColor }]} numberOfLines={2}>

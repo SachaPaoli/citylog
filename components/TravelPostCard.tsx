@@ -13,8 +13,9 @@ interface TravelPostCardProps {
 
 export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
   const textColor = useThemeColor({}, 'text');
+  const textActiveColor = useThemeColor({}, 'textActive');
+  const ratingColor = useThemeColor({}, 'rating');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6'; // Couleur beige pour les notes
   const { user } = useAuth();
 
   const isLiked = user ? post.likes.includes(user.uid) : false;
@@ -56,8 +57,8 @@ export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
           
           {/* Note */}
           <View style={styles.ratingContainer}>
-            <Text style={[styles.rating, { color: beigeColor }]}>
-              {post.rating}/10
+            <Text style={[styles.rating, { color: ratingColor }]}>
+              ⭐ {post.rating}/10
             </Text>
           </View>
           
@@ -72,7 +73,7 @@ export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
               style={styles.likeButton}
               onPress={onLike}
             >
-              <Text style={[styles.likeIcon, { color: isLiked ? beigeColor : textColor }]}>
+              <Text style={[styles.likeIcon, { color: isLiked ? textActiveColor : textColor }]}>
                 {isLiked ? '❤️' : '🤍'}
               </Text>
               <Text style={[styles.likeCount, { color: textColor }]}>

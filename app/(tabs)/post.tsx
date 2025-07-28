@@ -4,15 +4,15 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -33,8 +33,12 @@ type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
 
 export default function PostScreen() {
   const textColor = useThemeColor({}, 'text');
+  const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6';
+  const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
+  const borderColor = useThemeColor({}, 'borderColor');
+  const headerBackgroundColor = '#808080';
+  const scrollBackgroundColor = '#D3D3D3';
   
   // Hooks pour Firebase
   const { createPost } = usePosts();
@@ -254,10 +258,10 @@ export default function PostScreen() {
     return (
       <View style={styles.tabContent}>
         {currentItems.map(item => (
-          <View key={item.id} style={[styles.itemCard, { borderColor: beigeColor }]}>
+          <View key={item.id} style={[styles.itemCard, { borderColor: borderColor }]}>
             {/* Bouton supprimer */}
             <TouchableOpacity 
-              style={[styles.deleteItemButton, { backgroundColor: beigeColor }]}
+              style={[styles.deleteItemButton, { backgroundColor: textActiveColor }]}
               onPress={() => removeItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id)}
             >
               <Text style={styles.deleteItemText}>×</Text>
@@ -277,16 +281,16 @@ export default function PostScreen() {
                 </View>
               ))}
               <TouchableOpacity 
-                style={[styles.addImageButton, { borderColor: beigeColor }]}
+                style={[styles.addImageButton, { borderColor: borderColor }]}
                 onPress={() => pickImage(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id)}
               >
-                <Text style={[styles.addImageText, { color: beigeColor }]}>+</Text>
+                <Text style={[styles.addImageText, { color: textActiveColor }]}>+</Text>
               </TouchableOpacity>
             </ScrollView>
 
             {/* Nom */}
             <TextInput
-              style={[styles.nameInput, { color: textColor, borderColor: beigeColor }]}
+              style={[styles.nameInput, { color: textColor, borderColor: borderColor }]}
               placeholder={`Nom ${activeTab === 'staying' ? 'du logement' : 
                              activeTab === 'restaurant' ? 'du restaurant' : 
                              activeTab === 'activities' ? 'de l\'activité' : 'de l\'autre'}`}
@@ -304,8 +308,8 @@ export default function PostScreen() {
                     key={rating}
                     style={[
                       styles.ratingButton, 
-                      { borderColor: beigeColor },
-                      item.rating === rating && { backgroundColor: beigeColor }
+                      { borderColor: borderColor },
+                      item.rating === rating && { backgroundColor: textActiveColor }
                     ]}
                     onPress={() => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'rating', rating)}
                   >
@@ -322,7 +326,7 @@ export default function PostScreen() {
 
             {/* Description */}
             <TextInput
-              style={[styles.descriptionInput, { color: textColor, borderColor: beigeColor }]}
+              style={[styles.descriptionInput, { color: textColor, borderColor: borderColor }]}
               placeholder="Description (optionnelle)"
               placeholderTextColor="#999"
               value={item.description}
@@ -335,7 +339,7 @@ export default function PostScreen() {
 
         {/* Bouton ajouter */}
         <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: beigeColor }]}
+          style={[styles.addButton, { backgroundColor: textActiveColor }]}
           onPress={() => addNewItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other')}
         >
           <Text style={styles.addButtonText}>
@@ -360,10 +364,10 @@ export default function PostScreen() {
           {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, activeTab === tab && { borderBottomColor: beigeColor }]}
+              style={[styles.tab, activeTab === tab && { borderBottomColor: borderColor }]}
               onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, { color: activeTab === tab ? beigeColor : textColor }]}>
+              <Text style={[styles.tabText, { color: activeTab === tab ? textActiveColor : textColor }]}>
                 {tab === 'staying' ? 'Staying' : 
                  tab === 'restaurant' ? 'Restaurant' : 
                  tab === 'activities' ? 'Activities' : 'Other'}
@@ -385,7 +389,7 @@ export default function PostScreen() {
 
       {/* Bouton flottant */}
       <TouchableOpacity 
-        style={[styles.floatingButton, { backgroundColor: beigeColor }]}
+        style={[styles.floatingButton, { backgroundColor: textActiveColor }]}
         onPress={() => setShowPostModal(true)}
       >
         <Text style={styles.floatingButtonText}>Log your city</Text>
@@ -431,10 +435,10 @@ export default function PostScreen() {
                   </View>
                 ) : (
                   <TouchableOpacity 
-                    style={[styles.addCoverImageButton, { borderColor: beigeColor }]}
+                    style={[styles.addCoverImageButton, { borderColor: borderColor }]}
                     onPress={pickCoverImage}
                   >
-                    <Text style={[styles.addCoverImageText, { color: beigeColor }]}>+ Ajouter une photo</Text>
+                    <Text style={[styles.addCoverImageText, { color: textActiveColor }]}>+ Ajouter une photo</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -446,14 +450,14 @@ export default function PostScreen() {
                 </Text>
                 <View style={styles.locationInputs}>
                   <TextInput
-                    style={[styles.locationInput, { color: textColor, borderColor: beigeColor }]}
+                    style={[styles.locationInput, { color: textColor, borderColor: borderColor }]}
                     placeholder="Ville"
                     placeholderTextColor="#666"
                     value={cityName}
                     onChangeText={setCityName}
                   />
                   <TextInput
-                    style={[styles.locationInput, { color: textColor, borderColor: beigeColor }]}
+                    style={[styles.locationInput, { color: textColor, borderColor: borderColor }]}
                     placeholder="Pays"
                     placeholderTextColor="#666"
                     value={countryName}
@@ -468,7 +472,7 @@ export default function PostScreen() {
                   Description (optionnelle):
                 </Text>
                 <TextInput
-                  style={[styles.descriptionTextArea, { color: textColor, borderColor: beigeColor }]}
+                  style={[styles.descriptionTextArea, { color: textColor, borderColor: borderColor }]}
                   placeholder="Racontez votre voyage..."
                   placeholderTextColor="#666"
                   value={tripDescription}
@@ -483,7 +487,7 @@ export default function PostScreen() {
                 <Text style={[styles.averageRatingLabel, { color: textColor }]}>
                   Note finale:
                 </Text>
-                <Text style={[styles.averageRating, { color: beigeColor }]}>
+                <Text style={[styles.averageRating, { color: textActiveColor }]}>
                   {calculateAverageRating()}/10
                 </Text>
               </View>
@@ -491,7 +495,7 @@ export default function PostScreen() {
             
             {/* Bouton flottant dans le modal */}
             <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: beigeColor }]} onPress={handlePost}>
+              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: textActiveColor }]} onPress={handlePost}>
                 <Text style={styles.modalPostButtonText}>Poster le voyage</Text>
               </TouchableOpacity>
             </View>

@@ -4,24 +4,24 @@ import { StyleSheet, Text, View } from 'react-native';
 
 export function CityLogTitle() {
   const textColor = useThemeColor({}, 'text');
-  const beigeColor = useThemeColor({ light: '#E5C9A6', dark: '#E5C9A6' }, 'beige');
+  const textActiveColor = useThemeColor({}, 'textActive');
 
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text style={[styles.title, { color: beigeColor }]}>Ci</Text>
+        <Text style={[styles.title, { color: textActiveColor }]}>Ci</Text>
         <View style={styles.airplaneContainer}>
           {/* Forme d'avion réaliste */}
           <View style={styles.airplane}>
             {/* Corps de l'avion */}
-            <View style={[styles.airplaneBody, { backgroundColor: beigeColor }]} />
+            <View style={[styles.airplaneBody, { backgroundColor: textActiveColor }]} />
             {/* Ailes */}
-            <View style={[styles.airplaneWings, { backgroundColor: beigeColor }]} />
+            <View style={[styles.airplaneWings, { backgroundColor: textActiveColor }]} />
             {/* Queue */}
-            <View style={[styles.airplaneTail, { backgroundColor: beigeColor }]} />
+            <View style={[styles.airplaneTail, { backgroundColor: textActiveColor }]} />
           </View>
         </View>
-        <Text style={[styles.title, { color: beigeColor }]}>yLog</Text>
+        <Text style={[styles.title, { color: textActiveColor }]}>yLog</Text>
       </View>
     </View>
   );

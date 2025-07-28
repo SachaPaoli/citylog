@@ -1,0 +1,19 @@
+- page accueil : que la photo de profil s'affiche sur chaque post, que la description et les like ne soit pas affiché pour chaque poste, que la partie du dessus avec le titre et les des onglets soient plus petite plus minime, que quand on scroll sur cette page on voit en permanence la partie du dessus avec le titre et les deux onglets, enlever les etoiles des notes et trouver une bonne couleur pour les notes
+
+- page explore : faire des plus petites cartes pour chaque pays avec juste le drapeau et le nom du pays, agrandir la base de données de villes pour tous les pays, pouvoir cliquer sur les villes et quon voit une page detail de chaque ville avec possibilité de log la ville etc
+
+- page post : changer la couleur des boutons, fais un meilleur design pour quand tajoute un element, monter le bouton pour poster quand u "log la city"
+
+- page ranking : changer le design general
+
+- page mon profil : faire une page de parametre, ajouter un onglet en haut pour les favorites, changer les icones de parametres et de edit de profil, afficher nbr de followers et de following, implementer une partie de la page pour pouvoir choisir ses trois villes preferees, afficher des petites cartes de tous les pays que jai visités et quand jappuie dessus je vois tous mes posts, en dessous mettre le bouton pour créer des trips et changer tt cette page de trips pour la rendre bien
+
+- animation debut d'app :  changer la couleur en blanc et faire qqch de diff
+
+- tab bar :  mettre que des icones et pas de texte
+
+- premium : trouver des fonctionnalités en plus pour les premium
+
+- page detail : changer les couleurs, faire un scroll de la description comme sur letterboxd
+
+- voir autre profil : ajouter possibilité de voir un autre profil

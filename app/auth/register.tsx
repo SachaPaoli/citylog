@@ -3,22 +3,24 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const textColor = useThemeColor({}, 'text');
+  const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6';
+  const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
+  const borderColor = useThemeColor({}, 'borderColor');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -94,7 +96,7 @@ export default function RegisterScreen() {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {/* Logo/Titre */}
           <View style={styles.headerContainer}>
-            <Text style={[styles.title, { color: beigeColor }]}>
+            <Text style={[styles.title, { color: textActiveColor }]}>
               CityLog
             </Text>
             <Text style={[styles.subtitle, { color: textColor }]}>
@@ -106,9 +108,9 @@ export default function RegisterScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: textActiveColor }]}
                 placeholder="Nom d'affichage"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textActiveColor}80`}
                 value={displayName}
                 onChangeText={setDisplayName}
                 autoCapitalize="words"
@@ -117,9 +119,9 @@ export default function RegisterScreen() {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: textActiveColor }]}
                 placeholder="Nom d'utilisateur"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textActiveColor}80`}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -129,9 +131,9 @@ export default function RegisterScreen() {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: textActiveColor }]}
                 placeholder="Email"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textActiveColor}80`}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -142,9 +144,9 @@ export default function RegisterScreen() {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: textActiveColor }]}
                 placeholder="Mot de passe"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textActiveColor}80`}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -154,9 +156,9 @@ export default function RegisterScreen() {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: textActiveColor }]}
                 placeholder="Confirmer le mot de passe"
-                placeholderTextColor={`${beigeColor}80`}
+                placeholderTextColor={`${textActiveColor}80`}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -165,7 +167,7 @@ export default function RegisterScreen() {
             </View>
 
             <TouchableOpacity 
-              style={[styles.registerButton, { backgroundColor: beigeColor }]}
+              style={[styles.registerButton, { backgroundColor: textActiveColor }]}
               onPress={handleRegister}
               disabled={loading}
             >
@@ -180,7 +182,7 @@ export default function RegisterScreen() {
                 Déjà un compte ?{' '}
               </Text>
               <TouchableOpacity onPress={() => router.push('./login')}>
-                <Text style={[styles.loginLink, { color: beigeColor }]}>
+                <Text style={[styles.loginLink, { color: textActiveColor }]}>
                   Se connecter
                 </Text>
               </TouchableOpacity>

@@ -6,8 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ExploreScreen() {
   const textColor = useThemeColor({}, 'text');
+  const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6';
+  const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
+  const borderColor = useThemeColor({}, 'borderColor');
   
   const [activeTab, setActiveTab] = useState<'countries' | 'cities'>('countries');
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +48,7 @@ export default function ExploreScreen() {
             style={styles.backButton}
             onPress={handleBackToCountries}
           >
-            <Text style={[styles.backButtonText, { color: beigeColor }]}>← Retour</Text>
+            <Text style={[styles.backButtonText, { color: textActiveColor }]}>← Retour</Text>
           </TouchableOpacity>
         )}
         
@@ -58,9 +60,9 @@ export default function ExploreScreen() {
       {/* Barre de recherche */}
       <View style={styles.searchContainer}>
         <TextInput
-          style={[styles.searchInput, { color: textColor, borderColor: beigeColor }]}
+          style={[styles.searchInput, { color: textColor, borderColor: borderColor }]}
           placeholder={activeTab === 'countries' ? "Rechercher un pays..." : "Rechercher une ville..."}
-          placeholderTextColor={`${beigeColor}80`}
+          placeholderTextColor={`${textColor}80`}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -70,7 +72,7 @@ export default function ExploreScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={beigeColor} />
+            <ActivityIndicator size="large" color={textActiveColor} />
             <Text style={[styles.loadingText, { color: textColor }]}>
               Chargement...
             </Text>
@@ -89,7 +91,7 @@ export default function ExploreScreen() {
             {filteredCountries.map((country) => (
               <TouchableOpacity
                 key={country.code}
-                style={[styles.countryCard, { borderColor: beigeColor }]}
+                style={[styles.countryCard, { borderColor: borderColor }]}
                 onPress={() => handleCountryPress(country)}
               >
                 <Text style={styles.flagEmoji}>{country.flag}</Text>
@@ -101,12 +103,12 @@ export default function ExploreScreen() {
                     {country.region}
                   </Text>
                   {country.capital && (
-                    <Text style={[styles.countryCapital, { color: beigeColor }]}>
+                    <Text style={[styles.countryCapital, { color: textActiveColor }]}>
                       Capitale: {country.capital}
                     </Text>
                   )}
                 </View>
-                <Text style={[styles.arrowIcon, { color: beigeColor }]}>→</Text>
+                <Text style={[styles.arrowIcon, { color: textActiveColor }]}>→</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -125,7 +127,7 @@ export default function ExploreScreen() {
                   <Text style={[styles.cityName, { color: textColor }]}>
                     {city.name}
                   </Text>
-                  <Text style={[styles.cityPopulation, { color: beigeColor }]}>
+                  <Text style={[styles.cityPopulation, { color: textActiveColor }]}>
                     {city.population.toLocaleString()} habitants
                   </Text>
                   <Text style={[styles.cityDescription, { color: textColor }]} numberOfLines={3}>
