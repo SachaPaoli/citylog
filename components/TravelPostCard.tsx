@@ -4,6 +4,7 @@ import { Post } from '@/types/Post';
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StarRating } from './StarRating';
 
 interface TravelPostCardProps {
   post: Post;
@@ -55,11 +56,14 @@ export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
             {post.city}, {post.country}
           </Text>
           
-          {/* Note */}
+          {/* Note avec étoiles */}
           <View style={styles.ratingContainer}>
-            <Text style={[styles.rating, { color: ratingColor }]}>
-              ⭐ {post.rating}/10
-            </Text>
+            <StarRating 
+              rating={post.rating / 2} // Convertir de /10 à /5
+              readonly={true} 
+              size="small"
+              color="#FFD700"
+            />
           </View>
           
           {/* Description courte */}

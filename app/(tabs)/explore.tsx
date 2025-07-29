@@ -1,7 +1,9 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useWorldData } from '@/hooks/useWorldData';
-import React, { useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { RealCitiesService } from '@/services/RealCitiesService';
+import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
+import { StarRating } from '@/components/StarRating';
+import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ExploreScreen() {
@@ -11,49 +13,57 @@ export default function ExploreScreen() {
   const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
   const borderColor = useThemeColor({}, 'borderColor');
   
-  const [activeTab, setActiveTab] = useState<'countries' | 'cities'>('countries');
   const [searchQuery, setSearchQuery] = useState('');
+  const [cities, setCities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   
-  const { 
-    countries, 
-    selectedCountry, 
-    cities, 
-    loading, 
-    error,
-    loadCitiesForCountry,
-    searchCountries,
-    searchCities 
-  } = useWorldData();
+  // Modal de notation
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<any>(null);
 
-  // Filtrer selon la recherche
-  const filteredCountries = searchCountries(searchQuery);
-  const filteredCities = searchCities(searchQuery);
-
-  const handleCountryPress = (country: any) => {
-    loadCitiesForCountry(country);
-    setActiveTab('cities');
+  // Rechercher des villes avec l'API 154k
+  const searchCities = async (query: string) => {
+    if (!query.trim()) {
+      setCities([]);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const results = await RealCitiesService.searchCities(query, 50);
+      console.log(`Trouvé ${results.length} villes pour: ${query}`);
+      setCities(results);
+    } catch (error) {
+      console.error('Erreur recherche:', error);
+      setCities([]);
+    }
+    setLoading(false);
   };
 
-  const handleBackToCountries = () => {
-    setActiveTab('countries');
-    setSearchQuery('');
+  // Recherche automatique quand on tape
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchCities(searchQuery);
+    }, 300); // Délai de 300ms pour éviter trop de requêtes
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const handleCityPress = (city: any) => {
+    setSelectedCity(city);
+    setModalVisible(true);
+  };
+
+  const handleRateCity = (cityId: number, rating: number) => {
+    console.log(`Ville ${cityId} notée ${rating}/5`);
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      {/* Header avec navigation */}
+      {/* Header */}
       <View style={styles.header}>
-        {selectedCountry && activeTab === 'cities' && (
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackToCountries}
-          >
-            <Text style={[styles.backButtonText, { color: textActiveColor }]}>← Retour</Text>
-          </TouchableOpacity>
-        )}
-        
         <Text style={[styles.headerTitle, { color: textColor }]}>
-          {activeTab === 'countries' ? 'Explorer le Monde' : `Villes de ${selectedCountry?.name}`}
+          Explorer les Villes
         </Text>
       </View>
 
@@ -61,7 +71,7 @@ export default function ExploreScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { color: textColor, borderColor: borderColor }]}
-          placeholder={activeTab === 'countries' ? "Rechercher un pays..." : "Rechercher une ville..."}
+          placeholder="Rechercher une ville..."
           placeholderTextColor={`${textColor}80`}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -70,86 +80,90 @@ export default function ExploreScreen() {
 
       {/* Contenu principal */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {loading && (
+        {loading && searchQuery.length > 0 && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={textActiveColor} />
             <Text style={[styles.loadingText, { color: textColor }]}>
-              Chargement...
+              Recherche en cours...
             </Text>
           </View>
         )}
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={[styles.errorText, { color: 'red' }]}>{error}</Text>
-          </View>
-        )}
-
-        {/* Liste des pays */}
-        {activeTab === 'countries' && !loading && (
-          <View style={styles.countriesList}>
-            {filteredCountries.map((country) => (
-              <TouchableOpacity
-                key={country.code}
-                style={[styles.countryCard, { borderColor: borderColor }]}
-                onPress={() => handleCountryPress(country)}
-              >
-                <Text style={styles.flagEmoji}>{country.flag}</Text>
-                <View style={styles.countryInfo}>
-                  <Text style={[styles.countryName, { color: textColor }]}>
-                    {country.name}
-                  </Text>
-                  <Text style={[styles.countryRegion, { color: textColor }]}>
-                    {country.region}
-                  </Text>
-                  {country.capital && (
-                    <Text style={[styles.countryCapital, { color: textActiveColor }]}>
-                      Capitale: {country.capital}
-                    </Text>
-                  )}
-                </View>
-                <Text style={[styles.arrowIcon, { color: textActiveColor }]}>→</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
         {/* Liste des villes */}
-        {activeTab === 'cities' && !loading && (
+        {!loading && cities.length > 0 && (
           <View style={styles.citiesList}>
-            {filteredCities.map((city) => (
+            {cities.map((city, index) => (
               <TouchableOpacity
-                key={city.name}
-                style={[styles.cityCard, { backgroundColor: '#2a2a2a' }]}
+                key={`${city.name}-${city.country}-${index}`}
+                style={[styles.cityCard, { backgroundColor: buttonBackgroundColor, borderColor: borderColor }]}
+                onPress={() => handleCityPress(city)}
               >
-                <Image source={{ uri: city.imageUrl }} style={styles.cityImage} />
-                <View style={styles.cityInfo}>
-                  <Text style={[styles.cityName, { color: textColor }]}>
-                    {city.name}
-                  </Text>
-                  <Text style={[styles.cityPopulation, { color: textActiveColor }]}>
-                    {city.population.toLocaleString()} habitants
-                  </Text>
-                  <Text style={[styles.cityDescription, { color: textColor }]} numberOfLines={3}>
-                    {city.description}
+                <View style={styles.cityMainContent}>
+                  <Image
+                    source={{ uri: `https://flagcdn.com/w80/${city.country.toLowerCase()}.png` }}
+                    style={styles.countryFlag}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.cityTextInfo}>
+                    <Text style={[styles.cityName, { color: '#FFFFFF' }]}>
+                      {city.name}
+                    </Text>
+                    <Text style={[styles.countryName, { color: textActiveColor }]}>
+                      {city.country}
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* Note moyenne simulée */}
+                <View style={styles.ratingSection}>
+                  <StarRating 
+                    rating={3.5 + Math.random() * 1.5} 
+                    readonly={true} 
+                    size="small"
+                    color="#FFD700"
+                  />
+                  <Text style={[styles.ratingsCount, { color: textColor }]}>
+                    ({Math.floor(Math.random() * 100) + 10})
                   </Text>
                 </View>
+                
+                <Text style={[styles.tapHint, { color: textActiveColor }]}>
+                  Tapez pour noter
+                </Text>
               </TouchableOpacity>
             ))}
-            
-            {filteredCities.length === 0 && !loading && (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: textColor }]}>
-                  Aucune ville trouvée pour ce pays.
-                </Text>
-                <Text style={[styles.emptySubtext, { color: textColor }]}>
-                  Notre base de données s'enrichit régulièrement !
-                </Text>
-              </View>
-            )}
+          </View>
+        )}
+
+        {/* Message si aucune ville trouvée */}
+        {!loading && cities.length === 0 && searchQuery.length > 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: textColor }]}>
+              Aucune ville trouvée pour "{searchQuery}"
+            </Text>
+          </View>
+        )}
+
+        {/* Instructions initiales */}
+        {searchQuery.length === 0 && (
+          <View style={styles.instructionContainer}>
+            <Text style={[styles.instructionText, { color: textColor }]}>
+              Tapez le nom d'une ville pour commencer votre recherche
+            </Text>
+            <Text style={[styles.instructionSubtext, { color: textColor }]}>
+              Plus de 154 000 villes disponibles dans le monde
+            </Text>
           </View>
         )}
       </ScrollView>
+
+      {/* Modal de notation */}
+      <SimpleCityRatingModal
+        visible={modalVisible}
+        city={selectedCity}
+        onClose={() => setModalVisible(false)}
+        onRate={handleRateCity}
+      />
     </SafeAreaView>
   );
 }
@@ -203,14 +217,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.7,
   },
-  errorContainer: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
   countriesList: {
     paddingBottom: 20,
   },
@@ -252,33 +258,61 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   cityCard: {
-    flexDirection: 'row',
+    padding: 15,
     borderRadius: 12,
     marginBottom: 15,
-    overflow: 'hidden',
-  },
-  cityImage: {
-    width: 100,
-    height: 80,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cityInfo: {
     flex: 1,
-    padding: 12,
-    justifyContent: 'center',
+  },
+  cityMainContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cityTextInfo: {
+    flex: 1,
+    marginLeft: 4,
+  },
+  cityHeader: {
+    marginBottom: 8,
   },
   cityName: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   cityPopulation: {
-    fontSize: 12,
-    marginBottom: 6,
+    fontSize: 14,
+    opacity: 0.7,
   },
-  cityDescription: {
+  ratingSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  ratingsCount: {
     fontSize: 12,
+    opacity: 0.7,
+  },
+  userRatingSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  userRatingLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tapHint: {
+    fontSize: 12,
+    fontWeight: '600',
     opacity: 0.8,
-    lineHeight: 16,
+    textAlign: 'center',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -289,9 +323,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: 14,
-    opacity: 0.7,
+  countryFlag: {
+    width: 32,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  instructionContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  instructionText: {
+    fontSize: 18,
+    fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  instructionSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });

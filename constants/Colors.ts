@@ -11,13 +11,13 @@ export const Colors = {
     text: '#B0B0B0', // Gris clair pour tous les textes par défaut
     textActive: '#FFFFFF', // Blanc pour les éléments actifs/sélectionnés
     rating: '#FF8C00', // Orange pour les notes/évaluations
-    background: '#1A1A1A', // Garde le fond sombre actuel
+    background: '#5784BA', // Nouveau fond bleu
     headerBackground: '#808080', // Fond gris foncé pour les headers
     scrollBackground: '#D3D3D3', // Fond gris très clair pour les zones de scroll
-    tint: tintColorLight,
+    tint: '#FFFFFF', // Tab bar fond blanc
     icon: '#B0B0B0',
-    tabIconDefault: '#B0B0B0', // Gris clair pour les icônes non sélectionnées
-    tabIconSelected: '#FFFFFF', // Blanc pour les icônes sélectionnées
+    tabIconDefault: '#B0B0B0', // Gris pour les icônes non sélectionnées
+    tabIconSelected: '#5784BA', // Bleu pour les icônes sélectionnées
     buttonBackground: '#FFFFFF', // Boutons en blanc
     buttonText: '#000000', // Texte des boutons en noir
     borderColor: '#FFFFFF', // Bordures en blanc
@@ -26,13 +26,13 @@ export const Colors = {
     text: '#B0B0B0', // Gris clair pour tous les textes par défaut
     textActive: '#FFFFFF', // Blanc pour les éléments actifs/sélectionnés
     rating: '#FF8C00', // Orange pour les notes/évaluations
-    background: '#1A1A1A', // Garde le fond sombre actuel
+    background: '#5784BA', // Nouveau fond bleu
     headerBackground: '#808080', // Fond gris foncé pour les headers
     scrollBackground: '#D3D3D3', // Fond gris très clair pour les zones de scroll
-    tint: tintColorDark,
+    tint: '#FFFFFF', // Tab bar fond blanc
     icon: '#B0B0B0',
-    tabIconDefault: '#B0B0B0', // Gris clair pour les icônes non sélectionnées
-    tabIconSelected: '#FFFFFF', // Blanc pour les icônes sélectionnées
+    tabIconDefault: '#B0B0B0', // Gris pour les icônes non sélectionnées
+    tabIconSelected: '#5784BA', // Bleu pour les icônes sélectionnées
     buttonBackground: '#FFFFFF', // Boutons en blanc
     buttonText: '#000000', // Texte des boutons en noir
     borderColor: '#FFFFFF', // Bordures en blanc

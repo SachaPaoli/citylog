@@ -16,7 +16,7 @@ export default function TabLayout() {
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tabIconSelected, // Blanc pour les icônes actives
+          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tabIconSelected, // Bleu pour les icônes actives
           tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault, // Gris clair pour les icônes inactives
           headerShown: false,
           tabBarButton: HapticTab,
@@ -25,8 +25,11 @@ export default function TabLayout() {
             ios: {
               // Use a transparent background on iOS to show the blur effect
               position: 'absolute',
+              backgroundColor: '#FFFFFF', // Fond blanc
             },
-            default: {},
+            default: {
+              backgroundColor: '#FFFFFF', // Fond blanc
+            },
           }),
         }}>
       <Tabs.Screen
