@@ -1,19 +1,19 @@
+import { StarRating } from '@/components/StarRating';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post, TripItem } from '@/types/Post';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { StarRating } from '@/components/StarRating';
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 type TabType = 'staying' | 'restaurant' | 'activities' | 'other';

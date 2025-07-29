@@ -12,10 +12,12 @@ export default function ExploreScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
   const borderColor = useThemeColor({}, 'borderColor');
+  const headerColor = '#2A2A2A'; // Gris très foncé comme la page d'accueil
   
   const [searchQuery, setSearchQuery] = useState('');
   const [cities, setCities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'cities' | 'members'>('cities');
   
   // Modal de notation
   const [modalVisible, setModalVisible] = useState(false);
@@ -59,16 +61,9 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: textColor }]}>
-          Explorer les Villes
-        </Text>
-      </View>
-
+    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
       {/* Barre de recherche */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: headerColor }]}>
         <TextInput
           style={[styles.searchInput, { color: textColor, borderColor: borderColor }]}
           placeholder="Rechercher une ville..."
@@ -78,80 +73,109 @@ export default function ExploreScreen() {
         />
       </View>
 
+      {/* Onglets */}
+      <View style={[styles.tabsContainer, { backgroundColor: headerColor }]}>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'cities' && styles.activeTab
+          ]}
+          onPress={() => setActiveTab('cities')}
+        >
+          <Text style={[
+            styles.tabText,
+            { color: activeTab === 'cities' ? '#FFFFFF' : textColor }
+          ]}>
+            Cities
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'members' && styles.activeTab
+          ]}
+          onPress={() => setActiveTab('members')}
+        >
+          <Text style={[
+            styles.tabText,
+            { color: activeTab === 'members' ? '#FFFFFF' : textColor }
+          ]}>
+            Members
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Contenu principal */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {loading && searchQuery.length > 0 && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={textActiveColor} />
-            <Text style={[styles.loadingText, { color: textColor }]}>
-              Recherche en cours...
-            </Text>
-          </View>
-        )}
-
-        {/* Liste des villes */}
-        {!loading && cities.length > 0 && (
-          <View style={styles.citiesList}>
-            {cities.map((city, index) => (
-              <TouchableOpacity
-                key={`${city.name}-${city.country}-${index}`}
-                style={[styles.cityCard, { backgroundColor: buttonBackgroundColor, borderColor: borderColor }]}
-                onPress={() => handleCityPress(city)}
-              >
-                <View style={styles.cityMainContent}>
-                  <Image
-                    source={{ uri: `https://flagcdn.com/w80/${city.country.toLowerCase()}.png` }}
-                    style={styles.countryFlag}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.cityTextInfo}>
-                    <Text style={[styles.cityName, { color: '#FFFFFF' }]}>
-                      {city.name}
-                    </Text>
-                    <Text style={[styles.countryName, { color: textActiveColor }]}>
-                      {city.country}
-                    </Text>
-                  </View>
-                </View>
-                
-                {/* Note moyenne simulée */}
-                <View style={styles.ratingSection}>
-                  <StarRating 
-                    rating={3.5 + Math.random() * 1.5} 
-                    readonly={true} 
-                    size="small"
-                    color="#FFD700"
-                  />
-                  <Text style={[styles.ratingsCount, { color: textColor }]}>
-                    ({Math.floor(Math.random() * 100) + 10})
-                  </Text>
-                </View>
-                
-                <Text style={[styles.tapHint, { color: textActiveColor }]}>
-                  Tapez pour noter
+      <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
+        {activeTab === 'cities' && (
+          <>
+            {loading && searchQuery.length > 0 && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={textActiveColor} />
+                <Text style={[styles.loadingText, { color: textColor }]}>
+                  Recherche en cours...
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              </View>
+            )}
+
+            {/* Liste des villes */}
+            {!loading && cities.length > 0 && (
+              <View style={styles.citiesList}>
+                {cities.map((city, index) => (
+                  <TouchableOpacity
+                    key={`${city.name}-${city.country}-${index}`}
+                    style={[styles.cityCard, { backgroundColor: '#3A3A3A', borderColor: '#555' }]}
+                    onPress={() => handleCityPress(city)}
+                  >
+                    <Image
+                      source={{ uri: `https://flagcdn.com/w80/${city.country.toLowerCase()}.png` }}
+                      style={styles.countryFlag}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.cityTextInfo}>
+                      <Text style={[styles.cityName, { color: '#FFFFFF' }]}>
+                        {city.name}
+                      </Text>
+                      <Text style={[styles.countryName, { color: '#CCCCCC' }]}>
+                        {city.country}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Message si aucune ville trouvée */}
+            {!loading && cities.length === 0 && searchQuery.length > 0 && (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
+                  Aucune ville trouvée pour "{searchQuery}"
+                </Text>
+              </View>
+            )}
+
+            {/* Instructions initiales */}
+            {searchQuery.length === 0 && (
+              <View style={styles.instructionContainer}>
+                <Text style={[styles.instructionText, { color: textColor }]}>
+                  Tapez le nom d'une ville pour commencer votre recherche
+                </Text>
+                <Text style={[styles.instructionSubtext, { color: textColor }]}>
+                  Plus de 154 000 villes disponibles dans le monde
+                </Text>
+              </View>
+            )}
+          </>
         )}
 
-        {/* Message si aucune ville trouvée */}
-        {!loading && cities.length === 0 && searchQuery.length > 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: textColor }]}>
-              Aucune ville trouvée pour "{searchQuery}"
-            </Text>
-          </View>
-        )}
-
-        {/* Instructions initiales */}
-        {searchQuery.length === 0 && (
+        {activeTab === 'members' && (
           <View style={styles.instructionContainer}>
             <Text style={[styles.instructionText, { color: textColor }]}>
-              Tapez le nom d'une ville pour commencer votre recherche
+              Section Members
             </Text>
             <Text style={[styles.instructionSubtext, { color: textColor }]}>
-              Plus de 154 000 villes disponibles dans le monde
+              Fonctionnalité à venir...
             </Text>
           </View>
         )}
@@ -193,15 +217,37 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 15,
+    paddingBottom: 12,
+    paddingTop: 15,
   },
   searchInput: {
-    height: 45,
+    height: 38,
     borderWidth: 1.5,
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    fontSize: 16,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    fontSize: 15,
     backgroundColor: 'rgba(212, 184, 150, 0.1)',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#FFFFFF',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -210,7 +256,7 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: 30,
   },
   loadingText: {
     marginTop: 10,
@@ -236,11 +282,6 @@ const styles = StyleSheet.create({
   countryInfo: {
     flex: 1,
   },
-  countryName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
   countryRegion: {
     fontSize: 14,
     opacity: 0.7,
@@ -255,15 +296,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   citiesList: {
-    paddingBottom: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
   },
   cityCard: {
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   cityInfo: {
     flex: 1,
@@ -275,15 +318,15 @@ const styles = StyleSheet.create({
   },
   cityTextInfo: {
     flex: 1,
-    marginLeft: 4,
-  },
-  cityHeader: {
-    marginBottom: 8,
   },
   cityName: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 1,
+  },
+  countryName: {
+    fontSize: 13,
+    opacity: 0.8,
   },
   cityPopulation: {
     fontSize: 14,
@@ -324,14 +367,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   countryFlag: {
-    width: 32,
-    height: 24,
-    borderRadius: 4,
-    marginRight: 12,
+    width: 28,
+    height: 20,
+    borderRadius: 3,
+    marginRight: 10,
   },
   instructionContainer: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
     paddingHorizontal: 20,
   },
   instructionText: {

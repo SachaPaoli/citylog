@@ -1,6 +1,6 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
-import React, { useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StarRating } from './StarRating';
 
 interface SimpleCity {
@@ -25,17 +25,53 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate }: Simple
   const backgroundColor = useThemeColor({}, 'background');
   const borderColor = useThemeColor({}, 'borderColor');
   
-  const [userRating, setUserRating] = useState(city?.userRating || 0);
+  const [userRating, setUserRating] = useState(0);
+  const [hasBeenThere, setHasBeenThere] = useState(false);
+  const curtainAnimation = useState(new Animated.Value(0))[0];
+
+  // Réinitialiser les états quand la ville change
+  useEffect(() => {
+    if (city) {
+      setUserRating(city.userRating || 0);
+      setHasBeenThere(false); // ou récupérer depuis une base de données
+      // Réinitialiser l'animation
+      curtainAnimation.setValue(0);
+    }
+  }, [city]);
+
+  // Animation du rideau
+  useEffect(() => {
+    Animated.timing(curtainAnimation, {
+      toValue: hasBeenThere ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [hasBeenThere, curtainAnimation]);
 
   const handleRatingChange = (rating: number) => {
     setUserRating(rating);
   };
 
   const handleSubmitRating = () => {
-    if (city) {
-      onRate(city.id, userRating);
-      onClose();
+    if (city && userRating > 0) {
+      // Activer automatiquement "I have been there" si pas déjà fait
+      if (!hasBeenThere) {
+        setHasBeenThere(true);
+        // Attendre un peu pour voir l'animation puis fermer
+        setTimeout(() => {
+          onRate(city.id, userRating);
+          onClose();
+        }, 800); // 800ms pour voir l'animation complète
+      } else {
+        // Si déjà activé, fermer directement
+        onRate(city.id, userRating);
+        onClose();
+      }
     }
+  };
+
+  const toggleHasBeenThere = () => {
+    setHasBeenThere(!hasBeenThere);
   };
 
   if (!city) return null;
@@ -91,10 +127,10 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate }: Simple
                 rating={userRating} 
                 onRatingChange={handleRatingChange}
                 size="large"
-                color="#FF8C00"
+                color="#f5c518"
                 showRating={false}
               />
-              <Text style={[styles.currentRating, { color: '#FF8C00' }]}>
+              <Text style={[styles.currentRating, { color: textColor }]}>
                 {userRating > 0 ? `${userRating.toFixed(1)}/5` : 'Pas encore noté'}
               </Text>
             </View>
@@ -102,26 +138,57 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate }: Simple
 
           {/* Boutons d'action */}
           <View style={styles.actions}>
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.rateButton]}
-              onPress={handleSubmitRating}
-              disabled={userRating === 0}
-            >
-              <Text style={styles.rateButtonText}>
-                {city.userRating ? 'Modifier ma note' : 'Noter cette ville'}
-              </Text>
-            </TouchableOpacity>
-
+            {/* Ligne des boutons de notation */}
             {userRating > 0 && (
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.clearButton, { borderColor }]}
-                onPress={() => setUserRating(0)}
-              >
-                <Text style={[styles.clearButtonText, { color: textColor }]}>
-                  Supprimer ma note
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.actionRow}>
+                <TouchableOpacity 
+                  style={[styles.clearButton, { borderColor }]}
+                  onPress={() => setUserRating(0)}
+                >
+                  <Text style={[styles.clearButtonText, { color: textColor }]}>
+                    Supprimer ma note
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.rateButton]}
+                  onPress={handleSubmitRating}
+                >
+                  <Text style={styles.rateButtonText}>
+                    Valider
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
+
+            {/* Bouton I have been there en dessous */}
+            <TouchableOpacity 
+              style={[styles.visitedButtonFullWidth]}
+              onPress={toggleHasBeenThere}
+            >
+              <View style={styles.visitedButtonContainer}>
+                <Animated.View style={[
+                  styles.curtainEffect,
+                  {
+                    width: curtainAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }
+                ]} />
+                <View style={styles.visitedButtonContent}>
+                  <Text style={[
+                    styles.visitedButtonTextNew, 
+                    hasBeenThere && styles.visitedButtonTextNewActive
+                  ]}>
+                    I have been there
+                  </Text>
+                  {hasBeenThere && (
+                    <Text style={styles.checkMarkNew}>✓</Text>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -216,7 +283,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rateButton: {
-    backgroundColor: '#FF8C00',
+    backgroundColor: '#5784BA',
+    flex: 1,
   },
   rateButtonText: {
     color: '#FFFFFF',
@@ -226,9 +294,114 @@ const styles = StyleSheet.create({
   clearButton: {
     borderWidth: 1,
     backgroundColor: 'transparent',
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignItems: 'center',
+    flex: 1,
   },
   clearButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 15,
+    marginBottom: 15,
+  },
+  visitedButtonFullWidth: {
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  visitedButtonNew: {
+    width: 120,
+    height: 60,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  visitedButtonContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  curtainEffect: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#5784BA',
+    zIndex: 1,
+  },
+  visitedButtonContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    zIndex: 2,
+    gap: 8,
+  },
+  visitedButtonTextContainer: {
+    alignItems: 'center',
+  },
+  visitedButtonTextNew: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  visitedButtonTextNewActive: {
+    color: '#FFFFFF',
+  },
+  checkMarkNew: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  visitedButton: {
+    backgroundColor: '#E0E0E0',
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  visitedButtonActive: {
+    backgroundColor: '#5784BA',
+  },
+  visitedButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  visitedButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  walkingIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#999',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  walkingIconActive: {
+    backgroundColor: '#5784BA',
+    borderColor: '#5784BA',
+  },
+  walkingIconText: {
+    fontSize: 16,
+  },
+  walkingIconTextActive: {
+    color: '#FFFFFF',
   },
 });
