@@ -3,6 +3,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post, TripItem } from '@/types/Post';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { StarRating } from '@/components/StarRating';
 import {
     ActivityIndicator,
     Image,
@@ -25,7 +26,8 @@ export default function TripDetailScreen() {
   
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6';
+  const whiteColor = '#FFFFFF';
+  const headerColor = '#2A2A2A'; // Gris très foncé comme la page d'accueil
 
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,24 +102,24 @@ export default function TripDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
+        <View style={[styles.header, { backgroundColor: headerColor }]}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={[styles.backButtonText, { color: beigeColor }]}>← Retour</Text>
+            <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.menuButton}
             onPress={() => setShowMenu(true)}
           >
-            <Text style={[styles.menuButtonText, { color: beigeColor }]}>⋯</Text>
+            <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={beigeColor} />
+        <View style={[styles.loadingContainer, { backgroundColor }]}>
+          <ActivityIndicator size="large" color={whiteColor} />
           <Text style={[styles.loadingText, { color: textColor }]}>
             Chargement du voyage...
           </Text>
@@ -128,23 +130,23 @@ export default function TripDetailScreen() {
 
   if (!post) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
+        <View style={[styles.header, { backgroundColor: headerColor }]}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={[styles.backButtonText, { color: beigeColor }]}>← Retour</Text>
+            <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.menuButton}
             onPress={() => setShowMenu(true)}
           >
-            <Text style={[styles.menuButtonText, { color: beigeColor }]}>⋯</Text>
+            <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorContainer, { backgroundColor }]}>
           <Text style={[styles.errorText, { color: textColor }]}>
             Voyage introuvable
           </Text>
@@ -156,21 +158,21 @@ export default function TripDetailScreen() {
   const currentItems = getCurrentItems();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
       {/* Header avec bouton retour et menu */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: headerColor }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={[styles.backButtonText, { color: beigeColor }]}>← Retour</Text>
+          <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.menuButton}
           onPress={() => setShowMenu(true)}
         >
-          <Text style={[styles.menuButtonText, { color: beigeColor }]}>⋯</Text>
+          <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
         </TouchableOpacity>
       </View>
 
@@ -204,7 +206,7 @@ export default function TripDetailScreen() {
 
       {/* Scroll global de toute la page */}
       <ScrollView 
-        style={styles.mainScroll} 
+        style={[styles.mainScroll, { backgroundColor }]} 
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {
           const offsetY = event.nativeEvent.contentOffset.y;
@@ -229,9 +231,13 @@ export default function TripDetailScreen() {
             <Text style={[styles.userName, { color: textColor }]}>
               Par {post.userName}
             </Text>
-            <Text style={[styles.rating, { color: beigeColor }]}>
-              {post.rating}/10
-            </Text>
+            <View style={styles.ratingContainer}>
+              <StarRating 
+                rating={post.rating / 2} 
+                readonly={true} 
+                size="medium"
+              />
+            </View>
             <Text style={[styles.description, { color: textColor }]}>
               {post.description}
             </Text>
@@ -245,13 +251,13 @@ export default function TripDetailScreen() {
               key={tab}
               style={[
                 styles.tab, 
-                activeTab === tab && { borderBottomColor: beigeColor, borderBottomWidth: 2 }
+                activeTab === tab && { borderBottomColor: whiteColor, borderBottomWidth: 2 }
               ]}
               onPress={() => setActiveTab(tab)}
             >
               <Text style={[
                 styles.tabText, 
-                { color: activeTab === tab ? beigeColor : textColor }
+                { color: activeTab === tab ? whiteColor : textColor }
               ]}>
                 {getTabLabel(tab)}
               </Text>
@@ -298,13 +304,13 @@ export default function TripDetailScreen() {
                   {getTabLabel(activeTab)}
                 </Text>
                 {currentItems.map(item => (
-                  <View key={item.id} style={[styles.itemCard, { borderColor: beigeColor }]}>
+                  <View key={item.id} style={[styles.itemCard, { borderColor: whiteColor }]}>
                     <View style={styles.itemHeader}>
                       <Text style={[styles.itemName, { color: textColor }]}>
                         {item.name}
                       </Text>
-                      <Text style={[styles.itemRating, { color: beigeColor }]}>
-                        {item.rating}/10
+                      <Text style={[styles.itemRating, { color: '#f5c518' }]}>
+                        {item.rating}/5
                       </Text>
                     </View>
                     {item.description && (
@@ -352,7 +358,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(212, 184, 150, 0.3)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -367,7 +373,7 @@ const styles = StyleSheet.create({
   menuButton: {
     padding: 8,
     borderWidth: 1,
-    borderColor: '#E5C9A6',
+    borderColor: '#FFFFFF',
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -456,6 +462,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
   },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 10,
+  },
+  ratingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   description: {
     fontSize: 16,
     textAlign: 'center',
@@ -467,7 +483,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(212, 184, 150, 0.3)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
   },
   tab: {
     flex: 1,
@@ -526,7 +542,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    backgroundColor: 'rgba(229, 201, 166, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   itemHeader: {
     flexDirection: 'row',
@@ -541,6 +557,15 @@ const styles = StyleSheet.create({
   },
   itemRating: {
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  itemRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  itemRatingText: {
+    fontSize: 14,
     fontWeight: 'bold',
   },
   itemDescription: {
@@ -561,7 +586,7 @@ const styles = StyleSheet.create({
   },
   scrollIndicator: {
     width: 2,
-    backgroundColor: '#E5C9A6',
+    backgroundColor: '#FFFFFF',
     borderRadius: 1,
     opacity: 0.8,
   },
