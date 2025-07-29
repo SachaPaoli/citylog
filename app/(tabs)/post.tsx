@@ -3,9 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Animated,
   Image,
   Modal,
   ScrollView,
@@ -57,6 +58,8 @@ export default function PostScreen() {
   const [cityName, setCityName] = useState('');
   const [countryName, setCountryName] = useState('');
   const [tripDescription, setTripDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(true); // true = public, false = private
+  const publicPrivateAnimation = useState(new Animated.Value(1))[0]; // Commence en mode public
   
   // Modals pour ajouter/modifier des items
   const [showItemModal, setShowItemModal] = useState(false);
@@ -82,6 +85,8 @@ export default function PostScreen() {
     setCityName('');
     setCountryName('');
     setTripDescription('');
+    setIsPublic(true);
+    publicPrivateAnimation.setValue(1);
     setActiveTab('staying');
   };
 
@@ -95,6 +100,20 @@ export default function PostScreen() {
       images: []
     });
     setEditingItem(null);
+  };
+
+  // Animation pour le bouton public/private
+  useEffect(() => {
+    Animated.timing(publicPrivateAnimation, {
+      toValue: isPublic ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [isPublic, publicPrivateAnimation]);
+
+  // Toggle public/private
+  const togglePublicPrivate = () => {
+    setIsPublic(!isPublic);
   };
 
   // Ouvrir le modal d'ajout d'item
@@ -495,6 +514,37 @@ export default function PostScreen() {
                     showRating={true}
                   />
                 </View>
+                
+                {/* Bouton Public/Private directement collé aux étoiles */}
+                <View style={styles.privacySection}>
+                  <Text style={[styles.privacyLabel, { color: textColor }]}>
+                    Visibilité:
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.privacyButton}
+                    onPress={togglePublicPrivate}
+                  >
+                    <View style={styles.privacyButtonContainer}>
+                      <Animated.View style={[
+                        styles.privacyCurtainEffect,
+                        {
+                          width: publicPrivateAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['100%', '0%'], // Inverse: private = 100%, public = 0%
+                          }),
+                        }
+                      ]} />
+                      <View style={styles.privacyButtonContent}>
+                        <Text style={[
+                          styles.privacyButtonText, 
+                          !isPublic && styles.privacyButtonTextActive
+                        ]}>
+                          {isPublic ? 'Public' : 'Private'}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
             
@@ -777,15 +827,15 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 25,
+    marginBottom: 15,
   },
   averageRatingContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 15,
   },
   averageRatingLabel: {
     fontSize: 18,
-    marginBottom: 8,
+    marginBottom: 5,
   },
   averageRating: {
     fontSize: 36,
@@ -828,7 +878,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '85%',
+    height: '88%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
@@ -882,12 +932,12 @@ const styles = StyleSheet.create({
     height: 120,
   },
   coverImageSection: {
-    marginBottom: 20,
+    marginBottom: 12,
     alignItems: 'center',
   },
   coverImageLabel: {
     fontSize: 16,
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
   },
   coverImageContainer: {
@@ -937,11 +987,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   locationSection: {
-    marginBottom: 15,
+    marginBottom: 12,
   },
   locationLabel: {
     fontSize: 16,
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   locationInputs: {
@@ -957,11 +1007,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   descriptionSection: {
-    marginBottom: 15,
+    marginBottom: 12,
   },
   descriptionLabel: {
     fontSize: 16,
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   descriptionTextArea: {
@@ -1080,5 +1130,57 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  privacySection: {
+    alignItems: 'center',
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  privacyLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 1,
+    textAlign: 'center',
+  },
+  privacyButton: {
+    width: 140,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#5784BA',
+    overflow: 'hidden',
+    position: 'relative',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  privacyButtonContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  privacyCurtainEffect: {
+    position: 'absolute',
+    right: 0, // Commence de la droite pour "private"
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#333333', // Couleur sombre pour "private"
+    zIndex: 1,
+  },
+  privacyButtonContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  privacyButtonText: {
+    color: '#333333',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  privacyButtonTextActive: {
+    color: '#FFFFFF',
   },
 });
