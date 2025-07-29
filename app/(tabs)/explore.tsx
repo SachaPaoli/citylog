@@ -1,9 +1,9 @@
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { RealCitiesService } from '@/services/RealCitiesService';
 import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
 import { StarRating } from '@/components/StarRating';
-import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { RealCitiesService } from '@/services/RealCitiesService';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ExploreScreen() {

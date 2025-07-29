@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
-import { StarRating } from './StarRating';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import React, { useState } from 'react';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StarRating } from './StarRating';
 
 interface SimpleCity {
   id: number;
