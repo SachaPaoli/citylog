@@ -4,7 +4,6 @@ import { Post } from '@/types/Post';
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { StarRating } from './StarRating';
 
 interface TravelPostCardProps {
   post: Post;

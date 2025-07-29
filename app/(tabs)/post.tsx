@@ -1,3 +1,4 @@
+import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -15,7 +16,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StarRating } from '@/components/StarRating';
 
 interface SelectedImage {
   id: string;
