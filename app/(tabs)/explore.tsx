@@ -1,5 +1,4 @@
 import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
-import { StarRating } from '@/components/StarRating';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import React, { useEffect, useState } from 'react';

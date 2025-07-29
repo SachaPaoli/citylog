@@ -373,11 +373,12 @@ export default function PostScreen() {
     );
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      {/* Onglets */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Nouveau Voyage</Text>
+return (
+  <SafeAreaView style={[styles.container, { backgroundColor: '#232323' }]}> 
+    {/* Onglets + tabs + separator all on dark background */}
+    <View>
+      <View style={[styles.header, { backgroundColor: 'transparent' }]}> 
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>New trip</Text>
         <View style={styles.tabsContainer}>
           {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
             <TouchableOpacity
@@ -385,7 +386,7 @@ export default function PostScreen() {
               style={[styles.tab, activeTab === tab && { borderBottomColor: borderColor }]}
               onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, { color: activeTab === tab ? textActiveColor : textColor }]}>
+              <Text style={[styles.tabText, { color: activeTab === tab ? textActiveColor : textColor }]}> 
                 {tab === 'staying' ? 'Staying' : 
                  tab === 'restaurant' ? 'Restaurant' : 
                  tab === 'activities' ? 'Activities' : 'Other'}
@@ -394,24 +395,24 @@ export default function PostScreen() {
           ))}
         </View>
       </View>
-
       {/* Ligne de séparation grise */}
       <View style={styles.separatorContainer}>
-        <View style={[styles.separatorLine, { backgroundColor: '#333333' }]} />
+        <View style={[styles.separatorLine, { backgroundColor: '#232323' }]} />
       </View>
+    </View>
 
-      {/* Contenu */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderTabContent()}
-      </ScrollView>
+    {/* Contenu */}
+    <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
+      {renderTabContent()}
+    </ScrollView>
 
-      {/* Bouton flottant */}
-      <TouchableOpacity 
-        style={[styles.floatingButton, { backgroundColor: '#5784BA' }]}
-        onPress={() => setShowPostModal(true)}
-      >
-        <Text style={styles.floatingButtonText}>Log your city</Text>
-      </TouchableOpacity>
+    {/* Bouton flottant */}
+    <TouchableOpacity 
+      style={[styles.floatingButton, { backgroundColor: '#5784BA' }]}
+      onPress={() => setShowPostModal(true)}
+    >
+      <Text style={styles.floatingButtonText}>Log your city</Text>
+    </TouchableOpacity>
 
       {/* Modal de post */}
       <Modal
@@ -677,15 +678,16 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 0,
-    paddingVertical: 12,
-    paddingBottom: 5, // Réduire l'espace vers la ligne
+    paddingVertical: 6, // More compact
+    paddingBottom: 2, // Even less space
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+    // backgroundColor moved to JSX for dynamic override
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 18, // Smaller title
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 8, // Less space
     textAlign: 'center',
   },
   tabsContainer: {
