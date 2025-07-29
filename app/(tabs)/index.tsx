@@ -13,7 +13,7 @@ export default function HomeScreen() {
   const textActiveColor = useThemeColor({}, 'textActive');
   const borderColor = useThemeColor({}, 'borderColor');
   
-  const { posts, loading, error, refreshPosts, toggleLike } = usePosts();
+  const { posts, loading, error, refreshPosts } = usePosts();
   const [refreshing, setRefreshing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'cities' | 'trips'>('cities');
 
@@ -24,48 +24,47 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+    <SafeAreaView style={[styles.container, { backgroundColor: '#2A2A2A' }]}>
+      {/* Section du haut - gris foncé */}
+      <View style={[styles.topSection, { backgroundColor: '#2A2A2A' }]}>
         {/* Titre CityLog */}
         <CityLogTitle />
         
         {/* Onglets */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'cities' && { borderBottomColor: borderColor }]}
+            style={[styles.tab, activeTab === 'cities' && { borderBottomColor: '#FFFFFF' }]}
             onPress={() => setActiveTab('cities')}
           >
             <Text style={[
               styles.tabText, 
-              { color: activeTab === 'cities' ? textActiveColor : textColor }
+              { color: activeTab === 'cities' ? '#FFFFFF' : '#B0B0B0' }
             ]}>
               Cities
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'trips' && { borderBottomColor: borderColor }]}
+            style={[styles.tab, activeTab === 'trips' && { borderBottomColor: '#FFFFFF' }]}
             onPress={() => setActiveTab('trips')}
           >
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'trips' ? textActiveColor : textColor }
+              { color: activeTab === 'trips' ? '#FFFFFF' : '#B0B0B0' }
             ]}>
               Trips
             </Text>
           </TouchableOpacity>
         </View>
-        
-        {/* Ligne de séparation grise */}
-        <View style={styles.separatorContainer}>
-          <View style={[styles.separatorLine, { backgroundColor: '#333333' }]} />
-        </View>
+      </View>
+
+      <ScrollView 
+        style={[styles.scrollView, { backgroundColor: '#3A3A3A' }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         
         {/* Messages d'état */}
         {loading && !refreshing && (
@@ -104,7 +103,6 @@ export default function HomeScreen() {
                 <TravelPostCard 
                   key={post.id} 
                   post={post}
-                  onLike={() => toggleLike(post.id)}
                 />
               ))}
             </>
@@ -130,6 +128,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  topSection: {
+    paddingTop: 0,
+    paddingBottom: 5,
+  },
   scrollView: {
     flex: 1,
   },
@@ -137,29 +139,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    marginTop: 5,
+    paddingBottom: 2,
+    marginTop: 0,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     marginHorizontal: -6,
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  separatorContainer: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-  },
-  separatorLine: {
-    height: 0.5,
-    width: '100%',
   },
   postsContainer: {
     paddingBottom: 20,

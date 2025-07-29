@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StarRating } from '@/components/StarRating';
 
 interface SelectedImage {
   id: string;
@@ -24,7 +25,7 @@ interface SelectedImage {
 interface TripItem {
   id: string;
   name: string;
-  rating: number;
+  rating: number; // Note sur 5 (avec demi-étoiles: 0, 0.5, 1, 1.5, ..., 5)
   description: string;
   images: SelectedImage[];
 }
@@ -56,6 +57,20 @@ export default function PostScreen() {
   const [cityName, setCityName] = useState('');
   const [countryName, setCountryName] = useState('');
   const [tripDescription, setTripDescription] = useState('');
+  
+  // Modals pour ajouter/modifier des items
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [currentItemType, setCurrentItemType] = useState<TabType>('staying');
+  const [editingItem, setEditingItem] = useState<TripItem | null>(null);
+  
+  // État temporaire pour le formulaire de l'item
+  const [tempItem, setTempItem] = useState<TripItem>({
+    id: '',
+    name: '',
+    rating: 2.5, // Note par défaut sur 5
+    description: '',
+    images: []
+  });
 
   // Réinitialiser le formulaire
   const resetForm = () => {
@@ -70,31 +85,72 @@ export default function PostScreen() {
     setActiveTab('staying');
   };
 
-  // Ajouter un nouvel item
-  const addNewItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other') => {
-    const newItem: TripItem = {
-      id: Date.now().toString(),
+  // Réinitialiser le formulaire d'item
+  const resetItemForm = () => {
+    setTempItem({
+      id: '',
       name: '',
-      rating: 5,
+      rating: 2.5, // Note par défaut sur 5
       description: '',
       images: []
-    };
+    });
+    setEditingItem(null);
+  };
 
-    if (tabType === 'staying') {
-      setStayingItems([...stayingItems, newItem]);
-    } else if (tabType === 'restaurant') {
-      setRestaurantItems([...restaurantItems, newItem]);
-    } else if (tabType === 'activities') {
-      setActivitiesItems([...activitiesItems, newItem]);
+  // Ouvrir le modal d'ajout d'item
+  const openAddItemModal = (tabType: TabType) => {
+    setCurrentItemType(tabType);
+    resetItemForm();
+    setTempItem(prev => ({ ...prev, id: Date.now().toString() }));
+    setShowItemModal(true);
+  };
+
+  // Ouvrir le modal de modification d'item
+  const openEditItemModal = (item: TripItem, tabType: TabType) => {
+    setCurrentItemType(tabType);
+    setEditingItem(item);
+    setTempItem({ ...item });
+    setShowItemModal(true);
+  };
+
+  // Sauvegarder l'item
+  const saveItem = () => {
+    if (!tempItem.name.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer un nom pour cet élément.');
+      return;
+    }
+
+    const itemToSave = { ...tempItem };
+
+    if (editingItem) {
+      // Modification d'un item existant
+      updateItemInList(currentItemType, itemToSave);
     } else {
-      setOtherItems([...otherItems, newItem]);
+      // Ajout d'un nouvel item
+      addItemToList(currentItemType, itemToSave);
+    }
+
+    setShowItemModal(false);
+    resetItemForm();
+  };
+
+  // Ajouter un item à la liste appropriée
+  const addItemToList = (tabType: TabType, item: TripItem) => {
+    if (tabType === 'staying') {
+      setStayingItems([...stayingItems, item]);
+    } else if (tabType === 'restaurant') {
+      setRestaurantItems([...restaurantItems, item]);
+    } else if (tabType === 'activities') {
+      setActivitiesItems([...activitiesItems, item]);
+    } else {
+      setOtherItems([...otherItems, item]);
     }
   };
 
-  // Mettre à jour un item
-  const updateItem = (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string, field: 'name' | 'rating' | 'description', value: string | number) => {
+  // Mettre à jour un item dans la liste appropriée
+  const updateItemInList = (tabType: TabType, updatedItem: TripItem) => {
     const updateItems = (items: TripItem[]) =>
-      items.map(item => item.id === itemId ? { ...item, [field]: value } : item);
+      items.map(item => item.id === updatedItem.id ? updatedItem : item);
 
     if (tabType === 'staying') {
       setStayingItems(updateItems(stayingItems));
@@ -107,8 +163,8 @@ export default function PostScreen() {
     }
   };
 
-  // Ajouter une photo
-  const pickImage = async (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string) => {
+  // Ajouter une photo à l'item temporaire
+  const pickImageForTempItem = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -122,43 +178,19 @@ export default function PostScreen() {
         uri: result.assets[0].uri
       };
 
-      const updateItems = (items: TripItem[]) =>
-        items.map(item => 
-          item.id === itemId 
-            ? { ...item, images: [...item.images, newImage] }
-            : item
-        );
-
-      if (tabType === 'staying') {
-        setStayingItems(updateItems(stayingItems));
-      } else if (tabType === 'restaurant') {
-        setRestaurantItems(updateItems(restaurantItems));
-      } else if (tabType === 'activities') {
-        setActivitiesItems(updateItems(activitiesItems));
-      } else {
-        setOtherItems(updateItems(otherItems));
-      }
+      setTempItem(prev => ({
+        ...prev,
+        images: [...prev.images, newImage]
+      }));
     }
   };
 
-  // Supprimer une photo
-  const removeImage = (tabType: 'staying' | 'restaurant' | 'activities' | 'other', itemId: string, imageId: string) => {
-    const updateItems = (items: TripItem[]) =>
-      items.map(item => 
-        item.id === itemId 
-          ? { ...item, images: item.images.filter(img => img.id !== imageId) }
-          : item
-      );
-
-    if (tabType === 'staying') {
-      setStayingItems(updateItems(stayingItems));
-    } else if (tabType === 'restaurant') {
-      setRestaurantItems(updateItems(restaurantItems));
-    } else if (tabType === 'activities') {
-      setActivitiesItems(updateItems(activitiesItems));
-    } else {
-      setOtherItems(updateItems(otherItems));
-    }
+  // Supprimer une photo de l'item temporaire
+  const removeImageFromTempItem = (imageId: string) => {
+    setTempItem(prev => ({
+      ...prev,
+      images: prev.images.filter(img => img.id !== imageId)
+    }));
   };
 
   // Supprimer un item
@@ -180,7 +212,7 @@ export default function PostScreen() {
     if (allItems.length === 0) return 0;
     
     const totalRating = allItems.reduce((sum, item) => sum + item.rating, 0);
-    return Math.round((totalRating / allItems.length) * 10) / 10;
+    return Math.round((totalRating / allItems.length) * 10) / 10; // Note moyenne sur 5
   };
 
   // Sélectionner la photo de couverture
@@ -258,89 +290,56 @@ export default function PostScreen() {
     return (
       <View style={styles.tabContent}>
         {currentItems.map(item => (
-          <View key={item.id} style={[styles.itemCard, { borderColor: borderColor }]}>
+          <TouchableOpacity 
+            key={item.id} 
+            style={[styles.itemCard, { borderColor: borderColor }]}
+            onPress={() => openEditItemModal(item, activeTab)}
+          >
             {/* Bouton supprimer */}
             <TouchableOpacity 
-              style={[styles.deleteItemButton, { backgroundColor: textActiveColor }]}
-              onPress={() => removeItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id)}
+              style={[styles.deleteItemButton, { backgroundColor: '#5784BA' }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                removeItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id);
+              }}
             >
               <Text style={styles.deleteItemText}>×</Text>
             </TouchableOpacity>
 
-            {/* Photos */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
-              {item.images.map(image => (
-                <View key={image.id} style={styles.imageContainer}>
-                  <Image source={{ uri: image.uri }} style={styles.itemImage} />
-                  <TouchableOpacity 
-                    style={styles.removeImageButton}
-                    onPress={() => removeImage(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, image.id)}
-                  >
-                    <Text style={styles.removeImageText}>×</Text>
-                  </TouchableOpacity>
+            {/* Première image ou placeholder */}
+            <View style={styles.cardImageContainer}>
+              {item.images.length > 0 ? (
+                <Image source={{ uri: item.images[0].uri }} style={styles.cardImage} />
+              ) : (
+                <View style={[styles.cardImagePlaceholder, { borderColor: borderColor }]}>
+                  <Text style={[styles.cardImagePlaceholderText, { color: textColor }]}>📷</Text>
                 </View>
-              ))}
-              <TouchableOpacity 
-                style={[styles.addImageButton, { borderColor: borderColor }]}
-                onPress={() => pickImage(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id)}
-              >
-                <Text style={[styles.addImageText, { color: textActiveColor }]}>+</Text>
-              </TouchableOpacity>
-            </ScrollView>
-
-            {/* Nom */}
-            <TextInput
-              style={[styles.nameInput, { color: textColor, borderColor: borderColor }]}
-              placeholder={`Nom ${activeTab === 'staying' ? 'du logement' : 
-                             activeTab === 'restaurant' ? 'du restaurant' : 
-                             activeTab === 'activities' ? 'de l\'activité' : 'de l\'autre'}`}
-              placeholderTextColor="#999"
-              value={item.name}
-              onChangeText={(text) => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'name', text)}
-            />
-
-            {/* Note */}
-            <View style={styles.ratingContainer}>
-              <Text style={[styles.ratingLabel, { color: textColor }]}>Note sur 10:</Text>
-              <View style={styles.ratingButtonsGrid}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (
-                  <TouchableOpacity
-                    key={rating}
-                    style={[
-                      styles.ratingButton, 
-                      { borderColor: borderColor },
-                      item.rating === rating && { backgroundColor: textActiveColor }
-                    ]}
-                    onPress={() => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'rating', rating)}
-                  >
-                    <Text style={[
-                      styles.ratingButtonText,
-                      { color: item.rating === rating ? '#000' : textColor }
-                    ]}>
-                      {rating}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              )}
             </View>
 
-            {/* Description */}
-            <TextInput
-              style={[styles.descriptionInput, { color: textColor, borderColor: borderColor }]}
-              placeholder="Description (optionnelle)"
-              placeholderTextColor="#999"
-              value={item.description}
-              onChangeText={(text) => updateItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other', item.id, 'description', text)}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+            {/* Informations */}
+            <View style={styles.cardInfo}>
+              <Text style={[styles.cardName, { color: textColor }]} numberOfLines={1}>
+                {item.name || `${activeTab === 'staying' ? 'Logement' : 
+                               activeTab === 'restaurant' ? 'Restaurant' : 
+                               activeTab === 'activities' ? 'Activité' : 'Autre'} sans nom`}
+              </Text>
+              <View style={[styles.cardRating, { alignItems: 'flex-start' }]}>
+                <StarRating rating={item.rating} readonly size="small" showRating={false} color="#f5c518" />
+              </View>
+              {item.images.length > 1 && (
+                <Text style={[styles.cardImageCount, { color: textColor }]}>
+                  +{item.images.length - 1} photo{item.images.length > 2 ? 's' : ''}
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
         ))}
 
         {/* Bouton ajouter */}
         <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: textActiveColor }]}
-          onPress={() => addNewItem(activeTab as 'staying' | 'restaurant' | 'activities' | 'other')}
+          style={[styles.addButton, { backgroundColor: '#5784BA' }]}
+          onPress={() => openAddItemModal(activeTab)}
         >
           <Text style={styles.addButtonText}>
             + Ajouter {activeTab === 'staying' ? 'un logement' : 
@@ -389,7 +388,7 @@ export default function PostScreen() {
 
       {/* Bouton flottant */}
       <TouchableOpacity 
-        style={[styles.floatingButton, { backgroundColor: textActiveColor }]}
+        style={[styles.floatingButton, { backgroundColor: '#5784BA' }]}
         onPress={() => setShowPostModal(true)}
       >
         <Text style={styles.floatingButtonText}>Log your city</Text>
@@ -487,16 +486,132 @@ export default function PostScreen() {
                 <Text style={[styles.averageRatingLabel, { color: textColor }]}>
                   Note finale:
                 </Text>
-                <Text style={[styles.averageRating, { color: textActiveColor }]}>
-                  {calculateAverageRating()}/10
-                </Text>
+                <View style={styles.averageRatingContainer}>
+                  <StarRating 
+                    rating={calculateAverageRating()} 
+                    readonly 
+                    size="large" 
+                    color="#f5c518"
+                    showRating={true}
+                  />
+                </View>
               </View>
             </View>
             
             {/* Bouton flottant dans le modal */}
             <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: textActiveColor }]} onPress={handlePost}>
+              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: '#5784BA' }]} onPress={handlePost}>
                 <Text style={styles.modalPostButtonText}>Poster le voyage</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal d'ajout/modification d'item */}
+      <Modal
+        visible={showItemModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowItemModal(false)}
+      >
+        <View style={styles.itemModalOverlay}>
+          <View style={[styles.itemModalContent, { backgroundColor }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowItemModal(false)}
+              >
+                <Text style={[styles.closeButtonText, { color: textColor }]}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.itemModalScroll} showsVerticalScrollIndicator={false}>
+              <Text style={[styles.itemModalTitle, { color: textColor }]}>
+                {editingItem ? 'Modifier' : 'Ajouter'} {
+                  currentItemType === 'staying' ? 'un logement' :
+                  currentItemType === 'restaurant' ? 'un restaurant' :
+                  currentItemType === 'activities' ? 'une activité' : 'autre chose'
+                }
+              </Text>
+
+              {/* Photos */}
+              <View style={styles.itemPhotosSection}>
+                <Text style={[styles.itemSectionLabel, { color: textColor }]}>Photos:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
+                  {tempItem.images.map(image => (
+                    <View key={image.id} style={styles.imageContainer}>
+                      <Image source={{ uri: image.uri }} style={styles.itemImage} />
+                      <TouchableOpacity 
+                        style={styles.removeImageButton}
+                        onPress={() => removeImageFromTempItem(image.id)}
+                      >
+                        <Text style={styles.removeImageText}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity 
+                    style={[styles.addImageButton, { borderColor: borderColor }]}
+                    onPress={pickImageForTempItem}
+                  >
+                    <Text style={[styles.addImageText, { color: '#5784BA' }]}>+</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+
+              {/* Nom */}
+              <View style={styles.itemFieldSection}>
+                <Text style={[styles.itemSectionLabel, { color: textColor }]}>Nom:</Text>
+                <TextInput
+                  style={[styles.itemInput, { color: textColor, borderColor: borderColor }]}
+                  placeholder={`Nom ${currentItemType === 'staying' ? 'du logement' : 
+                                 currentItemType === 'restaurant' ? 'du restaurant' : 
+                                 currentItemType === 'activities' ? 'de l\'activité' : 'de l\'autre'}`}
+                  placeholderTextColor="#999"
+                  value={tempItem.name}
+                  onChangeText={(text) => setTempItem(prev => ({ ...prev, name: text }))}
+                />
+              </View>
+
+              {/* Note */}
+              <View style={styles.itemFieldSection}>
+                <Text style={[styles.itemSectionLabel, { color: textColor }]}>Note sur 5:</Text>
+                <View style={styles.ratingContainer}>
+                  <StarRating 
+                    rating={tempItem.rating} 
+                    onRatingChange={(rating) => setTempItem(prev => ({ ...prev, rating }))}
+                    size="large"
+                    color="#f5c518"
+                    showRating={true}
+                  />
+                </View>
+              </View>
+
+              {/* Description */}
+              <View style={styles.itemFieldSection}>
+                <Text style={[styles.itemSectionLabel, { color: textColor }]}>Description (optionnelle):</Text>
+                <TextInput
+                  style={[styles.itemTextArea, { color: textColor, borderColor: borderColor }]}
+                  placeholder="Description..."
+                  placeholderTextColor="#999"
+                  value={tempItem.description}
+                  onChangeText={(text) => setTempItem(prev => ({ ...prev, description: text }))}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+            
+            {/* Bouton Ajouter/Modifier */}
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity 
+                style={[styles.itemSaveButton, { backgroundColor: '#5784BA' }]} 
+                onPress={saveItem}
+              >
+                <Text style={styles.itemSaveButtonText}>
+                  {editingItem ? 'Modifier' : 'Ajouter'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -551,11 +666,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
     position: 'relative',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   deleteItemButton: {
     position: 'absolute',
@@ -569,7 +687,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   deleteItemText: {
-    color: '#000',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -631,34 +749,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   ratingContainer: {
-    flexDirection: 'column',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginTop: 8,
   },
   ratingLabel: {
     fontSize: 16,
     marginBottom: 8,
-  },
-  ratingButtons: {
-    flexDirection: 'row',
-  },
-  ratingButtonsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  ratingButton: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    width: '18%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ratingButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   addButton: {
     borderRadius: 12,
@@ -667,7 +763,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   addButtonText: {
-    color: '#000',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -722,7 +818,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   floatingButtonText: {
-    color: '#000',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -762,7 +858,7 @@ const styles = StyleSheet.create({
   },
   modalButtonContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 60,
     paddingTop: 10,
     backgroundColor: 'transparent',
   },
@@ -778,7 +874,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   modalPostButtonText: {
-    color: '#000',
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -876,5 +972,113 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 60,
     textAlignVertical: 'top',
+  },
+  // Nouveaux styles pour les cartes d'items
+  cardImageContainer: {
+    width: 60,
+    height: 45,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  cardImagePlaceholderText: {
+    fontSize: 20,
+  },
+  cardInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cardName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cardRating: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  cardImageCount: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  // Styles pour le modal d'item
+  itemModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  itemModalContent: {
+    height: '85%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+  },
+  itemModalScroll: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  itemModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  itemPhotosSection: {
+    marginBottom: 20,
+  },
+  itemFieldSection: {
+    marginBottom: 20,
+  },
+  itemSectionLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  itemInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  itemTextArea: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  itemSaveButton: {
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  itemSaveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

@@ -30,21 +30,22 @@ export function CityLogTitle() {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: 8,
+    paddingTop: 5,
   },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: 'bold',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   airplaneContainer: {
-    marginHorizontal: 4,
-    width: 22,
-    height: 32,
+    marginHorizontal: 3,
+    width: 18,
+    height: 26,
     justifyContent: 'center',
     alignItems: 'center',
   },

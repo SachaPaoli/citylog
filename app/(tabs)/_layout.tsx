@@ -6,7 +6,6 @@ import AuthGuard from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
@@ -16,8 +15,8 @@ export default function TabLayout() {
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tabIconSelected, // Bleu pour les icônes actives
-          tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault, // Gris clair pour les icônes inactives
+          tabBarActiveTintColor: '#5784BA', // Bleu pour les icônes actives
+          tabBarInactiveTintColor: '#666666', // Gris moyen pour les icônes inactives
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
@@ -25,10 +24,10 @@ export default function TabLayout() {
             ios: {
               // Use a transparent background on iOS to show the blur effect
               position: 'absolute',
-              backgroundColor: '#FFFFFF', // Fond blanc
+              backgroundColor: '#D0D0D0', // Fond gris assez clair
             },
             default: {
-              backgroundColor: '#FFFFFF', // Fond blanc
+              backgroundColor: '#D0D0D0', // Fond gris assez clair
             },
           }),
         }}>

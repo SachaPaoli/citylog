@@ -9,18 +9,19 @@ import { StarRating } from './StarRating';
 interface TravelPostCardProps {
   post: Post;
   onPress?: () => void;
-  onLike?: () => void;
 }
 
-export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
+export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const ratingColor = useThemeColor({}, 'rating');
   const backgroundColor = useThemeColor({}, 'background');
   const { user } = useAuth();
 
-  const isLiked = user ? post.likes.includes(user.uid) : false;
-  const likesCount = post.likes.length;
+  // Utiliser la photo de profil actuelle de l'utilisateur si c'est son post
+  const userPhoto = (user && post.userId === user.uid && user.photoURL) 
+    ? user.photoURL 
+    : post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face';
 
   return (
     <TouchableOpacity 
@@ -42,7 +43,7 @@ export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
           {/* Photo de profil et nom */}
           <View style={styles.userInfo}>
             <Image 
-              source={{ uri: post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face' }} 
+              source={{ uri: userPhoto }} 
               style={styles.userPhoto}
               defaultSource={require('@/assets/images/placeholder.png')}
             />
@@ -56,35 +57,17 @@ export function TravelPostCard({ post, onPress, onLike }: TravelPostCardProps) {
             {post.city}, {post.country}
           </Text>
           
-          {/* Note avec étoiles */}
+          {/* Note dans un carré bleu */}
           <View style={styles.ratingContainer}>
-            <StarRating 
-              rating={post.rating / 2} // Convertir de /10 à /5
-              readonly={true} 
-              size="small"
-              color="#FFD700"
-            />
+            <View style={styles.ratingBadge}>
+              <Text style={styles.ratingNumber}>
+                {post.rating.toFixed(1)}
+              </Text>
+            </View>
           </View>
           
-          {/* Description courte */}
-          <Text style={[styles.description, { color: textColor }]} numberOfLines={2}>
-            {post.description}
-          </Text>
-          
-          {/* Actions */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity 
-              style={styles.likeButton}
-              onPress={onLike}
-            >
-              <Text style={[styles.likeIcon, { color: isLiked ? textActiveColor : textColor }]}>
-                {isLiked ? '❤️' : '🤍'}
-              </Text>
-              <Text style={[styles.likeCount, { color: textColor }]}>
-                {likesCount}
-              </Text>
-            </TouchableOpacity>
-            
+          {/* Date */}
+          <View style={styles.dateContainer}>
             <Text style={[styles.dateText, { color: textColor }]}>
               {post.createdAt.toLocaleDateString('fr-FR')}
             </Text>
@@ -149,34 +132,31 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  rating: {
+  ratingBadge: {
+    backgroundColor: '#5784BA',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    minWidth: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingNumber: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  ratingText: {
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 8,
   },
-  description: {
-    fontSize: 12,
-    opacity: 0.8,
-    lineHeight: 16,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  dateContainer: {
     marginTop: 8,
-  },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  likeIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  likeCount: {
-    fontSize: 12,
-    opacity: 0.7,
   },
   dateText: {
     fontSize: 10,
