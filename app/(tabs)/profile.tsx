@@ -21,6 +21,7 @@ import { Alert, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, Touch
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelPostCard } from '../../components/TravelPostCard';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { usePosts } from '../../hooks/usePosts';
 
 export default function ProfileScreen() {
   const { wishlist } = useWishlist();
@@ -43,6 +44,13 @@ export default function ProfileScreen() {
   );
   const { logout, userProfile: authUserProfile } = useAuth();
   const { travelData, loading: travelLoading } = useUserTravels();
+
+  // Fetch all posts, then filter by userId (after authUserProfile is defined)
+  const { posts, loading: postsLoading } = usePosts();
+  const userPosts = React.useMemo(() => {
+    if (!authUserProfile?.uid || !posts) return [];
+    return posts.filter((p: any) => p.userId === authUserProfile.uid);
+  }, [posts, authUserProfile]);
 
   // Combine les données du contexte auth avec les vraies données de voyage
   const displayProfile = {
@@ -197,9 +205,9 @@ export default function ProfileScreen() {
 
             {/* 4 boutons sous la ligne de séparation */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, width: '100%' }}>
-              <TouchableOpacity style={styles.profileButton}>
-                <Text style={styles.profileButtonText}>Posts</Text>
-              </TouchableOpacity>
+            <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/my-posts')}>
+              <Text style={styles.profileButtonText}>Posts</Text>
+            </TouchableOpacity>
               <TouchableOpacity style={styles.profileButton}>
                 <Text style={styles.profileButtonText}>Trips</Text>
               </TouchableOpacity>
@@ -237,6 +245,7 @@ export default function ProfileScreen() {
           )}
         </View>
       )}
+      {/* ...modal removed, navigation to /my-posts instead... */}
     </SafeAreaView>
   );
 }
