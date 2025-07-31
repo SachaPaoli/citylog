@@ -241,9 +241,11 @@ export default function TripDetailScreen() {
             </Text>
             <View style={styles.ratingContainer}>
               <StarRating 
-                rating={post.rating / 2} 
+                rating={post.rating} 
                 readonly={true} 
                 size="medium"
+                showRating={true}
+                color="#f5c518"
               />
             </View>
             <Text style={[styles.description, { color: textColor }]}> 
