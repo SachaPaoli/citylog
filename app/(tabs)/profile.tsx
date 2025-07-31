@@ -10,17 +10,19 @@ function getCountryCode(countryName: string): string {
   };
   return map[countryName] || '';
 }
-import { FlatWorldMap } from '@/components/FlatWorldMap';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TravelPostCard } from '../../components/TravelPostCard';
+import { useWishlist } from '../../contexts/WishlistContext';
 
 export default function ProfileScreen() {
+  const { wishlist } = useWishlist();
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const ratingColor = useThemeColor({}, 'rating');
@@ -144,133 +146,96 @@ export default function ProfileScreen() {
       {/* Ligne de séparation fine */}
       <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
 
-      <ScrollView style={[styles.scrollView, { backgroundColor: '#3A3A3A' }]} showsVerticalScrollIndicator={false}>
-        {activeTab === 'profile' ? (
-          <>
-            {/* Header du profil avec followers/following autour de la photo */}
-            <View style={styles.profileHeader}>
-              <View style={styles.profileRow}>
-                <View style={styles.profileStatCol}>
-                  <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
-                  <Text style={[styles.profileStatLabel, { color: textColor }]}>Followers</Text>
-                </View>
-                <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
-                <View style={styles.profileStatCol}>
-                  <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.following}</Text>
-                  <Text style={[styles.profileStatLabel, { color: textColor }]}>Following</Text>
-                </View>
+      {activeTab === 'profile' ? (
+        <ScrollView style={[styles.scrollView, { backgroundColor: '#3A3A3A' }]} showsVerticalScrollIndicator={false}>
+          {/* Header du profil avec followers/following autour de la photo */}
+          <View style={styles.profileHeader}>
+            <View style={styles.profileRow}>
+              <View style={styles.profileStatCol}>
+                <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
+                <Text style={[styles.profileStatLabel, { color: textColor }]}>Followers</Text>
               </View>
-              <Text style={[styles.userName, { color: textColor }]}>{displayProfile.name}</Text>
-              {/* Stats villes/pays */}
-              <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.totalCities}</Text>
-                  <Text style={[styles.statLabel, { color: textColor }]}>Villes</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.visitedCountries.length}</Text>
-                  <Text style={[styles.statLabel, { color: textColor }]}>Pays</Text>
-                </View>
+              <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
+              <View style={styles.profileStatCol}>
+                <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.following}</Text>
+                <Text style={[styles.profileStatLabel, { color: textColor }]}>Following</Text>
               </View>
-              {/* Ligne de séparation fine */}
-              <View style={styles.separator} />
-              {/* Section Favorites */}
-              <Text style={[styles.favoritesTitle, { color: textColor }]}>Favorites</Text>
-              <View style={styles.favoritesRow}>
-                {favorites.map((fav, idx) => (
-                  <View key={idx} style={{ alignItems: 'center', flex: 1 }}>
-                    <TouchableOpacity
-                      style={styles.favoriteBox}
-                      onPress={() => handleAddFavorite(idx)}
-                      activeOpacity={0.7}
-                    >
-                      {!fav ? (
-                        <Text style={styles.plus}>+</Text>
-                      ) : (
-                        getCountryCode(fav.country)
-                          ? <Image
-                              source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
-                              style={styles.favoriteFlagImg}
-                              resizeMode="cover"
-                            />
-                          : <Text style={styles.flag}>{fav.flag}</Text>
-                      )}
-                    </TouchableOpacity>
-                    {fav && (
-                      <Text style={[styles.favoriteCity, { color: textColor }]}>{fav.city}</Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-
             </View>
-
-            {/* Carte du monde en flat design */}
-            <View style={styles.mapSection}>
-              <FlatWorldMap 
-                visitedCountries={displayProfile.visitedCountries}
-                onCountryPress={handleCountryPress}
-              />
-            </View>
-
-            {/* Villes visitées pour le pays sélectionné - affiché seulement après clic */}
-            {selectedCountry && (
-              <View style={styles.citiesSection}>
-                <View style={styles.citiesSectionHeader}>
-                  <Text style={[styles.sectionTitle, { color: textColor }]}>
-                    Villes visitées en {selectedCountry}
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.closeButton}
-                    onPress={() => setSelectedCountry(null)}
+            {/* Ligne de séparation fine grise au-dessus des Favorites */}
+            <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginVertical: 12 }} />
+            {/* Section Favorites */}
+            <Text style={[styles.favoritesTitle, { color: textColor }]}>Favorites</Text>
+            <View style={styles.favoritesRow}>
+              {favorites.map((fav, idx) => (
+                <View key={idx} style={{ alignItems: 'center', flex: 1 }}>
+                  <TouchableOpacity
+                    style={styles.favoriteBox}
+                    onPress={() => handleAddFavorite(idx)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[styles.closeButtonText, { color: textActiveColor }]}>✕</Text>
+                    {!fav ? (
+                      <Text style={styles.plus}>+</Text>
+                    ) : (
+                      getCountryCode(fav.country)
+                        ? <Image
+                            source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
+                            style={styles.favoriteFlagImg}
+                            resizeMode="cover"
+                          />
+                        : <Text style={styles.flag}>{fav.flag}</Text>
+                    )}
                   </TouchableOpacity>
+                  {fav && (
+                    <Text style={[styles.favoriteCity, { color: textColor }]}>{fav.city}</Text>
+                  )}
                 </View>
-                {travelData.countryVisits
-                  .filter(visit => visit.country === selectedCountry)
-                  .map(visit => (
-                    <View key={visit.country}>
-                      {visit.cities.map(city => (
-                        <TouchableOpacity
-                          key={city.id}
-                          style={styles.cityCard}
-                          onPress={() => router.push(`/trip-detail?postId=${city.postId}`)}
-                        >
-                          <Image source={{ uri: city.photo }} style={styles.cityPhoto} />
-                          <View style={styles.cityInfo}>
-                            <Text style={[styles.cityName, { color: textColor }]}>{city.name}</Text>
-                            <Text style={[styles.cityRating, { color: ratingColor }]}>
-                              {city.rating}/10
-                            </Text>
-                            <Text style={[styles.cityDescription, { color: textColor }]} numberOfLines={2}>
-                              {city.description}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ))}
-              </View>
-            )}
-          </>
-        ) : (
-          /* Contenu Wishlist */
-          <View style={styles.wishlistSection}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              🌟 Mes destinations de rêve
-            </Text>
-            <View style={styles.wishlistContent}>
-              <Text style={[styles.wishlistText, { color: textColor }]}>
-                Ici tu pourras voir tous les pays et villes que tu aimerais visiter !
-              </Text>
-              <Text style={[styles.wishlistSubtext, { color: textColor }]}>
-                Fonctionnalité à venir... 🚀
-              </Text>
+              ))}
+            </View>
+            {/* Ligne de séparation fine grise en dessous des Favorites */}
+            <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginVertical: 12 }} />
+
+            {/* 4 boutons sous la ligne de séparation */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, width: '100%' }}>
+              <TouchableOpacity style={styles.profileButton}>
+                <Text style={styles.profileButtonText}>Posts</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.profileButton}>
+                <Text style={styles.profileButtonText}>Trips</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.profileButton}>
+                <Text style={styles.profileButtonText}>Cities</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.profileButton}>
+                <Text style={styles.profileButtonText}>Countries</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      ) : (
+        <View style={styles.wishlistSection}>
+          <Text style={[styles.sectionTitle, { color: textColor, alignSelf: 'flex-start', marginLeft: 4 }]}>🌟 Mes destinations de rêve</Text>
+          {wishlist.length === 0 ? (
+            <View style={styles.wishlistContent}>
+              <Text style={[styles.wishlistText, { color: textColor }]}>Aucune destination dans ta wishlist.</Text>
+              <Text style={[styles.wishlistSubtext, { color: textColor }]}>Ajoute des voyages à ta wishlist depuis les détails d'un post !</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={wishlist}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <TravelPostCard
+                  post={item}
+                  onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
+                />
+              )}
+              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+              contentContainerStyle={{ paddingBottom: 30 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -484,7 +449,7 @@ const styles = StyleSheet.create({
   },
   wishlistSection: {
     padding: 20,
-    alignItems: 'center',
+    // alignItems: 'center', // Remove to allow full-width cards
   },
   wishlistContent: {
     alignItems: 'center',
@@ -500,5 +465,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
     fontStyle: 'italic',
+  },
+  profileButton: {
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 10,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: '#bbb',
+  },
+  profileButtonText: {
+    color: '#bbb',
+    fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.5,
   },
 });

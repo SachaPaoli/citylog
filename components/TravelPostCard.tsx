@@ -70,8 +70,8 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
           
           {/* Date */}
           <View style={styles.dateContainer}>
-            <Text style={[styles.dateText, { color: textColor }]}>
-              {post.createdAt.toLocaleDateString('fr-FR')}
+            <Text style={[styles.dateText, { color: textColor }]}> 
+              {post.createdAt ? new Date(post.createdAt).toLocaleDateString('fr-FR') : ''}
             </Text>
           </View>
         </View>

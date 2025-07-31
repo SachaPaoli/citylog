@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   SafeAreaView,
@@ -15,6 +16,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useWishlist } from '../contexts/WishlistContext';
 
 type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
 
@@ -33,6 +35,7 @@ export default function TripDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('staying');
   const [showMenu, setShowMenu] = useState(false);
+  const { addToWishlist, isInWishlist } = useWishlist();
   const [scrollY, setScrollY] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
@@ -157,8 +160,16 @@ export default function TripDetailScreen() {
 
   const currentItems = getCurrentItems();
 
+  const handleAddToWishlist = () => {
+    if (post) {
+      addToWishlist(post);
+      Alert.alert('Ajouté à la wishlist', 'Ce voyage a bien été ajouté à votre wishlist !');
+      setShowMenu(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
       {/* Header avec bouton retour et menu */}
       <View style={[styles.header, { backgroundColor: headerColor }]}>
         <TouchableOpacity 
@@ -187,12 +198,16 @@ export default function TripDetailScreen() {
           style={styles.modalOverlay}
           onPress={() => setShowMenu(false)}
         >
-          <View style={[styles.menuContainer, { backgroundColor }]}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
-              <Text style={[styles.menuItemText, { color: textColor }]}>Add to favorites</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
-              <Text style={[styles.menuItemText, { color: textColor }]}>Add to wishlist</Text>
+          <View style={[styles.menuContainer, { backgroundColor }]}> 
+          
+            <TouchableOpacity 
+              style={[styles.menuItem, isInWishlist(post.id) && { opacity: 0.5 }]}
+              onPress={isInWishlist(post.id) ? undefined : handleAddToWishlist}
+              disabled={isInWishlist(post.id)}
+            >
+              <Text style={[styles.menuItemText, { color: textColor }]}> 
+                {isInWishlist(post.id) ? 'Déjà dans la wishlist' : 'Add to wishlist'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
               <Text style={[styles.menuItemText, { color: textColor }]}>Share</Text>

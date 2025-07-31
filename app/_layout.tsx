@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/AuthContext';
+import { WishlistProvider } from '../contexts/WishlistContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import SplashScreen from './SplashScreen';
 
@@ -27,19 +28,21 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={DarkTheme}>
-        <AuthProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="trip-detail" options={{ headerShown: false }} />
-            <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-        </AuthProvider>
-        <StatusBar style="light" />
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <WishlistProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider value={DarkTheme}>
+          <AuthProvider>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="auth" options={{ headerShown: false }} />
+              <Stack.Screen name="trip-detail" options={{ headerShown: false }} />
+              <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </AuthProvider>
+          <StatusBar style="light" />
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </WishlistProvider>
   );
 }
