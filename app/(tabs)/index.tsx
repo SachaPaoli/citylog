@@ -29,15 +29,17 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#2A2A2A' }]}> 
       <View style={{ flex: 1 }}>
-        {/* Header : logo à gauche, cloche à droite */}
-        <View style={[styles.topSection, { backgroundColor: '#2A2A2A', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }]}> 
-          <CityLogTitle />
-          <TouchableOpacity onPress={() => router.push('/notifications-screen')} style={{ padding: 8 }}>
-            <Ionicons name="notifications-outline" size={28} color="#fff" />
-          </TouchableOpacity>
+        {/* Header Explore-like */}
+        <View style={{ backgroundColor: '#2A2A2A', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <CityLogTitle />
+            <TouchableOpacity onPress={() => router.push('/notifications-screen')} style={{ padding: 8 }}>
+              <Ionicons name="notifications-outline" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
         {/* Onglets */}
-        <View style={styles.tabsContainer}>
+        <View style={[styles.tabsContainer, { backgroundColor: '#2A2A2A', paddingTop: 0, paddingBottom: 12 }]}> 
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'cities' && { borderBottomColor: '#FFFFFF' }]}
             onPress={() => setActiveTab('cities')}
@@ -61,6 +63,8 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        {/* Ligne de séparation fine */}
+        <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
         <ScrollView 
           style={[styles.scrollView, { backgroundColor: '#3A3A3A' }]}
           showsVerticalScrollIndicator={false}

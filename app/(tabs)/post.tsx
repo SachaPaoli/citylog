@@ -396,9 +396,7 @@ return (
         </View>
       </View>
       {/* Ligne de séparation grise */}
-      <View style={styles.separatorContainer}>
-        <View style={[styles.separatorLine, { backgroundColor: '#232323' }]} />
-      </View>
+      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
     </View>
 
     {/* Contenu */}

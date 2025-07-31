@@ -104,45 +104,47 @@ export default function ProfileScreen() {
   const screenWidth = Dimensions.get('window').width;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      {/* Barre de navigation en haut */}
-      <View style={styles.topNavBar}>
-        {/* Bouton déconnexion à gauche */}
-        <TouchableOpacity style={styles.navIcon} onPress={handleLogout}>
-          <Text style={[styles.iconText, { color: buttonBackgroundColor }]}>🚪</Text>
-        </TouchableOpacity>
-        
-        {/* Onglets Profile / Wishlist au centre */}
-        <View style={styles.tabsContainer}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#2A2A2A' }]}> 
+      {/* Header Explore-like avec nom d'utilisateur et boutons, fond foncé partout */}
+      <View style={{ backgroundColor: '#2A2A2A', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Bouton logout (porte) */}
+          <TouchableOpacity onPress={handleLogout} style={{ padding: 8 }}>
+            <Text style={{ fontSize: 22, color: '#fff' }}>🚪</Text>
+          </TouchableOpacity>
+          {/* Nom d'utilisateur centré */}
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22, textAlign: 'center', flex: 1 }} numberOfLines={1}>{displayProfile.name}</Text>
+          {/* Bouton edit (crayon) */}
+          <TouchableOpacity onPress={() => router.push('/edit-profile')} style={{ padding: 8 }}>
+            <Text style={{ fontSize: 22, color: '#fff' }}>✏️</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      {/* Onglets Profile / Wishlist centrés */}
+      <View style={{ backgroundColor: '#2A2A2A', paddingTop: 0, paddingBottom: 4, marginBottom: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24 }}>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'profile' && { borderBottomColor: borderColor }]}
             onPress={() => setActiveTab('profile')}
           >
-            <Text style={[styles.tabText, { color: activeTab === 'profile' ? textActiveColor : textColor }]}>
+            <Text style={[styles.tabText, { color: activeTab === 'profile' ? textActiveColor : textColor }]}> 
               Profile
             </Text>
           </TouchableOpacity>
-          
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'wishlist' && { borderBottomColor: borderColor }]}
             onPress={() => setActiveTab('wishlist')}
           >
-            <Text style={[styles.tabText, { color: activeTab === 'wishlist' ? textActiveColor : textColor }]}>
+            <Text style={[styles.tabText, { color: activeTab === 'wishlist' ? textActiveColor : textColor }]}> 
               Wishlist
             </Text>
           </TouchableOpacity>
         </View>
-        
-        {/* Icône édition à droite */}
-        <TouchableOpacity 
-          style={styles.navIcon}
-          onPress={() => router.push('/edit-profile')}
-        >
-          <Text style={[styles.iconText, { color: buttonBackgroundColor }]}>✏️</Text>
-        </TouchableOpacity>
       </View>
+      {/* Ligne de séparation fine */}
+      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: '#3A3A3A' }]} showsVerticalScrollIndicator={false}>
         {activeTab === 'profile' ? (
           <>
             {/* Header du profil avec followers/following autour de la photo */}

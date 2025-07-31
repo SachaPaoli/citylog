@@ -223,13 +223,21 @@ export default function TripDetailScreen() {
       >
         {/* Informations du voyage */}
         <View style={[styles.postInfo, !post.description && styles.postInfoCompact]}>
+          {/* User header centré au-dessus de la photo principale */}
+          <View style={styles.userHeader}>
+            <View style={styles.userHeaderRow}>
+              <Image 
+                source={{ uri: post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face' }}
+                style={styles.userProfilePhotoSmall}
+                defaultSource={require('@/assets/images/placeholder.png')}
+              />
+              <Text style={[styles.userHeaderName, { color: textColor }]}>{post.userName}</Text>
+            </View>
+          </View>
           <Image source={{ uri: post.photo }} style={styles.coverImage} />
           <View style={styles.postDetails}>
-            <Text style={[styles.cityName, { color: textColor }]}>
+            <Text style={[styles.cityName, { color: textColor }]}> 
               {post.city}, {post.country}
-            </Text>
-            <Text style={[styles.userName, { color: textColor }]}>
-              Par {post.userName}
             </Text>
             <View style={styles.ratingContainer}>
               <StarRating 
@@ -238,7 +246,7 @@ export default function TripDetailScreen() {
                 size="medium"
               />
             </View>
-            <Text style={[styles.description, { color: textColor }]}>
+            <Text style={[styles.description, { color: textColor }]}> 
               {post.description}
             </Text>
           </View>
@@ -456,6 +464,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.8,
     marginBottom: 10,
+  },
+  userHeader: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  userHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  userProfilePhotoSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#444',
+    marginRight: 6,
+  },
+  userHeaderName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'left',
   },
   rating: {
     fontSize: 20,
