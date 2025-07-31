@@ -7,8 +7,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/AuthContext';
-import { WishlistProvider } from '../contexts/WishlistContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { VisitedCitiesProvider } from '../contexts/VisitedCitiesContext';
+import { WishlistProvider } from '../contexts/WishlistContext';
 import SplashScreen from './SplashScreen';
 
 export default function RootLayout() {
@@ -29,6 +30,7 @@ export default function RootLayout() {
 
   return (
     <WishlistProvider>
+      <VisitedCitiesProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ThemeProvider value={DarkTheme}>
           <AuthProvider>
@@ -43,6 +45,7 @@ export default function RootLayout() {
           <StatusBar style="light" />
         </ThemeProvider>
       </GestureHandlerRootView>
+      </VisitedCitiesProvider>
     </WishlistProvider>
   );
 }

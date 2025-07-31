@@ -20,10 +20,12 @@ import React, { useState } from 'react';
 import { Alert, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelPostCard } from '../../components/TravelPostCard';
+import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { usePosts } from '../../hooks/usePosts';
 
 export default function ProfileScreen() {
+  const { cities: visitedCities } = useVisitedCities();
   const { wishlist } = useWishlist();
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
@@ -203,21 +205,46 @@ export default function ProfileScreen() {
             {/* Ligne de séparation fine grise en dessous des Favorites */}
             <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginVertical: 12 }} />
 
-            {/* 4 boutons sous la ligne de séparation */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, width: '100%' }}>
-            <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/my-posts')}>
-              <Text style={styles.profileButtonText}>Posts</Text>
-            </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButton}>
-                <Text style={styles.profileButtonText}>Trips</Text>
+            {/* 4 boutons, un par ligne, avec icône chevron à droite */}
+            <View style={{ width: '100%', marginTop: 12 }}>
+              <TouchableOpacity style={styles.profileButtonRow} onPress={() => router.push('/my-posts')}>
+                <View style={styles.profileButtonLeft}>
+                  <Text style={styles.profileButtonText}>Posts</Text>
+                </View>
+                <View style={styles.profileButtonRight}>
+                  <Text style={styles.profileButtonCount}>{userPosts.length}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButton}>
-                <Text style={styles.profileButtonText}>Cities</Text>
+              <TouchableOpacity style={styles.profileButtonRow}>
+                <View style={styles.profileButtonLeft}>
+                  <Text style={styles.profileButtonText}>Trips</Text>
+                </View>
+                <View style={styles.profileButtonRight}>
+                  <Text style={styles.profileButtonCount}>0</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButton}>
-                <Text style={styles.profileButtonText}>Countries</Text>
+              <TouchableOpacity style={styles.profileButtonRow} onPress={() => router.push('/my-cities')}>
+                <View style={styles.profileButtonLeft}>
+                  <Text style={styles.profileButtonText}>Cities</Text>
+                </View>
+                <View style={styles.profileButtonRight}>
+                  <Text style={styles.profileButtonCount}>{visitedCities.length}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.profileButtonRow}>
+                <View style={styles.profileButtonLeft}>
+                  <Text style={styles.profileButtonText}>Countries</Text>
+                </View>
+                <View style={styles.profileButtonRight}>
+                  <Text style={styles.profileButtonCount}>{travelData?.visitedCountries?.length ?? 0}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
+                </View>
               </TouchableOpacity>
             </View>
+
           </View>
         </ScrollView>
       ) : (
@@ -476,21 +503,42 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     fontStyle: 'italic',
   },
-  profileButton: {
-    flex: 1,
-    marginHorizontal: 4,
-    paddingVertical: 10,
+  profileButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: 'transparent',
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 0.5,
     borderColor: '#bbb',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginBottom: 10,
+  },
+  profileButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   profileButtonText: {
     color: '#bbb',
     fontWeight: 'bold',
     fontSize: 15,
     letterSpacing: 0.5,
+    marginRight: 6,
+  },
+  profileButtonCount: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    opacity: 0.85,
+  },
+  profileButtonIcon: {
+    marginLeft: 8,
+  },
+  profileButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });

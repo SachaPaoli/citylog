@@ -4,8 +4,10 @@ import { RealCitiesService } from '@/services/RealCitiesService';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
 export default function ExploreScreen() {
+  const { addOrUpdateCity } = useVisitedCities();
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
@@ -55,9 +57,32 @@ export default function ExploreScreen() {
     setModalVisible(true);
   };
 
+  // Ajout/MAJ d'une ville visitée ou notée
   const handleRateCity = (cityId: number, rating: number) => {
-    console.log(`Ville ${cityId} notée ${rating}/5`);
+    if (!selectedCity) return;
+    addOrUpdateCity({
+      name: selectedCity.name,
+      country: selectedCity.country,
+      flag: '',
+      rating,
+      beenThere: true,
+    });
+    setModalVisible(false);
   };
+
+  const handleBeenThere = () => {
+    if (!selectedCity) return;
+    addOrUpdateCity({
+      name: selectedCity.name,
+      country: selectedCity.country,
+      flag: '',
+      beenThere: true,
+      // Pas de rating ici, donc on ne met pas rating du tout
+    });
+    setModalVisible(false);
+  };
+
+  // (Déjà défini plus bas pour le contexte, donc on retire ce handler inutile)
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
@@ -160,9 +185,6 @@ export default function ExploreScreen() {
                 <Text style={[styles.instructionText, { color: textColor }]}>
                   Tapez le nom d'une ville pour commencer votre recherche
                 </Text>
-                <Text style={[styles.instructionSubtext, { color: textColor }]}>
-                  Plus de 154 000 villes disponibles dans le monde
-                </Text>
               </View>
             )}
           </>
@@ -187,6 +209,17 @@ export default function ExploreScreen() {
         onClose={() => setModalVisible(false)}
         onRate={handleRateCity}
       />
+      {/* Bouton "I have been there" dans le modal (si tu veux le mettre ailleurs, déplace-le) */}
+      {modalVisible && selectedCity && (
+        <View style={{ position: 'absolute', bottom: 40, left: 0, right: 0, alignItems: 'center' }}>
+          <TouchableOpacity
+            style={{ backgroundColor: '#444', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20 }}
+            onPress={handleBeenThere}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>I have been there</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
