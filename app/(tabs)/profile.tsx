@@ -1,8 +1,21 @@
+// Utilitaire pour obtenir le code pays ISO2 en minuscule à partir du nom du pays
+function getCountryCode(countryName: string): string {
+  const map: Record<string, string> = {
+    France: 'fr',
+    Japan: 'jp',
+    USA: 'us',
+    Brazil: 'br',
+    Australia: 'au',
+    // Ajoute d'autres pays si besoin
+  };
+  return map[countryName] || '';
+}
 import { FlatWorldMap } from '@/components/FlatWorldMap';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
-import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +29,15 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'borderColor');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
-  
+  const [favorites, setFavorites] = useState<Array<{ city: string; country: string; flag: string } | null>>([
+    null, null, null
+  ]);
+  // Force a re-render when the screen is focused (to avoid stale state)
+  useFocusEffect(
+    React.useCallback(() => {
+      setFavorites(favs => [...favs]);
+    }, [])
+  );
   const { logout, userProfile: authUserProfile } = useAuth();
   const { travelData, loading: travelLoading } = useUserTravels();
 
@@ -24,11 +45,38 @@ export default function ProfileScreen() {
   const displayProfile = {
     name: authUserProfile?.displayName || 'Utilisateur',
     photo: authUserProfile?.photoURL || authUserProfile?.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
-    followers: 0, // À implémenter plus tard
-    following: 0, // À implémenter plus tard
+    followers: 0, // À remplacer par vraie donnée
+    following: 0, // À remplacer par vraie donnée
     visitedCountries: travelData.visitedCountries,
     totalCities: travelData.totalCities
   };
+
+  // Navigation vers la page de recherche de ville (même style que Explore)
+  const handleAddFavorite = (index: number) => {
+    router.push({ pathname: '../search-city', params: { favoriteIndex: index } });
+  };
+
+  // Récupère la ville sélectionnée via les params de navigation
+  const params = useLocalSearchParams();
+  React.useEffect(() => {
+    if (
+      params.favoriteIndex !== undefined &&
+      params.city && params.country && params.flag
+    ) {
+      const favoriteIndex = Number(params.favoriteIndex);
+      setFavorites(prev => {
+        const updated = [...prev];
+        updated[favoriteIndex] = {
+          city: String(params.city),
+          country: String(params.country),
+          flag: String(params.flag),
+        };
+        return updated;
+      });
+      // Nettoie les params de l'URL après usage (optionnel)
+      router.replace('../profile');
+    }
+  }, [params]);
 
   // Fonction pour gérer le clic sur un pays
   const handleCountryPress = (country: string) => {
@@ -97,12 +145,21 @@ export default function ProfileScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {activeTab === 'profile' ? (
           <>
-            {/* Header du profil */}
+            {/* Header du profil avec followers/following autour de la photo */}
             <View style={styles.profileHeader}>
-              <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
+              <View style={styles.profileRow}>
+                <View style={styles.profileStatCol}>
+                  <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
+                  <Text style={[styles.profileStatLabel, { color: textColor }]}>Followers</Text>
+                </View>
+                <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
+                <View style={styles.profileStatCol}>
+                  <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.following}</Text>
+                  <Text style={[styles.profileStatLabel, { color: textColor }]}>Following</Text>
+                </View>
+              </View>
               <Text style={[styles.userName, { color: textColor }]}>{displayProfile.name}</Text>
-              
-              {/* Stats followers/following */}
+              {/* Stats villes/pays */}
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statNumber, { color: textColor }]}>{displayProfile.totalCities}</Text>
@@ -113,14 +170,37 @@ export default function ProfileScreen() {
                   <Text style={[styles.statLabel, { color: textColor }]}>Pays</Text>
                 </View>
               </View>
+              {/* Ligne de séparation fine */}
+              <View style={styles.separator} />
+              {/* Section Favorites */}
+              <Text style={[styles.favoritesTitle, { color: textColor }]}>Favorites</Text>
+              <View style={styles.favoritesRow}>
+                {favorites.map((fav, idx) => (
+                  <View key={idx} style={{ alignItems: 'center', flex: 1 }}>
+                    <TouchableOpacity
+                      style={styles.favoriteBox}
+                      onPress={() => handleAddFavorite(idx)}
+                      activeOpacity={0.7}
+                    >
+                      {!fav ? (
+                        <Text style={styles.plus}>+</Text>
+                      ) : (
+                        getCountryCode(fav.country)
+                          ? <Image
+                              source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
+                              style={styles.favoriteFlagImg}
+                              resizeMode="cover"
+                            />
+                          : <Text style={styles.flag}>{fav.flag}</Text>
+                      )}
+                    </TouchableOpacity>
+                    {fav && (
+                      <Text style={[styles.favoriteCity, { color: textColor }]}>{fav.city}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
 
-              {/* Bouton Trips */}
-              <TouchableOpacity 
-                style={[styles.tripsButton, { backgroundColor: buttonBackgroundColor }]}
-                onPress={() => router.push('../trips')}
-              >
-                <Text style={styles.tripsButtonText}>🧳 Mes Trips</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Carte du monde en flat design */}
@@ -196,6 +276,73 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  profileStatCol: {
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  profileStatNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  profileStatLabel: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#333',
+    marginVertical: 16,
+    width: '100%',
+    opacity: 0.4,
+  },
+  favoritesTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  favoritesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
+  },
+  favoriteBox: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    backgroundColor: '#232323',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+  },
+  plus: {
+    fontSize: 32,
+    color: '#888',
+    fontWeight: 'bold',
+  },
+  favoriteFlagImg: {
+    width: 40,
+    height: 28,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  flag: {
+    fontSize: 32,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  favoriteCity: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
   },
   topNavBar: {
     flexDirection: 'row',
