@@ -14,6 +14,7 @@ export default function MyCitiesScreen() {
     navigation.setOptions?.({ headerShown: false });
   }, [navigation]);
   const { cities: visitedCities } = useVisitedCities();
+  console.log('visitedCities:', visitedCities);
   const textColor = useThemeColor({}, 'text');
 
   return (
@@ -44,7 +45,7 @@ export default function MyCitiesScreen() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.cityName}>{city.name}</Text>
-                {city.rating ? (
+                {city.rating !== undefined ? (
                   <Text style={styles.cityRating}>★ {city.rating}/5</Text>
                 ) : (
                   <Text style={styles.cityBeenThere}>I have been there</Text>

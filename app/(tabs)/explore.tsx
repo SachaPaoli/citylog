@@ -72,14 +72,17 @@ export default function ExploreScreen() {
 
   const handleBeenThere = () => {
     if (!selectedCity) return;
-    addOrUpdateCity({
+    const cityObj = {
       name: selectedCity.name,
       country: selectedCity.country,
       flag: '',
-      beenThere: true,
-      // Pas de rating ici, donc on ne met pas rating du tout
-    });
-    setModalVisible(false);
+      beenThere: true
+    };
+    addOrUpdateCity(cityObj);
+    // Wait 800ms to allow the curtain/checkmark animation in the modal
+    setTimeout(() => {
+      setModalVisible(false);
+    }, 800);
   };
 
   // (Déjà défini plus bas pour le contexte, donc on retire ce handler inutile)
@@ -208,18 +211,8 @@ export default function ExploreScreen() {
         city={selectedCity}
         onClose={() => setModalVisible(false)}
         onRate={handleRateCity}
+        onBeenThere={handleBeenThere}
       />
-      {/* Bouton "I have been there" dans le modal (si tu veux le mettre ailleurs, déplace-le) */}
-      {modalVisible && selectedCity && (
-        <View style={{ position: 'absolute', bottom: 40, left: 0, right: 0, alignItems: 'center' }}>
-          <TouchableOpacity
-            style={{ backgroundColor: '#444', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20 }}
-            onPress={handleBeenThere}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold' }}>I have been there</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </SafeAreaView>
   );
 }

@@ -13,14 +13,16 @@ interface SimpleCity {
   userRating?: number;
 }
 
+
 interface SimpleCityRatingModalProps {
   visible: boolean;
   city: SimpleCity | null;
   onClose: () => void;
   onRate: (cityId: number, rating: number) => void;
+  onBeenThere?: () => void;
 }
 
-export function SimpleCityRatingModal({ visible, city, onClose, onRate }: SimpleCityRatingModalProps) {
+export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenThere }: SimpleCityRatingModalProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const borderColor = useThemeColor({}, 'borderColor');
@@ -71,7 +73,11 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate }: Simple
   };
 
   const toggleHasBeenThere = () => {
-    setHasBeenThere(!hasBeenThere);
+    const newValue = !hasBeenThere;
+    setHasBeenThere(newValue);
+    if (newValue && onBeenThere) {
+      onBeenThere();
+    }
   };
 
   if (!city) return null;
