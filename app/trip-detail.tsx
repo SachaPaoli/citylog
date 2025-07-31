@@ -1,4 +1,5 @@
 import { StarRating } from '@/components/StarRating';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post, TripItem } from '@/types/Post';
@@ -21,10 +22,37 @@ import { useWishlist } from '../contexts/WishlistContext';
 type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
 
 export default function TripDetailScreen() {
+  const { userProfile } = useAuth();
   console.log('✨ NOUVELLE PAGE TRIP DETAIL CHARGEE !');
   const router = useRouter();
   const { postId } = useLocalSearchParams<{ postId: string }>();
-  const { getPostById } = usePosts();
+  const { getPostById, deletePost } = usePosts();
+  // ...existing code...
+  // Suppression du post avec confirmation
+  const handleDeletePost = () => {
+    if (!post) return;
+    Alert.alert(
+      'Supprimer ce post',
+      'Es-tu sûr de vouloir supprimer ce voyage ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePost(post.id);
+              Alert.alert('Supprimé', 'Le voyage a été supprimé.');
+              setShowMenu(false);
+              router.replace('/(tabs)/explore');
+            } catch (err) {
+              Alert.alert('Erreur', "Impossible de supprimer le post.");
+            }
+          }
+        }
+      ]
+    );
+  };
   
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
@@ -131,6 +159,9 @@ export default function TripDetailScreen() {
     );
   }
 
+  // Vérifie si le post appartient à l'utilisateur courant (doit être après la déclaration de post)
+  const isMyPost = post && userProfile && (post.userId === userProfile.uid);
+
   if (!post) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
@@ -215,6 +246,11 @@ export default function TripDetailScreen() {
             <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
               <Text style={[styles.menuItemText, { color: textColor }]}>Back</Text>
             </TouchableOpacity>
+            {isMyPost && (
+              <TouchableOpacity style={[styles.menuItem, { marginTop: 4 }]} onPress={handleDeletePost}>
+                <Text style={[styles.menuItemText, { color: '#ff4444', fontWeight: 'bold' }]}>Supprimer</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableOpacity>
       </Modal>

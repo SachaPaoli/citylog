@@ -13,6 +13,7 @@ function getCountryCode(countryName: string): string {
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -112,13 +113,13 @@ export default function ProfileScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Bouton logout (porte) */}
           <TouchableOpacity onPress={handleLogout} style={{ padding: 8 }}>
-            <Text style={{ fontSize: 22, color: '#fff' }}>🚪</Text>
+            <Ionicons name="settings-outline" size={22} color="#fff" />
           </TouchableOpacity>
           {/* Nom d'utilisateur centré */}
           <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22, textAlign: 'center', flex: 1 }} numberOfLines={1}>{displayProfile.name}</Text>
           {/* Bouton edit (crayon) */}
           <TouchableOpacity onPress={() => router.push('/edit-profile')} style={{ padding: 8 }}>
-            <Text style={{ fontSize: 22, color: '#fff' }}>✏️</Text>
+            <Ionicons name="pencil-outline" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
