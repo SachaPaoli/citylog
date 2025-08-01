@@ -11,6 +11,7 @@ interface SimpleCity {
   averageRating?: number;
   totalRatings?: number;
   userRating?: number;
+  beenThere?: boolean; // <-- Ajoute cette ligne
 }
 
 
@@ -19,13 +20,15 @@ interface SimpleCityRatingModalProps {
   city: SimpleCity | null;
   onClose: () => void;
   onRate: (cityId: number, rating: number) => void;
-  onBeenThere?: () => void;
+  onBeenThere?: (city: SimpleCity) => void; // <- accepte la ville
+  onDelete?: (city: SimpleCity) => void; // Ajout de la prop onDelete
 }
 
-export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenThere }: SimpleCityRatingModalProps) {
+export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenThere, onDelete }: SimpleCityRatingModalProps) {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const borderColor = useThemeColor({}, 'borderColor');
+  const mainBlue = '#2051A4'; // Bleu principal pour uniformiser les boutons
   
   const [userRating, setUserRating] = useState(0);
   const [hasBeenThere, setHasBeenThere] = useState(false);
@@ -35,8 +38,7 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenTh
   useEffect(() => {
     if (city) {
       setUserRating(city.userRating || 0);
-      setHasBeenThere(false); // ou récupérer depuis une base de données
-      // Réinitialiser l'animation
+      setHasBeenThere(!!city.beenThere); // <-- corrige la synchro avec le contexte
       curtainAnimation.setValue(0);
     }
   }, [city]);
@@ -56,27 +58,17 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenTh
 
   const handleSubmitRating = () => {
     if (city && userRating > 0) {
-      // Activer automatiquement "I have been there" si pas déjà fait
-      if (!hasBeenThere) {
-        setHasBeenThere(true);
-        // Attendre un peu pour voir l'animation puis fermer
-        setTimeout(() => {
-          onRate(city.id, userRating);
-          onClose();
-        }, 800); // 800ms pour voir l'animation complète
-      } else {
-        // Si déjà activé, fermer directement
-        onRate(city.id, userRating);
-        onClose();
-      }
+      onRate(city.id, userRating);
+      onClose();
     }
   };
 
   const toggleHasBeenThere = () => {
+    if (!city) return;
     const newValue = !hasBeenThere;
     setHasBeenThere(newValue);
-    if (newValue && onBeenThere) {
-      onBeenThere();
+    if (onBeenThere) {
+      onBeenThere(city);
     }
   };
 
@@ -149,7 +141,7 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenTh
               <View style={styles.actionRow}>
                 <TouchableOpacity 
                   style={[styles.clearButton, { borderColor }]}
-                  onPress={() => setUserRating(0)}
+                  onPress={onDelete ? () => onDelete(city) : () => setUserRating(0)}
                 >
                   <Text style={[styles.clearButtonText, { color: textColor }]}>
                     Supprimer ma note
@@ -157,7 +149,7 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenTh
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={[styles.actionButton, styles.rateButton]}
+                  style={[styles.actionButton, { backgroundColor: mainBlue }]}
                   onPress={handleSubmitRating}
                 >
                   <Text style={styles.rateButtonText}>
@@ -169,13 +161,18 @@ export function SimpleCityRatingModal({ visible, city, onClose, onRate, onBeenTh
 
             {/* Bouton I have been there en dessous */}
             <TouchableOpacity 
-              style={[styles.visitedButtonFullWidth]}
+              style={[
+                styles.visitedButtonFullWidth,
+                { borderColor: mainBlue },
+                hasBeenThere && { backgroundColor: mainBlue }
+              ]}
               onPress={toggleHasBeenThere}
             >
               <View style={styles.visitedButtonContainer}>
                 <Animated.View style={[
                   styles.curtainEffect,
                   {
+                    backgroundColor: mainBlue,
                     width: curtainAnimation.interpolate({
                       inputRange: [0, 1],
                       outputRange: ['0%', '100%'],

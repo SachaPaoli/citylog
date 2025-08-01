@@ -7,21 +7,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
 export default function ExploreScreen() {
-  const { addOrUpdateCity } = useVisitedCities();
+  // Ajout d'un état pour savoir si la recherche a été effectuée (évite le clignotement)
+  const [searchDone, setSearchDone] = useState(false);
+  const { addOrUpdateCity, removeCity, cities: visitedCities } = useVisitedCities();
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
   const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
   const borderColor = useThemeColor({}, 'borderColor');
-  // Nouveau gris plus foncé et électrique pour le fond général
   const headerColor = '#181C24'; // Electric dark gray
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [cities, setCities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'cities' | 'members'>('cities');
-  
-  // Modal de notation
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCity, setSelectedCity] = useState<any>(null);
 
@@ -29,38 +28,65 @@ export default function ExploreScreen() {
   const searchCities = async (query: string) => {
     if (!query.trim()) {
       setCities([]);
+      setSearchDone(false);
       return;
     }
-    
+
     setLoading(true);
+    setSearchDone(false);
     try {
       const results = await RealCitiesService.searchCities(query, 50);
-      console.log(`Trouvé ${results.length} villes pour: ${query}`);
-      setCities(results);
+      // Filtrer les doublons (même nom, même pays)
+      const uniqueCities = [];
+      const seen = new Set();
+      for (const city of results) {
+        const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueCities.push(city);
+        }
+      }
+      console.log(`Trouvé ${uniqueCities.length} villes uniques pour: ${query}`);
+      setCities(uniqueCities);
     } catch (error) {
       console.error('Erreur recherche:', error);
       setCities([]);
     }
     setLoading(false);
+    setSearchDone(true);
   };
 
   // Recherche automatique quand on tape
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       searchCities(searchQuery);
-    }, 300); // Délai de 300ms pour éviter trop de requêtes
+    }, 100); // Délai réduit à 100ms pour accélérer le loading
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  // Injecte le rating et beenThere du contexte dans la modale
   const handleCityPress = (city: any) => {
-    setSelectedCity(city);
+    const contextCity = visitedCities.find(
+      c => c.name === city.name && c.country === city.country
+    );
+    setSelectedCity({
+      ...city,
+      userRating: contextCity?.rating,
+      beenThere: contextCity?.beenThere,
+    });
     setModalVisible(true);
   };
 
-  // Ajout/MAJ d'une ville visitée ou notée
-  const handleRateCity = (cityId: number, rating: number) => {
+  // Ajout/MAJ/Suppression d'une ville visitée ou notée
+  const handleRateCity = (cityId: number, rating: number | null | undefined) => {
     if (!selectedCity) return;
+    if (!rating || rating < 1) {
+      // Supprimer complètement la note ET le statut "beenThere"
+      removeCity(selectedCity.name, selectedCity.country);
+      setModalVisible(false);
+      return;
+    }
     addOrUpdateCity({
       name: selectedCity.name,
       country: selectedCity.country,
@@ -73,20 +99,24 @@ export default function ExploreScreen() {
 
   const handleBeenThere = () => {
     if (!selectedCity) return;
-    const cityObj = {
+    // Si déjà beenThere, on retire complètement la ville
+    if (selectedCity.beenThere) {
+      removeCity(selectedCity.name, selectedCity.country);
+      setModalVisible(false);
+      return;
+    }
+    // Sinon, on ajoute/MAJ la ville comme visitée
+    addOrUpdateCity({
       name: selectedCity.name,
       country: selectedCity.country,
       flag: '',
-      beenThere: true
-    };
-    addOrUpdateCity(cityObj);
-    // Wait 800ms to allow the curtain/checkmark animation in the modal
+      rating: selectedCity.userRating ?? undefined,
+      beenThere: true,
+    });
     setTimeout(() => {
       setModalVisible(false);
     }, 800);
   };
-
-  // (Déjà défini plus bas pour le contexte, donc on retire ce handler inutile)
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
@@ -153,7 +183,7 @@ export default function ExploreScreen() {
                 {cities.map((city, index) => (
                   <TouchableOpacity
                     key={`${city.name}-${city.country}-${index}`}
-                    style={[styles.cityCard, { backgroundColor: '#3A3A3A', borderColor: '#555' }]}
+                    style={styles.cityCard}
                     onPress={() => handleCityPress(city)}
                   >
                     <Image
@@ -162,10 +192,10 @@ export default function ExploreScreen() {
                       resizeMode="cover"
                     />
                     <View style={styles.cityTextInfo}>
-                      <Text style={[styles.cityName, { color: '#FFFFFF' }]}>
+                      <Text style={[styles.cityName, { color: '#FFFFFF' }]}> 
                         {city.name}
                       </Text>
-                      <Text style={[styles.countryName, { color: '#CCCCCC' }]}>
+                      <Text style={[styles.countryName, { color: '#CCCCCC' }]}> 
                         {city.country}
                       </Text>
                     </View>
@@ -175,7 +205,7 @@ export default function ExploreScreen() {
             )}
 
             {/* Message si aucune ville trouvée */}
-            {!loading && cities.length === 0 && searchQuery.length > 0 && (
+            {searchQuery.trim().length > 0 && !loading && searchDone && cities.length === 0 && (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: textColor }]}>
                   Aucune ville trouvée pour "{searchQuery}"
@@ -212,7 +242,28 @@ export default function ExploreScreen() {
         city={selectedCity}
         onClose={() => setModalVisible(false)}
         onRate={handleRateCity}
-        onBeenThere={handleBeenThere}
+        onBeenThere={(city) => {
+          if (!city) return;
+          // Si déjà beenThere, on retire la ville immédiatement
+          if (city.beenThere) {
+            removeCity(city.name, city.country);
+            return;
+          }
+          // Sinon, on ajoute/MAJ la ville comme visitée
+          addOrUpdateCity({
+            name: city.name,
+            country: city.country,
+            flag: '',
+            rating: city.userRating ?? undefined,
+            beenThere: true,
+          });
+          // NE FERME PLUS LA MODALE
+        }}
+        onDelete={(city) => {
+          if (!city) return;
+          removeCity(city.name, city.country);
+          setModalVisible(false);
+        }}
       />
     </SafeAreaView>
   );
@@ -322,17 +373,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   citiesList: {
-    paddingBottom: 15,
+    paddingBottom: 70, // Encore plus de padding pour garantir la visibilité
     paddingTop: 10,
   },
   cityCard: {
     padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)', // Bordure très fine et subtile
+    backgroundColor: 'rgba(255,255,255,0.04)', // Fond très léger, effet bouton classe
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    // Optionnel : effet d'ombre léger pour le relief
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
   },
   cityInfo: {
     flex: 1,

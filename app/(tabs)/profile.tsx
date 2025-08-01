@@ -11,10 +11,11 @@ function getCountryCode(countryName: string): string {
   return map[countryName] || '';
 }
 import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -25,6 +26,7 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { usePosts } from '../../hooks/usePosts';
 
 export default function ProfileScreen() {
+
   const { cities: visitedCities } = useVisitedCities();
   const { wishlist } = useWishlist();
   const textColor = useThemeColor({}, 'text');
@@ -35,9 +37,23 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'borderColor');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
-  const [favorites, setFavorites] = useState<Array<{ city: string; country: string; flag: string } | null>>([
+  const [favorites, setFavorites] = useState<Array<{ city: string; country: string; flag: string; countryCode?: string } | null>>([
     null, null, null
   ]);
+
+  // Charge les favoris depuis le stockage local à chaque focus
+  useFocusEffect(
+    React.useCallback(() => {
+      (async () => {
+        try {
+          const stored = await AsyncStorage.getItem('favorites');
+          if (stored) {
+            setFavorites(JSON.parse(stored));
+          }
+        } catch (e) { /* ignore */ }
+      })();
+    }, [])
+  );
   // Force a re-render when the screen is focused (to avoid stale state)
   useFocusEffect(
     React.useCallback(() => {
@@ -71,10 +87,20 @@ export default function ProfileScreen() {
 
   // Récupère la ville sélectionnée via les params de navigation
   const params = useLocalSearchParams();
+  const navigation = useNavigation();
+  const [paramReload, setParamReload] = useState(0);
+
+  // Incrémente le compteur à chaque focus/navigation
+  useFocusEffect(
+    React.useCallback(() => {
+      setParamReload(r => r + 1);
+    }, [])
+  );
+
   React.useEffect(() => {
     if (
       params.favoriteIndex !== undefined &&
-      params.city && params.country && params.flag
+      params.city && params.country
     ) {
       const favoriteIndex = Number(params.favoriteIndex);
       setFavorites(prev => {
@@ -82,14 +108,18 @@ export default function ProfileScreen() {
         updated[favoriteIndex] = {
           city: String(params.city),
           country: String(params.country),
-          flag: String(params.flag),
+          flag: params.flag ? String(params.flag) : '',
+          countryCode: params.countryCode ? String(params.countryCode) : undefined,
         };
+        // Persiste dans le stockage local
+        AsyncStorage.setItem('favorites', JSON.stringify(updated));
         return updated;
       });
       // Nettoie les params de l'URL après usage (optionnel)
       router.replace('../profile');
+      console.log('PROFILE PARAMS EFFECT RUN', params);
     }
-  }, [params]);
+  }, [paramReload, params]);
 
   // Fonction pour gérer le clic sur un pays
   const handleCountryPress = (country: string) => {
@@ -187,13 +217,21 @@ export default function ProfileScreen() {
                     {!fav ? (
                       <Text style={styles.plus}>+</Text>
                     ) : (
-                      getCountryCode(fav.country)
+                      (fav.countryCode && fav.countryCode.length === 2)
                         ? <Image
-                            source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
+                            source={{ uri: `https://flagcdn.com/w80/${fav.countryCode}.png` }}
                             style={styles.favoriteFlagImg}
                             resizeMode="cover"
                           />
-                        : <Text style={styles.flag}>{fav.flag}</Text>
+                        : getCountryCode(fav.country)
+                          ? <Image
+                              source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
+                              style={styles.favoriteFlagImg}
+                              resizeMode="cover"
+                            />
+                          : fav.flag
+                            ? <Text style={styles.flag}>{fav.flag}</Text>
+                            : <Text style={styles.flag}>🏙️</Text>
                     )}
                   </TouchableOpacity>
                   {fav && (
@@ -319,8 +357,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   favoriteBox: {
-    width: 70,
-    height: 70,
+    width: 56,
+    height: 56,
     borderRadius: 12,
     backgroundColor: '#232323',
     alignItems: 'center',
@@ -333,14 +371,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   favoriteFlagImg: {
-    width: 40,
-    height: 28,
-    borderRadius: 6,
-    marginBottom: 4,
+    width: 48,
+    height: 36,
+    borderRadius: 8,
+    marginBottom: 0,
   },
   flag: {
-    fontSize: 32,
-    marginBottom: 4,
+    fontSize: 44,
+    marginBottom: 0,
     textAlign: 'center',
   },
   favoriteCity: {

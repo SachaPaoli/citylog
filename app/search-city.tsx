@@ -3,7 +3,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SearchCityScreen() {
   const textColor = useThemeColor({}, 'text');
@@ -13,6 +13,7 @@ export default function SearchCityScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cities, setCities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
   const params = useLocalSearchParams();
   const favoriteIndex = Number(params.favoriteIndex ?? 0);
 
@@ -20,22 +21,35 @@ export default function SearchCityScreen() {
   const searchCities = async (query: string) => {
     if (!query.trim()) {
       setCities([]);
+      setSearchDone(false);
       return;
     }
     setLoading(true);
+    setSearchDone(false);
     try {
       const results = await RealCitiesService.searchCities(query, 50);
-      setCities(results);
+      // Filtrer les doublons (même nom, même pays)
+      const uniqueCities = [];
+      const seen = new Set();
+      for (const city of results) {
+        const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueCities.push(city);
+        }
+      }
+      setCities(uniqueCities);
     } catch (error) {
       setCities([]);
     }
     setLoading(false);
+    setSearchDone(true);
   };
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       searchCities(searchQuery);
-    }, 300);
+    }, 100); // Délai réduit à 100ms pour accélérer le loading
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
@@ -45,16 +59,19 @@ export default function SearchCityScreen() {
     if (city.countryCode) {
       flag = countryCodeToFlag(city.countryCode);
     }
-    // Retourne sur la page précédente (profil) avec les params de la ville sélectionnée
-    router.replace({
-      pathname: '/(tabs)/profile',
-      params: {
-        favoriteIndex: String(favoriteIndex),
-        city: city.name,
-        country: city.country,
-        flag: flag || '',
-      },
-    });
+    // Navigation vers le profil avec push, puis replace pour nettoyer l'URL
+    const paramsObj = {
+      favoriteIndex: String(favoriteIndex),
+      city: city.name,
+      country: city.country,
+      flag: flag || '',
+      countryCode: city.countryCode ? city.countryCode.toLowerCase() : '',
+    };
+    console.log('NAVIGATE TO PROFILE WITH:', paramsObj);
+    router.push({ pathname: '/(tabs)/profile', params: paramsObj });
+    setTimeout(() => {
+      router.replace('/(tabs)/profile');
+    }, 500);
   };
 
   // Utilitaire pour convertir un code pays en drapeau unicode
@@ -69,9 +86,9 @@ export default function SearchCityScreen() {
   return (
     <View style={[styles.container, { backgroundColor }]}> 
       <TextInput
-        style={[styles.input, { color: textColor, borderColor: '#333' }]}
-        placeholder="Rechercher une ville ou un pays"
-        placeholderTextColor="#888"
+        style={[styles.input, { color: textColor, borderColor: borderColor }]}
+        placeholder="Rechercher une ville..."
+        placeholderTextColor={`${textColor}80`}
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -81,34 +98,38 @@ export default function SearchCityScreen() {
           <Text style={[styles.loadingText, { color: textColor }]}>Recherche en cours...</Text>
         </View>
       )}
+      {/* Liste des villes */}
       {!loading && cities.length > 0 && (
-        <ScrollView style={styles.citiesList}>
+        <View style={styles.citiesList}>
           {cities.map((city, index) => (
             <TouchableOpacity
               key={`${city.name}-${city.country}-${index}`}
-              style={[styles.card, { backgroundColor: '#232323' }]}
+              style={styles.cityCard}
               onPress={() => handleSelect(city)}
             >
               <Image
-                source={{ uri: `https://flagcdn.com/w80/${city.countryCode?.toLowerCase() || ''}.png` }}
-                style={styles.image}
+                source={{ uri: `https://flagcdn.com/w80/${city.countryCode?.toLowerCase() || city.country?.toLowerCase() || ''}.png` }}
+                style={styles.countryFlag}
                 resizeMode="cover"
               />
-              <View style={styles.info}>
-                <Text style={[styles.city, { color: textColor }]}>{city.name}</Text>
-                <Text style={[styles.country, { color: textColor }]}>{city.country}</Text>
+              <View style={styles.cityTextInfo}>
+                <Text style={[styles.cityName, { color: '#FFFFFF' }]}>{city.name}</Text>
+                <Text style={[styles.countryName, { color: '#CCCCCC' }]}>{city.country}</Text>
               </View>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       )}
-      {!loading && cities.length === 0 && searchQuery.length > 0 && (
-        <Text style={{ color: textColor, textAlign: 'center', marginTop: 40 }}>Aucune ville trouvée</Text>
+      {/* Message si aucune ville trouvée */}
+      {searchQuery.trim().length > 0 && !loading && searchDone && cities.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.emptyText, { color: textColor }]}>Aucune ville trouvée pour "{searchQuery}"</Text>
+        </View>
       )}
+      {/* Instructions initiales */}
       {searchQuery.length === 0 && (
         <View style={styles.instructionContainer}>
-          <Text style={[styles.instructionText, { color: textColor }]}>Tape le nom d'une ville pour commencer ta recherche</Text>
-          <Text style={[styles.instructionSubtext, { color: textColor }]}>Plus de 154 000 villes disponibles dans le monde</Text>
+          <Text style={[styles.instructionText, { color: textColor }]}>Tapez le nom d'une ville pour commencer votre recherche</Text>
         </View>
       )}
     </View>
@@ -138,33 +159,42 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   citiesList: {
-    paddingBottom: 15,
+    paddingBottom: 70,
     paddingTop: 10,
   },
-  card: {
+  cityCard: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#232323',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  image: {
-    width: 60,
-    height: 40,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  info: {
+  cityTextInfo: {
     flex: 1,
   },
-  city: {
+  cityName: {
     fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 1,
   },
-  country: {
-    fontSize: 14,
-    opacity: 0.7,
+  countryName: {
+    fontSize: 13,
+    opacity: 0.8,
+  },
+  countryFlag: {
+    width: 28,
+    height: 20,
+    borderRadius: 3,
+    marginRight: 10,
   },
   instructionContainer: {
     alignItems: 'center',
@@ -177,9 +207,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
-  instructionSubtext: {
-    fontSize: 14,
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
     textAlign: 'center',
-    opacity: 0.7,
+    marginBottom: 8,
   },
 });

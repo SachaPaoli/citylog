@@ -12,6 +12,7 @@ export type VisitedCity = {
 type VisitedCitiesContextType = {
   cities: VisitedCity[];
   addOrUpdateCity: (city: Omit<VisitedCity, 'id'>) => void;
+  removeCity: (name: string, country: string) => void;
 };
 
 const VisitedCitiesContext = createContext<VisitedCitiesContextType | undefined>(undefined);
@@ -23,6 +24,10 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     setCities(prev => {
       const id = `${city.name}-${city.country}`;
       const existing = prev.find(c => c.id === id);
+      // Si on retire la note ET beenThere est false, on supprime la ville
+      if ((city.rating === undefined || city.rating === null) && !city.beenThere) {
+        return prev.filter(c => c.id !== id);
+      }
       if (existing) {
         // Update rating or beenThere
         return prev.map(c =>
@@ -34,8 +39,13 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const removeCity = (name: string, country: string) => {
+    const id = `${name}-${country}`;
+    setCities(prev => prev.filter(c => c.id !== id));
+  };
+
   return (
-    <VisitedCitiesContext.Provider value={{ cities, addOrUpdateCity }}>
+    <VisitedCitiesContext.Provider value={{ cities, addOrUpdateCity, removeCity }}>
       {children}
     </VisitedCitiesContext.Provider>
   );
