@@ -117,9 +117,9 @@ export default function ProfileScreen() {
   const screenWidth = Dimensions.get('window').width;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#2A2A2A' }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
       {/* Header Explore-like avec nom d'utilisateur et boutons, fond foncé partout */}
-      <View style={{ backgroundColor: '#2A2A2A', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 }}>
+      <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Bouton logout (porte) */}
           <TouchableOpacity onPress={handleLogout} style={{ padding: 8 }}>
@@ -134,7 +134,7 @@ export default function ProfileScreen() {
         </View>
       </View>
       {/* Onglets Profile / Wishlist centrés */}
-      <View style={{ backgroundColor: '#2A2A2A', paddingTop: 0, paddingBottom: 4, marginBottom: 10 }}>
+      <View style={{ backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 4, marginBottom: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24 }}>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'profile' && { borderBottomColor: borderColor }]}
@@ -158,7 +158,7 @@ export default function ProfileScreen() {
       <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
 
       {activeTab === 'profile' ? (
-        <ScrollView style={[styles.scrollView, { backgroundColor: '#3A3A3A' }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: '#181C24' }]} showsVerticalScrollIndicator={false}>
           {/* Header du profil avec followers/following autour de la photo */}
           <View style={styles.profileHeader}>
             <View style={styles.profileRow}>

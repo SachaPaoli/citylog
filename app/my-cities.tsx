@@ -18,9 +18,9 @@ export default function MyCitiesScreen() {
   const textColor = useThemeColor({}, 'text');
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#232323', paddingTop: 56 }}>
+    <View style={{ flex: 1, backgroundColor: '#181C24', paddingTop: 56 }}>
       {/* Header style notifications (back only, no title) */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: '#181C24' }]}> 
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Retour</Text>
         </TouchableOpacity>

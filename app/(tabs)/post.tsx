@@ -5,16 +5,16 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -357,10 +357,10 @@ export default function PostScreen() {
 
         {/* Bouton ajouter */}
         <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: '#5784BA' }]}
+          style={[styles.addButton, { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#2051A4' }]}
           onPress={() => openAddItemModal(activeTab)}
         >
-          <Text style={styles.addButtonText}>
+          <Text style={[styles.addButtonText, { color: '#fff' }]}> 
             + Ajouter {activeTab === 'staying' ? 'un logement' : 
                       activeTab === 'restaurant' ? 'un restaurant' : 
                       activeTab === 'activities' ? 'une activité' : 'autre chose'}
@@ -374,7 +374,7 @@ export default function PostScreen() {
   };
 
 return (
-  <SafeAreaView style={[styles.container, { backgroundColor: '#232323' }]}> 
+  <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
     {/* Onglets + tabs + separator all on dark background */}
     <View>
       <View style={[styles.header, { backgroundColor: 'transparent' }]}> 
@@ -406,7 +406,7 @@ return (
 
     {/* Bouton flottant */}
     <TouchableOpacity 
-      style={[styles.floatingButton, { backgroundColor: '#5784BA' }]}
+      style={[styles.floatingButton, { backgroundColor: '#2051A4' }]}
       onPress={() => setShowPostModal(true)}
     >
       <Text style={styles.floatingButtonText}>Log your city</Text>
@@ -549,7 +549,7 @@ return (
             
             {/* Bouton flottant dans le modal */}
             <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: '#5784BA' }]} onPress={handlePost}>
+              <TouchableOpacity style={[styles.modalPostButton, { backgroundColor: '#2051A4' }]} onPress={handlePost}>
                 <Text style={styles.modalPostButtonText}>Poster le voyage</Text>
               </TouchableOpacity>
             </View>
@@ -603,7 +603,7 @@ return (
                     style={[styles.addImageButton, { borderColor: borderColor }]}
                     onPress={pickImageForTempItem}
                   >
-                    <Text style={[styles.addImageText, { color: '#5784BA' }]}>+</Text>
+                    <Text style={[styles.addImageText, { color: '#2051A4' }]}>+</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </View>
@@ -655,7 +655,7 @@ return (
             {/* Bouton Ajouter/Modifier */}
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity 
-                style={[styles.itemSaveButton, { backgroundColor: '#5784BA' }]} 
+                style={[styles.itemSaveButton, { backgroundColor: '#2051A4' }]} 
                 onPress={saveItem}
               >
                 <Text style={styles.itemSaveButtonText}>
@@ -811,6 +811,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
+    backgroundColor: '#2051A4',
   },
   addButtonText: {
     color: '#fff',
@@ -922,6 +923,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    backgroundColor: '#2051A4',
   },
   modalPostButtonText: {
     color: '#fff',
@@ -1125,6 +1127,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    backgroundColor: '#2051A4',
   },
   itemSaveButtonText: {
     color: '#fff',

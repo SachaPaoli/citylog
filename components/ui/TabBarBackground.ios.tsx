@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 export default function GrayTabBarBackground() {
   return (
     <View
-      style={[StyleSheet.absoluteFill, { backgroundColor: '#D0D0D0' }]}
+      style={[StyleSheet.absoluteFill, { backgroundColor: '#181C24' }]}
     />
   );
 }

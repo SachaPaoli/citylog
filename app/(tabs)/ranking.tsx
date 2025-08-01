@@ -63,7 +63,7 @@ const rankingData: RankingUser[] = [
 ];
 
 export default function RankingScreen() {
-  const backgroundColor = useThemeColor({}, 'background');
+  const backgroundColor = '#181C24'; // Electric dark gray
   const textColor = useThemeColor({}, 'text');
   const beigeColor = '#E5C9A6';
 
@@ -88,7 +88,7 @@ export default function RankingScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, { backgroundColor }]}> 
       {/* Header */}
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={[styles.header, { backgroundColor }]}>

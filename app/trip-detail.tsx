@@ -57,7 +57,7 @@ export default function TripDetailScreen() {
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
   const whiteColor = '#FFFFFF';
-  const headerColor = '#2A2A2A'; // Gris très foncé comme la page d'accueil
+  const headerColor = '#181C24'; // Electric dark gray comme le fond général
 
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);

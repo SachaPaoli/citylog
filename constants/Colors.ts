@@ -11,13 +11,13 @@ export const Colors = {
     text: '#B0B0B0', // Gris clair pour tous les textes par défaut
     textActive: '#FFFFFF', // Blanc pour les éléments actifs/sélectionnés
     rating: '#FF8C00', // Orange pour les notes/évaluations
-    background: '#3A3A3A', // Gris foncé pour zone des posts
-    headerBackground: '#2A2A2A', // Gris très foncé pour les headers
+    background: '#181C24', // Electric dark gray for all backgrounds
+    headerBackground: '#181C24', // Electric dark gray for all headers
     scrollBackground: '#D3D3D3', // Fond gris très clair pour les zones de scroll
     tint: '#D0D0D0', // Tab bar fond gris assez clair
     icon: '#666666',
-    tabIconDefault: '#666666', // Gris moyen pour les icônes non sélectionnées
-    tabIconSelected: '#5784BA', // Bleu pour les icônes sélectionnées
+    tabIconDefault: '#FFFFFF', // Gris moyen pour les icônes non sélectionnées
+    tabIconSelected: '#2051A4', // Bleu pour les icônes sélectionnées
     buttonBackground: '#FFFFFF', // Boutons en blanc
     buttonText: '#000000', // Texte des boutons en noir
     borderColor: '#FFFFFF', // Bordures en blanc
@@ -26,13 +26,13 @@ export const Colors = {
     text: '#B0B0B0', // Gris clair pour tous les textes par défaut
     textActive: '#FFFFFF', // Blanc pour les éléments actifs/sélectionnés
     rating: '#FF8C00', // Orange pour les notes/évaluations
-    background: '#3A3A3A', // Gris foncé pour zone des posts
-    headerBackground: '#2A2A2A', // Gris très foncé pour les headers
+    background: '#181C24', // Electric dark gray for all backgrounds
+    headerBackground: '#181C24', // Electric dark gray for all headers
     scrollBackground: '#D3D3D3', // Fond gris très clair pour les zones de scroll
     tint: '#D0D0D0', // Tab bar fond gris assez clair
     icon: '#666666',
-    tabIconDefault: '#666666', // Gris moyen pour les icônes non sélectionnées
-    tabIconSelected: '#5784BA', // Bleu pour les icônes sélectionnées
+    tabIconDefault: '#B0B0B0', // Gris moyen pour les icônes non sélectionnées
+    tabIconSelected: '#2051A4', // Bleu pour les icônes sélectionnées
     buttonBackground: '#FFFFFF', // Boutons en blanc
     buttonText: '#000000', // Texte des boutons en noir
     borderColor: '#FFFFFF', // Bordures en blanc

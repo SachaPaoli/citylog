@@ -13,7 +13,8 @@ export default function ExploreScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const buttonBackgroundColor = useThemeColor({}, 'buttonBackground');
   const borderColor = useThemeColor({}, 'borderColor');
-  const headerColor = '#2A2A2A'; // Gris très foncé comme la page d'accueil
+  // Nouveau gris plus foncé et électrique pour le fond général
+  const headerColor = '#181C24'; // Electric dark gray
   
   const [searchQuery, setSearchQuery] = useState('');
   const [cities, setCities] = useState<any[]>([]);
@@ -88,9 +89,9 @@ export default function ExploreScreen() {
   // (Déjà défini plus bas pour le contexte, donc on retire ce handler inutile)
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
       {/* Barre de recherche */}
-      <View style={[styles.searchContainer, { backgroundColor: headerColor }]}>
+      <View style={[styles.searchContainer, { backgroundColor: headerColor }]}> 
         <TextInput
           style={[styles.searchInput, { color: textColor, borderColor: borderColor }]}
           placeholder="Rechercher une ville..."
@@ -101,7 +102,7 @@ export default function ExploreScreen() {
       </View>
 
       {/* Onglets */}
-      <View style={[styles.tabsContainer, { backgroundColor: headerColor }]}>
+      <View style={[styles.tabsContainer, { backgroundColor: headerColor }]}> 
         <TouchableOpacity
           style={[
             styles.tab,
@@ -134,7 +135,7 @@ export default function ExploreScreen() {
       </View>
 
       {/* Contenu principal */}
-      <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.content, { backgroundColor: headerColor }]} showsVerticalScrollIndicator={false}> 
         {activeTab === 'cities' && (
           <>
             {loading && searchQuery.length > 0 && (
