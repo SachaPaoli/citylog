@@ -37,6 +37,7 @@ export class PostService {
         restaurantItems: postData.restaurantItems,
         activitiesItems: postData.activitiesItems,
         otherItems: postData.otherItems,
+        isPublic: postData.isPublic, // Ajouté pour la visibilité du post
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         likes: [],

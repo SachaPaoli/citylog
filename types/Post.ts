@@ -17,6 +17,7 @@ export interface Post {
   restaurantItems: TripItem[];
   activitiesItems: TripItem[];
   otherItems: TripItem[];
+  isPublic: boolean; // Ajouté pour la visibilité du post
 }
 
 export interface TripItem {
@@ -50,4 +51,5 @@ export interface CreatePostData {
   restaurantItems: TripItem[];
   activitiesItems: TripItem[];
   otherItems: TripItem[];
+  isPublic: boolean; // Ajouté pour la visibilité du post
 }

@@ -70,7 +70,7 @@ export default function PostScreen() {
   const [tempItem, setTempItem] = useState<TripItem>({
     id: '',
     name: '',
-    rating: 2.5, // Note par défaut sur 5
+    rating: 0, // Toutes les étoiles vides par défaut
     description: '',
     images: []
   });
@@ -95,7 +95,7 @@ export default function PostScreen() {
     setTempItem({
       id: '',
       name: '',
-      rating: 2.5, // Note par défaut sur 5
+      rating: 0, // Toutes les étoiles vides par défaut
       description: '',
       images: []
     });
@@ -279,6 +279,7 @@ export default function PostScreen() {
         restaurantItems,
         activitiesItems,
         otherItems,
+        isPublic,
       });
       // Ajoute la ville comme visitée (source: 'post') dans Firestore
       try {

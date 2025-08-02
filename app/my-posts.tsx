@@ -3,6 +3,7 @@ import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelPostCard } from '../components/TravelPostCard';
+import { MyTravelPostCard } from '../components/MyTravelPostCard';
 import { useAuth } from '../contexts/AuthContext';
 import { usePosts } from '../hooks/usePosts';
 import { useThemeColor } from '../hooks/useThemeColor';
@@ -15,6 +16,7 @@ export default function MyPostsScreen() {
   const { userProfile } = useAuth();
   const { posts, loading } = usePosts();
   const textColor = useThemeColor({}, 'text');
+  // Filtre : tous les posts de l'utilisateur
   const userPosts = React.useMemo(() => {
     if (!userProfile?.uid || !posts) return [];
     return posts.filter((p: any) => p.userId === userProfile.uid);
@@ -36,10 +38,12 @@ export default function MyPostsScreen() {
           data={userPosts}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <TravelPostCard
-              post={item}
-              onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
-            />
+            <View>
+              <MyTravelPostCard
+                post={item}
+                onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
+              />
+            </View>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
