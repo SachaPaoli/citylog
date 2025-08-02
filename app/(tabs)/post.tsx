@@ -267,7 +267,7 @@ export default function PostScreen() {
     }
 
     const averageRating = calculateAverageRating();
-    
+
     try {
       await createPost({
         city: cityName.trim(),
@@ -280,6 +280,13 @@ export default function PostScreen() {
         activitiesItems,
         otherItems,
       });
+      // Ajoute la ville comme visitée (source: 'post') dans Firestore
+      try {
+        const { addVisitedCity } = await import('../../services/UserService');
+        await addVisitedCity(cityName.trim(), countryName.trim(), 'post');
+      } catch (e) {
+        console.warn('Erreur Firestore addVisitedCity:', e);
+      }
 
       Alert.alert(
         'Voyage posté !', 

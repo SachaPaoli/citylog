@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -24,6 +24,7 @@ import { TravelPostCard } from '../../components/TravelPostCard';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { usePosts } from '../../hooks/usePosts';
+import { addFavorite as addFavoriteFirestore, getUserFavorites } from '../../services/UserService';
 
 export default function ProfileScreen() {
 
@@ -40,21 +41,12 @@ export default function ProfileScreen() {
   type FavoriteType = { city: string; country: string; flag: string; countryCode?: string } | null;
   const [favorites, setFavorites] = useState<FavoriteType[]>([null, null, null]);
 
-  // Charge les favoris depuis le stockage local à chaque focus
+  // Charge les favoris depuis Firestore à chaque focus
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
         try {
-          const stored = await AsyncStorage.getItem('favorites');
-          let arr: FavoriteType[] = [null, null, null];
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-              for (let i = 0; i < 3; i++) {
-                arr[i] = parsed[i] ? parsed[i] as FavoriteType : null;
-              }
-            }
-          }
+          const arr = await getUserFavorites();
           setFavorites(arr);
         } catch (e) { setFavorites([null, null, null]); }
       })();
@@ -110,25 +102,16 @@ export default function ProfileScreen() {
     ) {
       const favoriteIndex = Number(params.favoriteIndex);
       (async () => {
-        let arr: FavoriteType[] = [null, null, null];
-        try {
-          const stored = await AsyncStorage.getItem('favorites');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-              for (let i = 0; i < 3; i++) {
-                arr[i] = parsed[i] ? parsed[i] as FavoriteType : null;
-              }
-            }
-          }
-        } catch (e) { /* ignore */ }
-        arr[favoriteIndex] = {
-          city: String(params.city),
-          country: String(params.country),
-          flag: params.flag ? String(params.flag) : '',
-          countryCode: params.countryCode ? String(params.countryCode) : undefined,
-        };
-        await AsyncStorage.setItem('favorites', JSON.stringify(arr));
+        // Ajoute le favori dans Firestore avec tous les champs
+        await addFavoriteFirestore(
+          String(params.city),
+          String(params.country),
+          params.flag ? String(params.flag) : '',
+          params.countryCode ? String(params.countryCode) : undefined,
+          favoriteIndex
+        );
+        // Recharge les favoris depuis Firestore
+        const arr = await getUserFavorites();
         setFavorites(arr);
         router.replace('../profile');
         console.log('PROFILE PARAMS EFFECT RUN', params);

@@ -3,7 +3,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 
 export default function SearchCityScreen() {
   const textColor = useThemeColor({}, 'text');
@@ -100,7 +100,7 @@ export default function SearchCityScreen() {
       )}
       {/* Liste des villes */}
       {!loading && cities.length > 0 && (
-        <View style={styles.citiesList}>
+        <ScrollView style={styles.citiesList} contentContainerStyle={{ paddingBottom: 70, paddingTop: 10 }} showsVerticalScrollIndicator={false}>
           {cities.map((city, index) => (
             <TouchableOpacity
               key={`${city.name}-${city.country}-${index}`}
@@ -118,7 +118,7 @@ export default function SearchCityScreen() {
               </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
       {/* Message si aucune ville trouvée */}
       {searchQuery.trim().length > 0 && !loading && searchDone && cities.length === 0 && (

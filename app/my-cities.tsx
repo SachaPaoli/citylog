@@ -45,7 +45,9 @@ export default function MyCitiesScreen() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.cityName}>{city.name}</Text>
-                {city.rating !== undefined ? (
+                {city.source === 'post' ? (
+                  <Text style={styles.cityPost}>post</Text>
+                ) : city.rating !== undefined ? (
                   <Text style={styles.cityRating}>★ {city.rating}/5</Text>
                 ) : (
                   <Text style={styles.cityBeenThere}>I have been there</Text>
@@ -113,6 +115,12 @@ const styles = StyleSheet.create({
   cityBeenThere: {
     color: '#bbb',
     fontSize: 12,
+    fontStyle: 'italic',
+  },
+  cityPost: {
+    color: '#2051A4',
+    fontSize: 13,
+    fontWeight: 'bold',
     fontStyle: 'italic',
   },
   centered: {
