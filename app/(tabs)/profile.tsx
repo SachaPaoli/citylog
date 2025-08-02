@@ -272,7 +272,7 @@ export default function ProfileScreen() {
                   <Text style={styles.profileButtonText}>Cities</Text>
                 </View>
                 <View style={styles.profileButtonRight}>
-                  <Text style={styles.profileButtonCount}>{visitedCities.length}</Text>
+                  <Text style={styles.profileButtonCount}>{visitedCities.filter(c => c?.name && c?.country).length}</Text>
                   <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
                 </View>
               </TouchableOpacity>

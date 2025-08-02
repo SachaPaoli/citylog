@@ -102,7 +102,7 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 )}
-                {posts.map((post) => (
+                {posts.filter(post => post.isPublic).map((post) => (
                   <TravelPostCard 
                     key={post.id} 
                     post={post}

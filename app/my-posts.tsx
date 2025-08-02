@@ -2,7 +2,6 @@ import { router, useNavigation } from 'expo-router';
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TravelPostCard } from '../components/TravelPostCard';
 import { MyTravelPostCard } from '../components/MyTravelPostCard';
 import { useAuth } from '../contexts/AuthContext';
 import { usePosts } from '../hooks/usePosts';

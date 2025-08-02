@@ -14,8 +14,9 @@ export default function MyCitiesScreen() {
     navigation.setOptions?.({ headerShown: false });
   }, [navigation]);
   const { cities: visitedCities } = useVisitedCities();
-  console.log('visitedCities:', visitedCities);
   const textColor = useThemeColor({}, 'text');
+  // Filtrer les villes valides (nom ET pays présents)
+  const validCities = visitedCities.filter(city => city.name && city.country);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#181C24', paddingTop: 56 }}>
@@ -26,7 +27,7 @@ export default function MyCitiesScreen() {
         </TouchableOpacity>
       </View>
       <View style={{ height: 0.5, backgroundColor: 'rgba(255,255,255,0.3)', width: '100%' }} />
-      {visitedCities.length === 0 ? (
+      {validCities.length === 0 ? (
         <View style={styles.centered}>
           <Text style={{ color: textColor, opacity: 0.7, fontSize: 16, textAlign: 'center' }}>
             You haven't added any cities yet.
@@ -34,7 +35,7 @@ export default function MyCitiesScreen() {
         </View>
       ) : (
         <FlatList
-          data={visitedCities}
+          data={validCities}
           keyExtractor={(item, idx) => (item.id && item.id !== 'undefined-France' ? item.id : `${item.name || 'city'}-${item.country || 'country'}-${idx}`)}
           renderItem={({ item: city }) => (
             <View style={styles.cityCard}>
@@ -92,9 +93,17 @@ const styles = StyleSheet.create({
   cityCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3A3A3A',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)', // Fond très léger, effet bouton classe (comme explore)
+    borderRadius: 12,
     padding: 12,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)', // Bordure très fine et subtile (comme explore)
+    // Optionnel : effet d'ombre léger pour le relief
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
   },
   flag: {
     width: 32,

@@ -17,6 +17,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
 interface SelectedImage {
   id: string;
@@ -34,6 +35,9 @@ interface TripItem {
 type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
 
 export default function PostScreen() {
+  const { addOrUpdateCity } = useVisitedCities();
+  // State for city autocomplete suggestions
+  const [citySuggestions, setCitySuggestions] = useState<any[]>([]);
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
@@ -43,7 +47,7 @@ export default function PostScreen() {
   const scrollBackgroundColor = '#D3D3D3';
   
   // Hooks pour Firebase
-  const { createPost } = usePosts();
+  const { createPost, refreshPosts } = usePosts();
   const { userProfile } = useAuth();
   
   const [activeTab, setActiveTab] = useState<TabType>('staying');
@@ -288,6 +292,19 @@ export default function PostScreen() {
       } catch (e) {
         console.warn('Erreur Firestore addVisitedCity:', e);
       }
+      // Ajoute la ville dans le contexte local pour affichage immédiat dans MyCities
+      addOrUpdateCity({
+        name: cityName.trim(),
+        country: countryName.trim(),
+        flag: '',
+        rating: averageRating,
+        beenThere: true,
+        source: 'post'
+      });
+      // Rafraîchir les posts pour que le nombre soit à jour sur le profil
+      if (typeof refreshPosts === 'function') {
+        await refreshPosts();
+      }
 
       Alert.alert(
         'Voyage posté !', 
@@ -446,7 +463,7 @@ return (
               {/* Photo de couverture */}
               <View style={styles.coverImageSection}>
                 <Text style={[styles.coverImageLabel, { color: textColor }]}>
-                  Photo de couverture:
+                  Cover picture:
                 </Text>
                 {coverImage ? (
                   <View style={styles.coverImageContainer}>
@@ -463,42 +480,120 @@ return (
                     style={[styles.addCoverImageButton, { borderColor: borderColor }]}
                     onPress={pickCoverImage}
                   >
-                    <Text style={[styles.addCoverImageText, { color: textActiveColor }]}>+ Ajouter une photo</Text>
+                    <Text style={[styles.addCoverImageText, { color: textActiveColor }]}>+ Add a picture</Text>
                   </TouchableOpacity>
                 )}
               </View>
               
               {/* Ville et Pays */}
               <View style={styles.locationSection}>
-                <Text style={[styles.locationLabel, { color: textColor }]}>
-                  Ville et Pays:
+                <Text style={[styles.locationLabel, { color: textColor }]}> 
+                  Choose a city :
                 </Text>
+                <View style={{ height: 8 }} />
                 <View style={styles.locationInputs}>
-                  <TextInput
-                    style={[styles.locationInput, { color: textColor, borderColor: borderColor }]}
-                    placeholder="Ville"
-                    placeholderTextColor="#666"
-                    value={cityName}
-                    onChangeText={setCityName}
-                  />
-                  <TextInput
-                    style={[styles.locationInput, { color: textColor, borderColor: borderColor }]}
-                    placeholder="Pays"
-                    placeholderTextColor="#666"
-                    value={countryName}
-                    onChangeText={setCountryName}
-                  />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ position: 'relative', justifyContent: 'center' }}>
+                      <TextInput
+                        style={[styles.locationInput, { color: textColor, borderColor: borderColor, paddingRight: 44 }]}
+                        placeholder="City"
+                        placeholderTextColor="#666"
+                        value={cityName}
+                        onChangeText={async (text) => {
+                          setCityName(text);
+                          if (text.length > 1) {
+                            try {
+                              const { RealCitiesService } = await import('@/services/RealCitiesService');
+                              const results = await RealCitiesService.searchCities(text, 10);
+                              // Remove duplicates
+                              const uniqueCities = [];
+                              const seen = new Set();
+                              for (const city of results) {
+                                const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
+                                if (!seen.has(key)) {
+                                  seen.add(key);
+                                  uniqueCities.push(city);
+                                }
+                              }
+                              setCitySuggestions(uniqueCities);
+                            } catch {
+                              setCitySuggestions([]);
+                            }
+                          } else {
+                            setCitySuggestions([]);
+                          }
+                        }}
+                      />
+                      {cityName.length > 0 && (
+                        <TouchableOpacity
+                          style={{ position: 'absolute', right: 12, top: '50%', transform: [{ translateY: -12 }], width: 24, height: 24, alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
+                          onPress={() => {
+                            setCityName('');
+                            setCitySuggestions([]);
+                          }}
+                        >
+                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>×</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
                 </View>
+                {/* Overlay autocomplete suggestions */}
+                {citySuggestions && citySuggestions.length > 0 && cityName.length > 1 && (
+                  <View style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: '100%',
+                    marginTop: 8,
+                    backgroundColor: '#181C24',
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                    zIndex: 100,
+                    maxHeight: 180,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                  }}>
+                    <ScrollView style={{ maxHeight: 180 }}>
+                      {citySuggestions.map((city, idx) => {
+                        const countryDisplay = city.countryFull || city.country;
+                        return (
+                          <TouchableOpacity
+                            key={`${city.name}-${city.country}-${idx}`}
+                            style={{ padding: 10, borderBottomWidth: idx < citySuggestions.length - 1 ? 1 : 0, borderBottomColor: '#eee', flexDirection: 'row', alignItems: 'center' }}
+                            onPress={() => {
+                              setCityName(city.name);
+                              setCountryName(countryDisplay);
+                              setCitySuggestions([]);
+                            }}
+                          >
+                            <Image
+                              source={{ uri: `https://flagcdn.com/w40/${city.countryCode?.toLowerCase() || city.country?.toLowerCase() || ''}.png` }}
+                              style={{ width: 22, height: 16, borderRadius: 3, marginRight: 8 }}
+                              resizeMode="cover"
+                            />
+                            <Text style={{ color: textActiveColor, fontWeight: 'bold', fontSize: 15 }}>{city.name}</Text>
+                            <Text style={{ color: textColor, fontSize: 14, marginLeft: 6 }}>({countryDisplay})</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
 
               {/* Description optionnelle */}
               <View style={styles.descriptionSection}>
                 <Text style={[styles.descriptionLabel, { color: textColor }]}>
-                  Description (optionnelle):
+                  Description (optional):
                 </Text>
                 <TextInput
                   style={[styles.descriptionTextArea, { color: textColor, borderColor: borderColor }]}
-                  placeholder="Racontez votre voyage..."
+                  placeholder="Describe your journey
+                  ..."
                   placeholderTextColor="#666"
                   value={tripDescription}
                   onChangeText={setTripDescription}
@@ -510,7 +605,7 @@ return (
               
               <View style={styles.averageRatingContainer}>
                 <Text style={[styles.averageRatingLabel, { color: textColor }]}>
-                  Note finale:
+                  Final rate:
                 </Text>
                 <View style={styles.averageRatingContainer}>
                   <StarRating 
@@ -525,7 +620,7 @@ return (
                 {/* Bouton Public/Private directement collé aux étoiles */}
                 <View style={styles.privacySection}>
                   <Text style={[styles.privacyLabel, { color: textColor }]}>
-                    Visibilité:
+                    Visibility:
                   </Text>
                   <TouchableOpacity 
                     style={styles.privacyButton}
@@ -887,7 +982,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '88%',
+    height: '90%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
@@ -900,13 +995,11 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 30,
     height: 30,
-    borderRadius: 15,
-    backgroundColor: '#333',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeButtonText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -1011,10 +1104,14 @@ const styles = StyleSheet.create({
   locationInput: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    fontSize: 14,
+    minHeight: 48,
+    minWidth: 0,
+    height: 56,
+    // Make input visually larger and modern
   },
   descriptionSection: {
     marginBottom: 12,
