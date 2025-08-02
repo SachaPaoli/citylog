@@ -2,10 +2,18 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { useNavigation } from '@react-navigation/native';
+import { useEffect } from 'react';
 
 export default function SearchCityScreen() {
+  // Désactive le header natif pour cette page
+  const navigation = useNavigation();
+  useEffect(() => {
+    navigation.setOptions?.({ headerShown: false });
+  }, [navigation]);
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
@@ -85,13 +93,44 @@ export default function SearchCityScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor }]}> 
-      <TextInput
-        style={[styles.input, { color: textColor, borderColor: borderColor }]}
-        placeholder="Rechercher une ville..."
-        placeholderTextColor={`${textColor}80`}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      {/* Nouveau header style my-posts */}
+      <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, marginTop: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Bouton retour */}
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+            <Text style={{ color: '#fff', fontSize: 18 }}>←</Text>
+          </TouchableOpacity>
+          {/* Titre centré */}
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22, textAlign: 'center', flex: 1 }} numberOfLines={1}>Search City</Text>
+          {/* Espace à droite */}
+          <View style={{ width: 30 }} />
+        </View>
+        {/* Barre de recherche avec croix à l'intérieur */}
+        <View style={{ position: 'relative', justifyContent: 'center', marginTop: 8 }}>
+          <TextInput
+            style={{
+              width: '100%',
+              borderWidth: 1,
+              borderRadius: 8,
+              padding: 12,
+              paddingRight: 36,
+              fontSize: 16,
+              color: textColor,
+              borderColor: borderColor,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+            placeholder="Rechercher une ville..."
+            placeholderTextColor={`${textColor}80`}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ position: 'absolute', right: 10, top: 0, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 18 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
       {loading && searchQuery.length > 0 && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={textActiveColor} />
@@ -101,23 +140,33 @@ export default function SearchCityScreen() {
       {/* Liste des villes */}
       {!loading && cities.length > 0 && (
         <ScrollView style={styles.citiesList} contentContainerStyle={{ paddingBottom: 70, paddingTop: 10 }} showsVerticalScrollIndicator={false}>
-          {cities.map((city, index) => (
-            <TouchableOpacity
-              key={`${city.name}-${city.country}-${index}`}
-              style={styles.cityCard}
-              onPress={() => handleSelect(city)}
-            >
-              <Image
-                source={{ uri: `https://flagcdn.com/w80/${city.countryCode?.toLowerCase() || city.country?.toLowerCase() || ''}.png` }}
-                style={styles.countryFlag}
-                resizeMode="cover"
-              />
-              <View style={styles.cityTextInfo}>
-                <Text style={[styles.cityName, { color: '#FFFFFF' }]}>{city.name}</Text>
-                <Text style={[styles.countryName, { color: '#CCCCCC' }]}>{city.country}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {cities.map((city, index) => {
+            // Table exhaustive ISO 3166-1 alpha-2 code -> nom anglais
+            const countryNamesEn: Record<string, string> = {
+              AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AS: 'American Samoa', AD: 'Andorra', AO: 'Angola', AI: 'Anguilla', AQ: 'Antarctica', AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh', BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin', BM: 'Bermuda', BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia and Herzegovina', BW: 'Botswana', BV: 'Bouvet Island', BR: 'Brazil', IO: 'British Indian Ocean Territory', BN: 'Brunei Darussalam', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia', CM: 'Cameroon', CA: 'Canada', CV: 'Cape Verde', KY: 'Cayman Islands', CF: 'Central African Republic', TD: 'Chad', CL: 'Chile', CN: 'China', CX: 'Christmas Island', CC: 'Cocos (Keeling) Islands', CO: 'Colombia', KM: 'Comoros', CG: 'Congo', CD: 'Congo, Democratic Republic', CK: 'Cook Islands', CR: 'Costa Rica', CI: 'Côte d’Ivoire', HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus', CZ: 'Czech Republic', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic', EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea', EE: 'Estonia', ET: 'Ethiopia', FK: 'Falkland Islands', FO: 'Faroe Islands', FJ: 'Fiji', FI: 'Finland', FR: 'France', GF: 'French Guiana', PF: 'French Polynesia', TF: 'French Southern Territories', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany', GH: 'Ghana', GI: 'Gibraltar', GR: 'Greece', GL: 'Greenland', GD: 'Grenada', GP: 'Guadeloupe', GU: 'Guam', GT: 'Guatemala', GG: 'Guernsey', GN: 'Guinea', GW: 'Guinea-Bissau', GY: 'Guyana', HT: 'Haiti', HM: 'Heard Island and McDonald Islands', VA: 'Holy See', HN: 'Honduras', HK: 'Hong Kong', HU: 'Hungary', IS: 'Iceland', IN: 'India', ID: 'Indonesia', IR: 'Iran', IQ: 'Iraq', IE: 'Ireland', IM: 'Isle of Man', IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JE: 'Jersey', JO: 'Jordan', KZ: 'Kazakhstan', KE: 'Kenya', KI: 'Kiribati', KP: 'Korea, Democratic People’s Republic', KR: 'Korea, Republic', KW: 'Kuwait', KG: 'Kyrgyzstan', LA: 'Lao People’s Democratic Republic', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia', LY: 'Libya', LI: 'Liechtenstein', LT: 'Lithuania', LU: 'Luxembourg', MO: 'Macao', MK: 'Macedonia', MG: 'Madagascar', MW: 'Malawi', MY: 'Malaysia', MV: 'Maldives', ML: 'Mali', MT: 'Malta', MH: 'Marshall Islands', MQ: 'Martinique', MR: 'Mauritania', MU: 'Mauritius', YT: 'Mayotte', MX: 'Mexico', FM: 'Micronesia', MD: 'Moldova', MC: 'Monaco', MN: 'Mongolia', ME: 'Montenegro', MS: 'Montserrat', MA: 'Morocco', MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NR: 'Nauru', NP: 'Nepal', NL: 'Netherlands', NC: 'New Caledonia', NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', NU: 'Niue', NF: 'Norfolk Island', MP: 'Northern Mariana Islands', NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PW: 'Palau', PS: 'Palestine', PA: 'Panama', PG: 'Papua New Guinea', PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PN: 'Pitcairn', PL: 'Poland', PT: 'Portugal', PR: 'Puerto Rico', QA: 'Qatar', RE: 'Réunion', RO: 'Romania', RU: 'Russia', RW: 'Rwanda', BL: 'Saint Barthélemy', SH: 'Saint Helena', KN: 'Saint Kitts and Nevis', LC: 'Saint Lucia', MF: 'Saint Martin', PM: 'Saint Pierre and Miquelon', VC: 'Saint Vincent and the Grenadines', WS: 'Samoa', SM: 'San Marino', ST: 'Sao Tome and Principe', SA: 'Saudi Arabia', SN: 'Senegal', RS: 'Serbia', SC: 'Seychelles', SL: 'Sierra Leone', SG: 'Singapore', SX: 'Sint Maarten', SK: 'Slovakia', SI: 'Slovenia', SB: 'Solomon Islands', SO: 'Somalia', ZA: 'South Africa', GS: 'South Georgia and the South Sandwich Islands', SS: 'South Sudan', ES: 'Spain', LK: 'Sri Lanka', SD: 'Sudan', SR: 'Suriname', SJ: 'Svalbard and Jan Mayen', SZ: 'Swaziland', SE: 'Sweden', CH: 'Switzerland', SY: 'Syrian Arab Republic', TW: 'Taiwan', TJ: 'Tajikistan', TZ: 'Tanzania', TH: 'Thailand', TL: 'Timor-Leste', TG: 'Togo', TK: 'Tokelau', TO: 'Tonga', TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan', TC: 'Turks and Caicos Islands', TV: 'Tuvalu', UG: 'Uganda', UA: 'Ukraine', AE: 'United Arab Emirates', GB: 'United Kingdom', US: 'United States', UM: 'United States Minor Outlying Islands', UY: 'Uruguay', UZ: 'Uzbekistan', VU: 'Vanuatu', VE: 'Venezuela', VN: 'Vietnam', VG: 'Virgin Islands, British', VI: 'Virgin Islands, U.S.', WF: 'Wallis and Futuna', EH: 'Western Sahara', YE: 'Yemen', ZM: 'Zambia', ZW: 'Zimbabwe'
+            };
+            let countryDisplay = city.countryFull || city.country;
+            if (city.countryCode && countryNamesEn[city.countryCode.toUpperCase()]) {
+              countryDisplay = countryNamesEn[city.countryCode.toUpperCase()];
+            }
+            return (
+              <TouchableOpacity
+                key={`${city.name}-${city.country}-${index}`}
+                style={styles.cityCard}
+                onPress={() => handleSelect(city)}
+              >
+                <Image
+                  source={{ uri: `https://flagcdn.com/w80/${city.countryCode?.toLowerCase() || city.country?.toLowerCase() || ''}.png` }}
+                  style={styles.countryFlag}
+                  resizeMode="cover"
+                />
+                <View style={styles.cityTextInfo}>
+                  <Text style={[styles.cityName, { color: '#FFFFFF' }]}>{city.name}</Text>
+                  <Text style={[styles.countryName, { color: '#CCCCCC' }]}>{countryDisplay}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       )}
       {/* Message si aucune ville trouvée */}
