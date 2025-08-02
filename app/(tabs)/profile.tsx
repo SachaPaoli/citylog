@@ -11,10 +11,10 @@ function getCountryCode(countryName: string): string {
   return map[countryName] || '';
 }
 import { useAuth } from '@/contexts/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -37,9 +37,8 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'borderColor');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
-  const [favorites, setFavorites] = useState<Array<{ city: string; country: string; flag: string; countryCode?: string } | null>>([
-    null, null, null
-  ]);
+  type FavoriteType = { city: string; country: string; flag: string; countryCode?: string } | null;
+  const [favorites, setFavorites] = useState<FavoriteType[]>([null, null, null]);
 
   // Charge les favoris depuis le stockage local à chaque focus
   useFocusEffect(
@@ -47,10 +46,17 @@ export default function ProfileScreen() {
       (async () => {
         try {
           const stored = await AsyncStorage.getItem('favorites');
+          let arr: FavoriteType[] = [null, null, null];
           if (stored) {
-            setFavorites(JSON.parse(stored));
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              for (let i = 0; i < 3; i++) {
+                arr[i] = parsed[i] ? parsed[i] as FavoriteType : null;
+              }
+            }
           }
-        } catch (e) { /* ignore */ }
+          setFavorites(arr);
+        } catch (e) { setFavorites([null, null, null]); }
       })();
     }, [])
   );
@@ -103,21 +109,30 @@ export default function ProfileScreen() {
       params.city && params.country
     ) {
       const favoriteIndex = Number(params.favoriteIndex);
-      setFavorites(prev => {
-        const updated = [...prev];
-        updated[favoriteIndex] = {
+      (async () => {
+        let arr: FavoriteType[] = [null, null, null];
+        try {
+          const stored = await AsyncStorage.getItem('favorites');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              for (let i = 0; i < 3; i++) {
+                arr[i] = parsed[i] ? parsed[i] as FavoriteType : null;
+              }
+            }
+          }
+        } catch (e) { /* ignore */ }
+        arr[favoriteIndex] = {
           city: String(params.city),
           country: String(params.country),
           flag: params.flag ? String(params.flag) : '',
           countryCode: params.countryCode ? String(params.countryCode) : undefined,
         };
-        // Persiste dans le stockage local
-        AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        return updated;
-      });
-      // Nettoie les params de l'URL après usage (optionnel)
-      router.replace('../profile');
-      console.log('PROFILE PARAMS EFFECT RUN', params);
+        await AsyncStorage.setItem('favorites', JSON.stringify(arr));
+        setFavorites(arr);
+        router.replace('../profile');
+        console.log('PROFILE PARAMS EFFECT RUN', params);
+      })();
     }
   }, [paramReload, params]);
 
@@ -210,7 +225,10 @@ export default function ProfileScreen() {
               {favorites.map((fav, idx) => (
                 <View key={idx} style={{ alignItems: 'center', flex: 1 }}>
                   <TouchableOpacity
-                    style={styles.favoriteBox}
+                    style={[
+                      styles.favoriteBox,
+                      fav && { borderWidth: 0, borderColor: 'transparent' }
+                    ]}
                     onPress={() => handleAddFavorite(idx)}
                     activeOpacity={0.7}
                   >
@@ -243,8 +261,11 @@ export default function ProfileScreen() {
             {/* Ligne de séparation fine grise en dessous des Favorites */}
             <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginVertical: 12 }} />
 
+            {/* Titre Diary au-dessus des 4 boutons */}
+            <Text style={[styles.favoritesTitle, { color: textColor, marginBottom: 18 }]}>Diary</Text>
+
             {/* 4 boutons, un par ligne, avec icône chevron à droite */}
-            <View style={{ width: '100%', marginTop: 12 }}>
+            <View style={{ width: '100%' }}>
               <TouchableOpacity style={styles.profileButtonRow} onPress={() => router.push('/my-posts')}>
                 <View style={styles.profileButtonLeft}>
                   <Text style={styles.profileButtonText}>Posts</Text>
@@ -360,10 +381,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#232323',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 4,
+    borderWidth: 0.5,
+    borderColor: '#bbb',
   },
   plus: {
     fontSize: 32,
@@ -547,7 +570,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: 'transparent',
     borderRadius: 10,
-    borderWidth: 0.5,
+    borderWidth: 0.35,
     borderColor: '#bbb',
     paddingVertical: 12,
     paddingHorizontal: 18,
