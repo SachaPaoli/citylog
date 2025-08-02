@@ -285,13 +285,6 @@ export default function PostScreen() {
         otherItems,
         isPublic,
       });
-      // Ajoute la ville comme visitée (source: 'post') dans Firestore
-      try {
-        const { addVisitedCity } = await import('../../services/UserService');
-        await addVisitedCity(cityName.trim(), countryName.trim(), 'post');
-      } catch (e) {
-        console.warn('Erreur Firestore addVisitedCity:', e);
-      }
       // Ajoute la ville dans le contexte local pour affichage immédiat dans MyCities
       addOrUpdateCity({
         name: cityName.trim(),
