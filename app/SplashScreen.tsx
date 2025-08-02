@@ -67,7 +67,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
               },
             ]}
           >
-            <Text style={styles.titleText}>Ci</Text>
+            <Text style={[styles.titleText, { color: '#fff' }]}>Ci</Text>
             <View style={styles.planeContainer}>
               <Animated.View
                 style={[
@@ -78,14 +78,14 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
                 ]}
               >
                 {/* Corps de l'avion */}
-                <View style={[styles.airplaneBody, { backgroundColor: '#E5C9A6' }]} />
+                <View style={[styles.airplaneBody, { backgroundColor: '#fff' }]} />
                 {/* Ailes */}
-                <View style={[styles.airplaneWings, { backgroundColor: '#E5C9A6' }]} />
+                <View style={[styles.airplaneWings, { backgroundColor: '#fff' }]} />
                 {/* Queue */}
-                <View style={[styles.airplaneTail, { backgroundColor: '#E5C9A6' }]} />
+                <View style={[styles.airplaneTail, { backgroundColor: '#fff' }]} />
               </Animated.View>
             </View>
-            <Text style={styles.titleText}>yLog</Text>
+            <Text style={[styles.titleText, { color: '#fff' }]}>yLog</Text>
           </Animated.View>
         </View>
       </Animated.View>
@@ -116,7 +116,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#181C24', // Couleur de fond générale de l'app
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#E5C9A6',
+    color: '#fff',
     letterSpacing: 2,
   },
   planeContainer: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 3,
     height: 3,
-    backgroundColor: '#E5C9A6',
+    backgroundColor: '#fff',
     borderRadius: 2,
   },
 });

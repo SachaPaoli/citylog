@@ -35,7 +35,7 @@ export default function MyCitiesScreen() {
       ) : (
         <FlatList
           data={visitedCities}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, idx) => (item.id && item.id !== 'undefined-France' ? item.id : `${item.name || 'city'}-${item.country || 'country'}-${idx}`)}
           renderItem={({ item: city }) => (
             <View style={styles.cityCard}>
               <Image

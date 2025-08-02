@@ -206,7 +206,7 @@ export default function ProfileScreen() {
             <Text style={[styles.favoritesTitle, { color: textColor }]}>Favorites</Text>
             <View style={styles.favoritesRow}>
               {favorites.map((fav, idx) => (
-                <View key={idx} style={{ alignItems: 'center', flex: 1 }}>
+                <View key={fav?.city && fav?.country ? `${fav.city}-${fav.country}-${idx}` : `favorite-${idx}`} style={{ alignItems: 'center', flex: 1 }}>
                   <TouchableOpacity
                     style={[
                       styles.favoriteBox,
@@ -236,7 +236,7 @@ export default function ProfileScreen() {
                     )}
                   </TouchableOpacity>
                   {fav && (
-                    <Text style={[styles.favoriteCity, { color: textColor }]}>{fav.city}</Text>
+                    <Text style={[styles.favoriteCity, { color: textColor }]}>{fav.city || 'Unknown'}</Text>
                   )}
                 </View>
               ))}

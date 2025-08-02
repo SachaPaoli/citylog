@@ -21,7 +21,7 @@ export default function EditProfileScreen() {
   const { userProfile, updateUserProfile } = useAuth();
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const beigeColor = '#E5C9A6';
+  const beigeColor = '#fff';
 
   // États locaux pour l'édition
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
@@ -98,7 +98,7 @@ export default function EditProfileScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={[styles.backButtonText, { color: beigeColor }]}>← Retour</Text>
+          <Text style={[styles.backButtonText, { color: '#fff' }]}>← Retour</Text>
         </TouchableOpacity>
         
         {/* Espace vide pour équilibrer */}
@@ -119,7 +119,7 @@ export default function EditProfileScreen() {
           <View style={styles.photoSection}>
             <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
               <Image source={{ uri: profilePhoto }} style={styles.profilePhoto} />
-              <View style={[styles.photoOverlay, { backgroundColor: beigeColor }]}>
+              <View style={[styles.photoOverlay, { backgroundColor: '#fff' }]}> 
                 <Text style={styles.photoOverlayText}>📷</Text>
               </View>
             </TouchableOpacity>
@@ -134,7 +134,7 @@ export default function EditProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: textColor }]}>Nom d'affichage</Text>
               <TextInput
-                style={[styles.input, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, { color: textColor, borderColor: '#fff' }]}
                 value={displayName}
                 onChangeText={setDisplayName}
                 placeholder="Votre nom"
@@ -161,7 +161,7 @@ export default function EditProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: textColor }]}>Bio (optionnel)</Text>
               <TextInput
-                style={[styles.input, styles.textArea, { color: textColor, borderColor: beigeColor }]}
+                style={[styles.input, styles.textArea, { color: textColor, borderColor: '#fff' }]}
                 value={bio}
                 onChangeText={setBio}
                 placeholder="Parlez-nous de vous..."
@@ -180,7 +180,7 @@ export default function EditProfileScreen() {
 
       {/* Bouton Save flottant */}
       <TouchableOpacity 
-        style={[styles.floatingButton, { backgroundColor: beigeColor }]}
+        style={[styles.floatingButton, { backgroundColor: '#fff' }]}
         onPress={saveProfile}
         disabled={isLoading}
       >
