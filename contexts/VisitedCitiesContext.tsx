@@ -5,6 +5,7 @@ import React, { createContext, ReactNode, useContext, useEffect, useState } from
 export type VisitedCity = {
   id: string;
   name: string;
+  city?: string; // Ajouté pour permettre le filtrage robuste
   country: string;
   flag: string;
   rating?: number;
@@ -24,29 +25,56 @@ const VisitedCitiesContext = createContext<VisitedCitiesContextType | undefined>
 
 export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
   // Supprime uniquement une source spécifique pour une ville (ex: 'post')
+  // Always normalize and clean visitedCities before any operation
+  const normalizeCity = (c: any): VisitedCity | null => {
+    const name = c.name || c.city;
+    if (!name || !c.country) return null;
+    return {
+      ...c,
+      name,
+      id: `${name}-${c.country}`,
+    };
+  };
+
   const removeCitySource = async (name: string, country: string, source: 'post' | 'note', postId?: string) => {
     if (!userId) return;
-    const id = `${name}-${country}`;
-    // Toujours fetch la dernière version Firestore pour être sûr
     const ref = doc(db, 'users', userId);
     const snap = await getDoc(ref);
     let cityToRemove: VisitedCity | undefined;
     if (snap.exists()) {
       const data = snap.data();
-      const visitedCitiesArr = (data.visitedCities || []).map((c: any) => ({ ...c, id: `${c.name}-${c.country}` }));
-      cityToRemove = visitedCitiesArr.find((c: VisitedCity) => c.id === id && c.source === source && (postId === undefined || c.postId === postId));
+      const visitedCitiesArr: VisitedCity[] = (data.visitedCities || []).map(normalizeCity).filter((c): c is VisitedCity => !!c);
+      cityToRemove = visitedCitiesArr.find((c: VisitedCity) =>
+        ((c.name === name || c.city === name) &&
+         c.country === country &&
+         c.source === source &&
+         (postId === undefined || c.postId === postId))
+      );
+      console.log('[removeCitySource] Before updateDoc, cityToRemove:', cityToRemove);
       if (cityToRemove) {
         await updateDoc(ref, {
           visitedCities: arrayRemove(cityToRemove)
         });
+        console.log('[removeCitySource] Called arrayRemove for:', cityToRemove);
+      } else {
+        console.log('[removeCitySource] No matching city found to remove.');
       }
-      // Met à jour le state local aussi
-      setCities(prev => prev.filter(c => {
-        if (c.id !== id) return true;
-        if (c.source !== source) return true;
-        if (postId !== undefined && c.postId !== postId) return true;
-        return false;
-      }));
+      // Clean up malformed entries directly in Firestore
+      const snapAfter = await getDoc(ref);
+      if (snapAfter.exists()) {
+        const dataAfter = snapAfter.data();
+        const rawArr = dataAfter.visitedCities || [];
+        console.log('[removeCitySource] Raw visitedCities after removal:', rawArr);
+        const cleanedArr = rawArr.filter((c: any) => typeof (c.name || c.city) === 'string' && (c.name || c.city).length > 0 && typeof c.country === 'string' && c.country.length > 0 && typeof (c.id || ((c.name || c.city) + '-' + c.country)) === 'string');
+        if (cleanedArr.length !== rawArr.length) {
+          await updateDoc(ref, { visitedCities: cleanedArr });
+          console.log('[removeCitySource] Cleaned malformed entries, new visitedCities:', cleanedArr);
+        }
+      } else {
+        console.log('[removeCitySource] User doc missing after removal.');
+      }
+    } else {
+      console.log('[removeCitySource] User doc missing.');
     }
   };
   const [cities, setCities] = useState<VisitedCity[]>([]);
@@ -62,38 +90,43 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
   }, [auth]);
 
   useEffect(() => {
-    async function fetchCities() {
-      if (!userId) return;
-      const ref = doc(db, 'users', userId);
-      const snap = await getDoc(ref);
+    // Real-time Firestore listener for visitedCities
+    if (!userId) return;
+    const ref = doc(db, 'users', userId);
+    const { onSnapshot } = require('firebase/firestore');
+    const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        setCities((data.visitedCities || []).map((c: any) => ({ ...c, id: `${c.name}-${c.country}` })));
+        // Clean and normalize all entries
+        const cleaned = (data.visitedCities || []).map(normalizeCity).filter((c) => !!c);
+        // Remove duplicates
+        const seen = new Set();
+        const deduped = cleaned.filter((c) => {
+          const key = `${c.id}-${c.source || ''}-${c.postId || ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setCities(deduped);
+        console.log('[VisitedCitiesContext] Real-time Firestore update:', deduped);
       } else {
         setCities([]);
+        console.log('[VisitedCitiesContext] Real-time Firestore update: user doc missing, setCities([])');
       }
-    }
-    fetchCities();
+    });
+    return () => unsubscribe();
   }, [userId, db]);
 
   const addOrUpdateCity = async (city: Omit<VisitedCity, 'id'>) => {
     if (!userId) return;
-    const id = `${city.name}-${city.country}`;
-    const cityObj = { ...city, id };
-    setCities(prev => {
-      const existing = prev.find(c => c.id === id);
-      if ((city.rating === undefined || city.rating === null) && !city.beenThere) {
-        return prev.filter(c => c.id !== id);
-      }
-      if (existing) {
-        return prev.map(c => c.id === id ? { ...c, ...city, id } : c);
-      } else {
-        return [...prev, cityObj];
-      }
-    });
+    // Always normalize
+    const name = city.name || city.city;
+    if (!name || !city.country) return;
+    const id = `${name}-${city.country}`;
+    const cityObj: VisitedCity = { ...city, name, id };
+    console.log('[addOrUpdateCity] Called with:', city);
     const ref = doc(db, 'users', userId);
     if ((city.rating === undefined || city.rating === null) && !city.beenThere) {
-      // Pour arrayRemove, il faut passer l'objet complet qui était dans Firestore
       await updateDoc(ref, {
         visitedCities: arrayRemove(cityObj)
       });
@@ -107,17 +140,7 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
   const removeCity = async (name: string, country: string) => {
     if (!userId) return;
     const id = `${name}-${country}`;
-    let cityToRemove: VisitedCity | undefined;
-    setCities(prev => {
-      cityToRemove = prev.find(c => c.id === id);
-      return prev.filter(c => c.id !== id);
-    });
-    if (cityToRemove) {
-      const ref = doc(db, 'users', userId);
-      await updateDoc(ref, {
-        visitedCities: arrayRemove(cityToRemove)
-      });
-    }
+    console.log('[removeCity] Called with:', name, country);
   };
 
   return (

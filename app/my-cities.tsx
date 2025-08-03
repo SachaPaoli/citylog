@@ -11,10 +11,13 @@ export default function MyCitiesScreen() {
     navigation.setOptions?.({ headerShown: false });
   }, [navigation]);
   const { cities: visitedCities } = useVisitedCities();
+  React.useEffect(() => {
+    console.log('[MyCities] visitedCities state:', visitedCities);
+  }, [visitedCities]);
   const textColor = useThemeColor({}, 'text');
   // Calcul instantané des villes à afficher à chaque render
   const displayCities = React.useMemo(() => {
-    const validCities = visitedCities.filter(city => city.name && city.country);
+    const validCities = visitedCities.filter(city => typeof city.name === 'string' && city.name.length > 0 && city.country);
     type GroupedCity = {
       name: string;
       country: string;

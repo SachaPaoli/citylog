@@ -15,8 +15,8 @@ export default function TabLayout() {
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#2051A4', // Bleu foncé pour icône active
-          tabBarInactiveTintColor: '#181C24', // Gris très foncé pour icône inactive
+          tabBarActiveTintColor: '#ffffffff', // Bleu foncé pour icône active
+          tabBarInactiveTintColor: '#909991ff', // Gris très foncé pour icône inactive
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,

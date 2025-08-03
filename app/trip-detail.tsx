@@ -53,6 +53,9 @@ export default function TripDetailScreen() {
             try {
               const { removeVisitedCity } = require('../services/UserService');
               await removeVisitedCity(post.city, post.country, 'post', post.id);
+              const { useVisitedCities } = require('../contexts/VisitedCitiesContext');
+              const { removeCitySource } = useVisitedCities();
+              await removeCitySource(post.city, post.country, 'post', post.id);
             } catch (err) {
               // On ignore l'erreur de suppression de la source 'post', car le post est bien supprimé
             }
