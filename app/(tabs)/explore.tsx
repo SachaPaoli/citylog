@@ -9,7 +9,7 @@ import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 export default function ExploreScreen() {
   // Ajout d'un état pour savoir si la recherche a été effectuée (évite le clignotement)
   const [searchDone, setSearchDone] = useState(false);
-  const { addOrUpdateCity, removeCity, cities: visitedCities } = useVisitedCities();
+  const { addOrUpdateCity, removeCity, removeCitySource, cities: visitedCities } = useVisitedCities();
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
@@ -79,13 +79,19 @@ export default function ExploreScreen() {
 
   // Injecte le rating et beenThere du contexte dans la modale
   const handleCityPress = (city: any) => {
-    const contextCity = visitedCities.find(
-      c => c.name === city.name && c.country === city.country
+    // Find both manual and post entries for this city
+    const manualEntry = visitedCities.find(
+      c => c.name === city.name && c.country === city.country && c.source === 'note'
+    );
+    const postEntry = visitedCities.find(
+      c => c.name === city.name && c.country === city.country && c.source === 'post'
     );
     setSelectedCity({
       ...city,
-      userRating: contextCity?.rating,
-      beenThere: contextCity?.beenThere,
+      userRating: manualEntry?.rating ?? postEntry?.rating,
+      beenThere: manualEntry?.beenThere ?? postEntry?.beenThere,
+      hasManualNote: !!manualEntry,
+      hasPost: !!postEntry,
     });
     setModalVisible(true);
   };
@@ -94,8 +100,8 @@ export default function ExploreScreen() {
   const handleRateCity = (cityId: number, rating: number | null | undefined) => {
     if (!selectedCity) return;
     if (!rating || rating < 1) {
-      // Supprimer complètement la note ET le statut "beenThere"
-      removeCity(selectedCity.name, selectedCity.country);
+      // Always remove only the manual note/rating (source 'note')
+      removeCitySource(selectedCity.name, selectedCity.country, 'note');
       setModalVisible(false);
       return;
     }
@@ -105,6 +111,7 @@ export default function ExploreScreen() {
       flag: '',
       rating,
       beenThere: true,
+      source: 'note',
     });
     setModalVisible(false);
   };
@@ -283,7 +290,7 @@ export default function ExploreScreen() {
         onRate={handleRateCity}
         onBeenThere={(city) => {
           if (!city) return;
-          // Si déjà beenThere, on retire la ville immédiatement
+          // Si déjà beenThere, on retire complètement la ville
           if (city.beenThere) {
             removeCity(city.name, city.country);
             return;
@@ -295,12 +302,14 @@ export default function ExploreScreen() {
             flag: '',
             rating: city.userRating ?? undefined,
             beenThere: true,
+            source: 'note',
           });
           // NE FERME PLUS LA MODALE
         }}
         onDelete={(city) => {
           if (!city) return;
-          removeCity(city.name, city.country);
+          // Always remove only the manual note/rating (source 'note')
+          removeCitySource(city.name, city.country, 'note');
           setModalVisible(false);
         }}
       />

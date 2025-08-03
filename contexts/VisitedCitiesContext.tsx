@@ -43,7 +43,7 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     let cityToRemove: VisitedCity | undefined;
     if (snap.exists()) {
       const data = snap.data();
-      const visitedCitiesArr: VisitedCity[] = (data.visitedCities || []).map(normalizeCity).filter((c): c is VisitedCity => !!c);
+      const visitedCitiesArr: VisitedCity[] = (data.visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
       cityToRemove = visitedCitiesArr.find((c: VisitedCity) =>
         ((c.name === name || c.city === name) &&
          c.country === country &&
@@ -94,14 +94,14 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     const ref = doc(db, 'users', userId);
     const { onSnapshot } = require('firebase/firestore');
-    const unsubscribe = onSnapshot(ref, (snap) => {
+    const unsubscribe = onSnapshot(ref, (snap: any) => {
       if (snap.exists()) {
         const data = snap.data();
         // Clean and normalize all entries
-        const cleaned = (data.visitedCities || []).map(normalizeCity).filter((c) => !!c);
+        const cleaned: VisitedCity[] = (data.visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
         // Remove duplicates
-        const seen = new Set();
-        const deduped = cleaned.filter((c) => {
+        const seen = new Set<string>();
+        const deduped: VisitedCity[] = cleaned.filter((c: VisitedCity) => {
           const key = `${c.id}-${c.source || ''}-${c.postId || ''}`;
           if (seen.has(key)) return false;
           seen.add(key);
