@@ -29,6 +29,7 @@ export default function TripDetailScreen() {
   const { getPostById, deletePost } = usePosts();
   // ...existing code...
   // Suppression du post avec confirmation
+  const { removeCity } = require('../contexts/VisitedCitiesContext');
   const handleDeletePost = () => {
     if (!post) return;
     Alert.alert(
@@ -40,13 +41,25 @@ export default function TripDetailScreen() {
           text: 'Supprimer',
           style: 'destructive',
           onPress: async () => {
+            let postDeleted = false;
             try {
               await deletePost(post.id);
+              postDeleted = true;
+            } catch (err) {
+              Alert.alert('Erreur', "Impossible de supprimer le post.");
+              return;
+            }
+            // Supprimer uniquement le post précis dans visitedCities de l'utilisateur
+            try {
+              const { removeVisitedCity } = require('../services/UserService');
+              await removeVisitedCity(post.city, post.country, 'post', post.id);
+            } catch (err) {
+              // On ignore l'erreur de suppression de la source 'post', car le post est bien supprimé
+            }
+            if (postDeleted) {
               Alert.alert('Supprimé', 'Le voyage a été supprimé.');
               setShowMenu(false);
               router.replace('/(tabs)/explore');
-            } catch (err) {
-              Alert.alert('Erreur', "Impossible de supprimer le post.");
             }
           }
         }

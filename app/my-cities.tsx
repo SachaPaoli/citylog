@@ -1,6 +1,3 @@
-
-
-
 import { router } from 'expo-router';
 import React from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,8 +12,64 @@ export default function MyCitiesScreen() {
   }, [navigation]);
   const { cities: visitedCities } = useVisitedCities();
   const textColor = useThemeColor({}, 'text');
-  // Filtrer les villes valides (nom ET pays présents)
-  const validCities = visitedCities.filter(city => city.name && city.country);
+  // Calcul instantané des villes à afficher à chaque render
+  const displayCities = React.useMemo(() => {
+    const validCities = visitedCities.filter(city => city.name && city.country);
+    type GroupedCity = {
+      name: string;
+      country: string;
+      ratings: number[];
+      manualCount: number;
+      postCount: number;
+      hasBeenThere: boolean;
+    };
+    const groupedCities: { [key: string]: GroupedCity } = {};
+    validCities.forEach(city => {
+      const key = `${city.name}-${city.country}`;
+      if (!groupedCities[key]) {
+        groupedCities[key] = {
+          name: city.name,
+          country: city.country,
+          ratings: [],
+          manualCount: 0,
+          postCount: 0,
+          hasBeenThere: false,
+        };
+      }
+      if (city.rating !== undefined && city.rating !== null) {
+        groupedCities[key].ratings.push(Number(city.rating));
+        if (city.source === 'note' || city.source === undefined) {
+          groupedCities[key].manualCount += 1;
+        }
+        if (city.source === 'post') {
+          groupedCities[key].postCount += 1;
+        }
+      } else if (city.source === 'post') {
+        groupedCities[key].postCount += 1;
+      }
+      if (city.beenThere) {
+        groupedCities[key].hasBeenThere = true;
+      }
+    });
+    return Object.values(groupedCities).map((city: GroupedCity) => {
+      const averageRating = city.ratings.length > 0 ? (city.ratings.reduce((a, b) => a + b, 0) / city.ratings.length) : null;
+      let sourceText = '';
+      if (city.manualCount > 0 && city.postCount > 0) {
+        sourceText = `(based on ${city.manualCount} rating${city.manualCount > 1 ? 's' : ''} and ${city.postCount} post${city.postCount > 1 ? 's' : ''})`;
+      } else if (city.manualCount > 0) {
+        sourceText = `(based on ${city.manualCount} rating${city.manualCount > 1 ? 's' : ''})`;
+      } else if (city.postCount > 0) {
+        sourceText = `(based on ${city.postCount} post${city.postCount > 1 ? 's' : ''})`;
+      } else if (city.hasBeenThere) {
+        sourceText = `(been there)`;
+      }
+      return {
+        ...city,
+        averageRating,
+        sourceText,
+      };
+    });
+  }, [visitedCities]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#181C24', paddingTop: 56 }}>
@@ -27,7 +80,7 @@ export default function MyCitiesScreen() {
         </TouchableOpacity>
       </View>
       <View style={{ height: 0.5, backgroundColor: 'rgba(255,255,255,0.3)', width: '100%' }} />
-      {validCities.length === 0 ? (
+      {displayCities.length === 0 ? (
         <View style={styles.centered}>
           <Text style={{ color: textColor, opacity: 0.7, fontSize: 16, textAlign: 'center' }}>
             You haven't added any cities yet.
@@ -35,8 +88,9 @@ export default function MyCitiesScreen() {
         </View>
       ) : (
         <FlatList
-          data={validCities}
-          keyExtractor={(item, idx) => (item.id && item.id !== 'undefined-France' ? item.id : `${item.name || 'city'}-${item.country || 'country'}-${idx}`)}
+          data={displayCities}
+          key={visitedCities.length}
+          keyExtractor={(item, idx) => `${item.name || 'city'}-${item.country || 'country'}-${idx}`}
           renderItem={({ item: city }) => (
             <View style={styles.cityCard}>
               <Image
@@ -46,10 +100,13 @@ export default function MyCitiesScreen() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.cityName}>{city.name}</Text>
-                {city.source === 'post' ? (
-                  <Text style={styles.cityPost}>post</Text>
-                ) : city.rating !== undefined ? (
-                  <Text style={styles.cityRating}>★ {city.rating}/5</Text>
+                {city.averageRating !== null ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.cityRating}>★ {city.averageRating.toFixed(1)}/5</Text>
+                    {city.sourceText && (
+                      <Text style={styles.citySourceGray}>{city.sourceText}</Text>
+                    )}
+                  </View>
                 ) : (
                   <Text style={styles.cityBeenThere}>I have been there</Text>
                 )}
@@ -131,6 +188,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
     fontStyle: 'italic',
+  },
+  citySourceGray: {
+    color: '#bbb',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginLeft: 4,
   },
   centered: {
     flex: 1,

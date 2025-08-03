@@ -273,7 +273,7 @@ export default function PostScreen() {
     const averageRating = calculateAverageRating();
 
     try {
-      await createPost({
+      const post = await createPost({
         city: cityName.trim(),
         country: countryName.trim(),
         photo: coverImage,
@@ -292,8 +292,10 @@ export default function PostScreen() {
         flag: '',
         rating: averageRating,
         beenThere: true,
-        source: 'post'
+        source: 'post',
+        postId: post // post est l'id string
       });
+      // Ajout unique dans Firestore via addOrUpdateCity (inclut postId)
       // Rafraîchir les posts pour que le nombre soit à jour sur le profil
       if (typeof refreshPosts === 'function') {
         await refreshPosts();

@@ -10,17 +10,45 @@ export type VisitedCity = {
   rating?: number;
   beenThere: boolean;
   source?: 'post' | 'note';
+  postId?: string; // Ajouté pour lier à un post précis
 };
 
 type VisitedCitiesContextType = {
   cities: VisitedCity[];
   addOrUpdateCity: (city: Omit<VisitedCity, 'id'>) => Promise<void>;
   removeCity: (name: string, country: string) => Promise<void>;
+  removeCitySource: (name: string, country: string, source: 'post' | 'note', postId?: string) => Promise<void>;
 };
 
 const VisitedCitiesContext = createContext<VisitedCitiesContextType | undefined>(undefined);
 
 export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
+  // Supprime uniquement une source spécifique pour une ville (ex: 'post')
+  const removeCitySource = async (name: string, country: string, source: 'post' | 'note', postId?: string) => {
+    if (!userId) return;
+    const id = `${name}-${country}`;
+    // Toujours fetch la dernière version Firestore pour être sûr
+    const ref = doc(db, 'users', userId);
+    const snap = await getDoc(ref);
+    let cityToRemove: VisitedCity | undefined;
+    if (snap.exists()) {
+      const data = snap.data();
+      const visitedCitiesArr = (data.visitedCities || []).map((c: any) => ({ ...c, id: `${c.name}-${c.country}` }));
+      cityToRemove = visitedCitiesArr.find((c: VisitedCity) => c.id === id && c.source === source && (postId === undefined || c.postId === postId));
+      if (cityToRemove) {
+        await updateDoc(ref, {
+          visitedCities: arrayRemove(cityToRemove)
+        });
+      }
+      // Met à jour le state local aussi
+      setCities(prev => prev.filter(c => {
+        if (c.id !== id) return true;
+        if (c.source !== source) return true;
+        if (postId !== undefined && c.postId !== postId) return true;
+        return false;
+      }));
+    }
+  };
   const [cities, setCities] = useState<VisitedCity[]>([]);
   const db = getFirestore();
   const auth = getAuth();
@@ -79,11 +107,13 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
   const removeCity = async (name: string, country: string) => {
     if (!userId) return;
     const id = `${name}-${country}`;
-    setCities(prev => prev.filter(c => c.id !== id));
-    const ref = doc(db, 'users', userId);
-    // On doit retrouver l'objet complet pour arrayRemove
-    const cityToRemove = cities.find(c => c.id === id);
+    let cityToRemove: VisitedCity | undefined;
+    setCities(prev => {
+      cityToRemove = prev.find(c => c.id === id);
+      return prev.filter(c => c.id !== id);
+    });
     if (cityToRemove) {
+      const ref = doc(db, 'users', userId);
       await updateDoc(ref, {
         visitedCities: arrayRemove(cityToRemove)
       });
@@ -91,7 +121,7 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <VisitedCitiesContext.Provider value={{ cities, addOrUpdateCity, removeCity }}>
+    <VisitedCitiesContext.Provider value={{ cities, addOrUpdateCity, removeCity, removeCitySource }}>
       {children}
     </VisitedCitiesContext.Provider>
   );
