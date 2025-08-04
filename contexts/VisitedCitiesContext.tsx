@@ -126,6 +126,16 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     const cityObj: VisitedCity = { ...city, name, id };
     console.log('[addOrUpdateCity] Called with:', city);
     const ref = doc(db, 'users', userId);
+    // Remove any previous manual note for this city (source 'note')
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const arr: VisitedCity[] = (snap.data().visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
+      const manualNote = arr.find(c => (c.name === name || c.city === name) && c.country === city.country && c.source === 'note');
+      if (manualNote) {
+        await updateDoc(ref, { visitedCities: arrayRemove(manualNote) });
+      }
+    }
+    // Add or update the city
     if ((city.rating === undefined || city.rating === null) && !city.beenThere) {
       await updateDoc(ref, {
         visitedCities: arrayRemove(cityObj)
