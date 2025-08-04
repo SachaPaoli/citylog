@@ -75,13 +75,14 @@ export default function MyCitiesScreen() {
       const averageRating = city.ratings.length > 0 ? (city.ratings.reduce((a, b) => a + b, 0) / city.ratings.length) : null;
       let sourceText = '';
       if (city.manualCount > 0 && city.postCount > 0) {
-        sourceText = `(based on ${city.manualCount} rating${city.manualCount > 1 ? 's' : ''} and ${city.postCount} post${city.postCount > 1 ? 's' : ''})`;
+        const ratingText = city.manualCount === 1 ? 'your rating' : `${city.manualCount} ratings`;
+        sourceText = `based on ${ratingText} and ${city.postCount} post${city.postCount > 1 ? 's' : ''}`;
       } else if (city.manualCount > 0) {
-        sourceText = `(based on ${city.manualCount} rating${city.manualCount > 1 ? 's' : ''})`;
+        sourceText = city.manualCount === 1 ? 'based on your rating' : `based on ${city.manualCount} ratings`;
       } else if (city.postCount > 0) {
-        sourceText = `(based on ${city.postCount} post${city.postCount > 1 ? 's' : ''})`;
+        sourceText = `based on ${city.postCount} post${city.postCount > 1 ? 's' : ''}`;
       } else if (city.hasBeenThere) {
-        sourceText = `(been there)`;
+        sourceText = `been there`;
       }
       return {
         ...city,
@@ -108,7 +109,7 @@ export default function MyCitiesScreen() {
         </View>
       ) : (
         <FlatList
-          data={displayCities}
+          data={[...displayCities].reverse()}
           key={visitedCities.length}
           keyExtractor={(item, idx) => `${item.name || 'city'}-${item.countryCode || 'country'}-${idx}`}
           renderItem={({ item: city }) => (
@@ -123,14 +124,19 @@ export default function MyCitiesScreen() {
                 resizeMode="cover"
               />
               <View style={{ flex: 1 }}>
-                <Text style={styles.cityName}>{city.name}</Text>
-                <Text style={styles.citySourceGray}>{countryCodeToName[city.countryCode] || city.countryCode}</Text>
+                <Text style={styles.cityName}>
+                  {city.name}, {countryCodeToName[city.countryCode] || city.countryCode}
+                </Text>
                 {city.averageRating !== null ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={styles.cityRating}>★ {city.averageRating.toFixed(1)}/5</Text>
-                    {city.sourceText && (
+                    <Text style={styles.cityRating}>
+                      {city.averageRating.toFixed(1).replace('.', ',')} <Text style={{ color: '#FFD700' }}>★</Text>
+                    </Text>
+                    {city.manualCount === 1 && city.postCount === 0 ? (
+                      <Text style={styles.citySourceGray}>based on your rating</Text>
+                    ) : city.sourceText ? (
                       <Text style={styles.citySourceGray}>{city.sourceText}</Text>
-                    )}
+                    ) : null}
                   </View>
                 ) : (
                   <Text style={styles.cityBeenThere}>I have been there</Text>
