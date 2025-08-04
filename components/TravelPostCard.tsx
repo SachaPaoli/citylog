@@ -1,3 +1,4 @@
+import { getCountryName } from '@/constants/CountryNames';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post } from '@/types/Post';
@@ -53,8 +54,8 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
           </View>
           
           {/* Ville et pays */}
-          <Text style={[styles.location, { color: textColor }]}>
-            {post.city}, {post.country}
+          <Text style={[styles.location, { color: textColor }]}> 
+            {post.city}, {getCountryName(post.country)}
           </Text>
           
           {/* Note avec étoiles jaunes + nombre, comme sur la page post */}
