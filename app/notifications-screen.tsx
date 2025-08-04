@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181818',
+    backgroundColor: '#181C24',
   },
   header: {
     flexDirection: 'row',
@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: '#181818',
+    backgroundColor: '#181C24',
     width: '100%',
   },
   backButton: {
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   },
   sections: {
     flex: 1,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#181C24',
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 0,
@@ -56,10 +56,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   notifItem: {
-    backgroundColor: '#232323',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 10,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+    // Optionnel : effet d'ombre léger pour le relief
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
   },
   notifText: {
     color: '#fff',
@@ -77,12 +85,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerSafe: {
-    backgroundColor: '#181818',
+    backgroundColor: '#181C24',
   },
   topBand: {
     width: '100%',
     height: 18,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#181C24',
   }
 });
 
