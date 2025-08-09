@@ -23,6 +23,8 @@ export default function ExploreScreen() {
   const [activeTab, setActiveTab] = useState<'cities' | 'members'>('cities');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCity, setSelectedCity] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
 
   // Rechercher des villes avec l'API 154k
   const searchCities = async (query: string) => {
@@ -139,7 +141,20 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
-      {/* Barre de recherche style search-city + croix effacer */}
+      {/* Error message overlay always at the top, above all content */}
+      {showError && errorMessage && (
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 48, alignItems: 'center', zIndex: 99999, elevation: 99 }} pointerEvents="box-none">
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, paddingVertical: 18, paddingHorizontal: 24, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, elevation: 99, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 260, maxWidth: '90%' }}>
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF4C4C', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 20 }}>!</Text>
+            </View>
+            <Text style={{ color: '#181C24', fontWeight: 'bold', fontSize: 16, flex: 1 }}>
+              {errorMessage}
+            </Text>
+          </View>
+        </View>
+      )}
+      {/* ...existing code... */}
       <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, marginTop: 12 }}>
         <View style={{ position: 'relative', justifyContent: 'center' }}>
           <TextInput
@@ -167,7 +182,7 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      {/* Onglets */}
+      {/* ...existing code... */}
       <View style={[styles.tabsContainer, { backgroundColor: headerColor }]}> 
         <TouchableOpacity
           style={[
@@ -200,24 +215,24 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Contenu principal */}
+      {/* ...existing code... */}
       <ScrollView style={[styles.content, { backgroundColor: headerColor }]} showsVerticalScrollIndicator={false}> 
         {activeTab === 'cities' && (
           <>
             {loading && searchQuery.length > 0 && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={textActiveColor} />
-                <Text style={[styles.loadingText, { color: textColor }]}>
+                <Text style={[styles.loadingText, { color: textColor }]}> 
                   Recherche en cours...
                 </Text>
               </View>
             )}
 
-            {/* Liste des villes */}
+            {/* ...existing code... */}
             {!loading && cities.length > 0 && (
               <View style={styles.citiesList}>
                 {cities.map((city, index) => {
-                  // Table exhaustive ISO 3166-1 alpha-2 code -> nom anglais
+                  // ...existing code...
                   const countryNamesEn: Record<string, string> = {
                     AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AS: 'American Samoa', AD: 'Andorra', AO: 'Angola', AI: 'Anguilla', AQ: 'Antarctica', AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh', BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin', BM: 'Bermuda', BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia and Herzegovina', BW: 'Botswana', BV: 'Bouvet Island', BR: 'Brazil', IO: 'British Indian Ocean Territory', BN: 'Brunei Darussalam', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia', CM: 'Cameroon', CA: 'Canada', CV: 'Cape Verde', KY: 'Cayman Islands', CF: 'Central African Republic', TD: 'Chad', CL: 'Chile', CN: 'China', CX: 'Christmas Island', CC: 'Cocos (Keeling) Islands', CO: 'Colombia', KM: 'Comoros', CG: 'Congo', CD: 'Congo, Democratic Republic', CK: 'Cook Islands', CR: 'Costa Rica', CI: 'Côte d’Ivoire', HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus', CZ: 'Czech Republic', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic', EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea', EE: 'Estonia', ET: 'Ethiopia', FK: 'Falkland Islands', FO: 'Faroe Islands', FJ: 'Fiji', FI: 'Finland', FR: 'France', GF: 'French Guiana', PF: 'French Polynesia', TF: 'French Southern Territories', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany', GH: 'Ghana', GI: 'Gibraltar', GR: 'Greece', GL: 'Greenland', GD: 'Grenada', GP: 'Guadeloupe', GU: 'Guam', GT: 'Guatemala', GG: 'Guernsey', GN: 'Guinea', GW: 'Guinea-Bissau', GY: 'Guyana', HT: 'Haiti', HM: 'Heard Island and McDonald Islands', VA: 'Holy See', HN: 'Honduras', HK: 'Hong Kong', HU: 'Hungary', IS: 'Iceland', IN: 'India', ID: 'Indonesia', IR: 'Iran', IQ: 'Iraq', IE: 'Ireland', IM: 'Isle of Man', IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JE: 'Jersey', JO: 'Jordan', KZ: 'Kazakhstan', KE: 'Kenya', KI: 'Kiribati', KP: 'Korea, Democratic People’s Republic', KR: 'Korea, Republic', KW: 'Kuwait', KG: 'Kyrgyzstan', LA: 'Lao People’s Democratic Republic', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia', LY: 'Libya', LI: 'Liechtenstein', LT: 'Lithuania', LU: 'Luxembourg', MO: 'Macao', MK: 'Macedonia', MG: 'Madagascar', MW: 'Malawi', MY: 'Malaysia', MV: 'Maldives', ML: 'Mali', MT: 'Malta', MH: 'Marshall Islands', MQ: 'Martinique', MR: 'Mauritania', MU: 'Mauritius', YT: 'Mayotte', MX: 'Mexico', FM: 'Micronesia', MD: 'Moldova', MC: 'Monaco', MN: 'Mongolia', ME: 'Montenegro', MS: 'Montserrat', MA: 'Morocco', MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NR: 'Nauru', NP: 'Nepal', NL: 'Netherlands', NC: 'New Caledonia', NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', NU: 'Niue', NF: 'Norfolk Island', MP: 'Northern Mariana Islands', NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PW: 'Palau', PS: 'Palestine', PA: 'Panama', PG: 'Papua New Guinea', PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PN: 'Pitcairn', PL: 'Poland', PT: 'Portugal', PR: 'Puerto Rico', QA: 'Qatar', RE: 'Réunion', RO: 'Romania', RU: 'Russia', RW: 'Rwanda', BL: 'Saint Barthélemy', SH: 'Saint Helena', KN: 'Saint Kitts and Nevis', LC: 'Saint Lucia', MF: 'Saint Martin', PM: 'Saint Pierre and Miquelon', VC: 'Saint Vincent and the Grenadines', WS: 'Samoa', SM: 'San Marino', ST: 'Sao Tome and Principe', SA: 'Saudi Arabia', SN: 'Senegal', RS: 'Serbia', SC: 'Seychelles', SL: 'Sierra Leone', SG: 'Singapore', SX: 'Sint Maarten', SK: 'Slovakia', SI: 'Slovenia', SB: 'Solomon Islands', SO: 'Somalia', ZA: 'South Africa', GS: 'South Georgia and the South Sandwich Islands', SS: 'South Sudan', ES: 'Spain', LK: 'Sri Lanka', SD: 'Sudan', SR: 'Suriname', SJ: 'Svalbard and Jan Mayen', SZ: 'Swaziland', SE: 'Sweden', CH: 'Switzerland', SY: 'Syrian Arab Republic', TW: 'Taiwan', TJ: 'Tajikistan', TZ: 'Tanzania', TH: 'Thailand', TL: 'Timor-Leste', TG: 'Togo', TK: 'Tokelau', TO: 'Tonga', TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan', TC: 'Turks and Caicos Islands', TV: 'Tuvalu', UG: 'Uganda', UA: 'Ukraine', AE: 'United Arab Emirates', GB: 'United Kingdom', US: 'United States', UM: 'United States Minor Outlying Islands', UY: 'Uruguay', UZ: 'Uzbekistan', VU: 'Vanuatu', VE: 'Venezuela', VN: 'Vietnam', VG: 'Virgin Islands, British', VI: 'Virgin Islands, U.S.', WF: 'Wallis and Futuna', EH: 'Western Sahara', YE: 'Yemen', ZM: 'Zambia', ZW: 'Zimbabwe'
                   };
@@ -250,19 +265,19 @@ export default function ExploreScreen() {
               </View>
             )}
 
-            {/* Message si aucune ville trouvée */}
+            {/* ...existing code... */}
             {searchQuery.trim().length > 0 && !loading && searchDone && cities.length === 0 && (
               <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: textColor }]}>
+                <Text style={[styles.emptyText, { color: textColor }]}> 
                   Aucune ville trouvée pour "{searchQuery}"
                 </Text>
               </View>
             )}
 
-            {/* Instructions initiales */}
+            {/* ...existing code... */}
             {searchQuery.length === 0 && (
               <View style={styles.instructionContainer}>
-                <Text style={[styles.instructionText, { color: textColor }]}>
+                <Text style={[styles.instructionText, { color: textColor }]}> 
                   Tapez le nom d'une ville pour commencer votre recherche
                 </Text>
               </View>
@@ -270,19 +285,20 @@ export default function ExploreScreen() {
           </>
         )}
 
+        {/* ...existing code... */}
         {activeTab === 'members' && (
           <View style={styles.instructionContainer}>
-            <Text style={[styles.instructionText, { color: textColor }]}>
+            <Text style={[styles.instructionText, { color: textColor }]}> 
               Section Members
             </Text>
-            <Text style={[styles.instructionSubtext, { color: textColor }]}>
+            <Text style={[styles.instructionSubtext, { color: textColor }]}> 
               Fonctionnalité à venir...
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Modal de notation */}
+      {/* ...existing code... */}
       <SimpleCityRatingModal
         visible={modalVisible}
         city={selectedCity}
@@ -290,6 +306,19 @@ export default function ExploreScreen() {
         onRate={handleRateCity}
         onBeenThere={(city) => {
           if (!city) return;
+          // Si la ville a une note manuelle, afficher le message d'erreur et ne rien changer
+          const manualNote = visitedCities.find(
+            c => (c.name === city.name || c.city === city.name) && c.country === city.country && c.source === 'note' && typeof c.rating === 'number'
+          );
+          if (manualNote) {
+            setErrorMessage(`Delete your rating first if you want to delete "${city.name}" from your cities`);
+            setShowError(true);
+            setTimeout(() => {
+              setShowError(false);
+              setErrorMessage(null);
+            }, 5000);
+            return;
+          }
           // Si déjà beenThere, on retire complètement la ville
           if (city.beenThere) {
             removeCity(city.name, city.country);
