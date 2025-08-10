@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post, TripItem } from '@/types/Post';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -165,7 +166,7 @@ export default function TripDetailScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
+            <Ionicons name="arrow-back" size={24} color={whiteColor} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -196,7 +197,7 @@ export default function TripDetailScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
+            <Ionicons name="arrow-back" size={24} color={whiteColor} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -236,14 +237,36 @@ export default function TripDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
-      {/* Header avec bouton retour et menu */}
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
+      {/* Header avec bouton retour, profil utilisateur et menu */}
       <View style={[styles.header, { backgroundColor: headerColor }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
+          <Ionicons name="arrow-back" size={24} color={whiteColor} />
+        </TouchableOpacity>
+        
+        {/* Profil utilisateur au centre du header */}
+        <TouchableOpacity 
+          style={styles.headerUserProfile}
+          onPress={() => {
+            if (post.userId && post.userId !== userProfile?.uid) {
+              setTimeout(() => {
+                router.navigate(`/user-profile?userId=${post.userId}`);
+              }, 100);
+            }
+          }}
+          activeOpacity={0.7}
+        >
+          <Image 
+            source={{ uri: userPhoto }}
+            style={styles.headerUserPhoto}
+            defaultSource={require('@/assets/images/placeholder.png')}
+          />
+          <Text style={[styles.headerUserName, { color: whiteColor }]}>{post.userName}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -310,17 +333,6 @@ export default function TripDetailScreen() {
       >
         {/* Informations du voyage */}
         <View style={[styles.postInfo, !post.description && styles.postInfoCompact]}>
-          {/* User header centré au-dessus de la photo principale */}
-          <View style={styles.userHeader}>
-            <View style={styles.userHeaderRow}>
-              <Image 
-                source={{ uri: userPhoto }}
-                style={styles.userProfilePhotoSmall}
-                defaultSource={require('@/assets/images/placeholder.png')}
-              />
-              <Text style={[styles.userHeaderName, { color: textColor }]}>{post.userName}</Text>
-            </View>
-          </View>
           {isCloudinaryUrl(post.photo) ? (
             <OptimizedImage 
               source={{ uri: post.photo }} 
@@ -386,54 +398,40 @@ export default function TripDetailScreen() {
             </View>
           ) : (
             <View style={styles.tabContent}>
-              {/* Photos horizontales */}
-              {currentItems.some(item => item.images && item.images.length > 0) && (
-                <View style={styles.photosSection}>
-                  <Text style={[styles.sectionTitle, { color: textColor }]}>Photos</Text>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false} 
-                    style={styles.photosContainer}
-                    contentContainerStyle={styles.photosContentContainer}
-                  >
-                    {currentItems.map(item => 
-                      item.images?.map(image => (
-                        isCloudinaryUrl(image.uri) ? (
+              {/* Chaque item dans sa propre carte */}
+              {currentItems.map((item, index) => (
+                <View key={item.id}>
+                  {/* Photos de l'item en haut */}
+                  {item.images && item.images.length > 0 && (
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false} 
+                      style={styles.itemPhotosScroll}
+                      contentContainerStyle={styles.itemPhotosContainer}
+                    >
+                      {item.images.map((image, imgIndex) => {
+                        return (
                           <OptimizedImage 
                             key={`${item.id}-${image.id}`}
                             source={{ uri: image.uri }} 
-                            variant="thumbnail"
+                            variant="medium"
                             style={styles.itemPhoto}
                             placeholder={false}
-                          />
-                        ) : (
-                          <Image 
-                            key={`${item.id}-${image.id}`}
-                            source={{ uri: image.uri }} 
-                            style={styles.itemPhoto}
                             resizeMode="cover"
-                            defaultSource={require('@/assets/images/placeholder.png')}
                           />
-                        )
-                      ))
-                    )}
-                  </ScrollView>
-                </View>
-              )}
+                        );
+                      })}
+                    </ScrollView>
+                  )}
 
-              {/* Liste verticale des items */}
-              <View style={styles.itemsList}>
-                <Text style={[styles.sectionTitle, { color: textColor }]}>
-                  {getTabLabel(activeTab)}
-                </Text>
-                {currentItems.map(item => (
-                  <View key={item.id} style={[styles.itemCard, { borderColor: whiteColor }]}>
+                  {/* Carte avec infos de l'item */}
+                  <View style={[styles.itemCard, { borderColor: whiteColor }]}>
                     <View style={styles.itemHeader}>
                       <Text style={[styles.itemName, { color: textColor }]}>
                         {item.name}
                       </Text>
                       <Text style={[styles.itemRating, { color: '#f5c518' }]}>
-                        {item.rating}/5
+                        {item.rating}/5 ⭐
                       </Text>
                     </View>
                     {item.description && (
@@ -442,8 +440,13 @@ export default function TripDetailScreen() {
                       </Text>
                     )}
                   </View>
-                ))}
-              </View>
+
+                  {/* Ligne de séparation fine (sauf pour le dernier item) */}
+                  {index < currentItems.length - 1 && (
+                    <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginTop: 12, marginBottom: 20 }} />
+                  )}
+                </View>
+              ))}
             </View>
           )}
           
@@ -467,6 +470,7 @@ export default function TripDetailScreen() {
         </View>
       )}
     </SafeAreaView>
+    </>
   );
 }
 
@@ -483,15 +487,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255, 255, 255, 0.3)',
   },
+  headerUserProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  headerUserPhoto: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#444',
+  },
+  headerUserName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    maxWidth: 120,
+  },
   backButton: {
-    alignSelf: 'flex-start',
     padding: 8,
     justifyContent: 'center',
+    alignItems: 'center',
+    width: 40,
     height: 40,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   menuButton: {
     padding: 8,
@@ -561,7 +580,7 @@ const styles = StyleSheet.create({
   },
   coverImage: {
     width: '100%',
-    height: 200,
+    height: 250,
     borderRadius: 12,
     marginBottom: 15,
   },
@@ -674,10 +693,11 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   itemPhoto: {
-    width: 120,
-    height: 90,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 140,
+    height: 105,
+    borderRadius: 10,
+    marginRight: 14,
+    backgroundColor: '#2a2a2a',
   },
   itemsList: {
     flex: 1,
@@ -688,6 +708,39 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  itemDetailCard: {
+    padding: 16,
+    marginVertical: 8,
+  },
+  itemDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  itemDetailName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 12,
+  },
+  itemDetailRating: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  itemPhotosScroll: {
+    marginBottom: 12,
+  },
+  itemPhotosContainer: {
+    paddingRight: 12,
+    alignItems: 'center',
+  },
+  itemDetailDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.8,
+    marginTop: 8,
   },
   itemHeader: {
     flexDirection: 'row',

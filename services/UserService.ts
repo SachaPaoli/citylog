@@ -41,13 +41,21 @@ export async function removeVisitedCity(city: string, country: string, source: '
 }
 import { getAuth } from 'firebase/auth';
 import { arrayRemove, arrayUnion, doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
-export async function getUserFavorites() {
+export async function getUserFavorites(userId?: string) {
   const user = getAuth().currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const ref = doc(db, 'users', user.uid);
+  const targetUserId = userId || user?.uid;
+  if (!targetUserId) throw new Error('Not authenticated');
+  const ref = doc(db, 'users', targetUserId);
   const snap = await getDoc(ref);
   const data = snap.data();
   return data?.favorites || [null, null, null];
+}
+
+export async function getUserProfile(userId: string) {
+  const ref = doc(db, 'users', userId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('User not found');
+  return snap.data();
 }
 
 const db = getFirestore();
