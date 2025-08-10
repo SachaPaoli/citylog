@@ -150,6 +150,18 @@ export class CloudinaryService {
     
     return cloudinaryUrl;
   }
+
+  /**
+   * URLs optimisées pour différentes tailles d'écran
+   */
+  static getImageVariants(cloudinaryUrl: string) {
+    return {
+      thumbnail: this.getOptimizedUrl(cloudinaryUrl, 'w_150,h_150,c_fill,f_auto,q_auto:low'),
+      medium: this.getOptimizedUrl(cloudinaryUrl, 'w_400,h_300,c_fill,f_auto,q_auto:good'),
+      large: this.getOptimizedUrl(cloudinaryUrl, 'w_800,h_600,c_fill,f_auto,q_auto:best'),
+      cover: this.getOptimizedUrl(cloudinaryUrl, 'w_600,h_400,c_fill,f_auto,q_auto:good')
+    };
+  }
 }
 
 export default CloudinaryService;

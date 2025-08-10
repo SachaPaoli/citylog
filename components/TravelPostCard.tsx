@@ -24,6 +24,14 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
     ? user.photoURL 
     : post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face';
 
+  // Pré-charger les images pour l'affichage instantané
+  React.useEffect(() => {
+    Image.prefetch(post.photo);
+    if (userPhoto) {
+      Image.prefetch(userPhoto);
+    }
+  }, [post.photo, userPhoto]);
+
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor }]} 

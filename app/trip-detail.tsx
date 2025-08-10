@@ -1,4 +1,5 @@
 import { StarRating } from '@/components/StarRating';
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -26,7 +27,7 @@ export default function TripDetailScreen() {
   console.log('✨ NOUVELLE PAGE TRIP DETAIL CHARGEE !');
   const router = useRouter();
   const { postId } = useLocalSearchParams<{ postId: string }>();
-  const { getPostById, deletePost } = usePosts();
+  const { getPostById, deletePost, posts } = usePosts();
   // ...existing code...
   // Suppression du post avec confirmation
   const { removeCity } = require('../contexts/VisitedCitiesContext');
@@ -87,9 +88,18 @@ export default function TripDetailScreen() {
   useEffect(() => {
     console.log('TripDetailScreen - postId recu:', postId);
     if (postId) {
-      loadPost();
+      // D'abord chercher dans les posts déjà chargés pour un affichage instantané
+      const cachedPost = posts.find(p => p.id === postId);
+      if (cachedPost) {
+        console.log('Post trouvé en cache:', cachedPost);
+        setPost(cachedPost);
+        setLoading(false);
+      } else {
+        // Si pas en cache, charger depuis Firebase
+        loadPost();
+      }
     }
-  }, [postId]);
+  }, [postId, posts]);
 
   const loadPost = async () => {
     if (!postId) return;
@@ -207,6 +217,16 @@ export default function TripDetailScreen() {
 
   const currentItems = getCurrentItems();
 
+  // Utiliser la photo de profil actuelle de l'utilisateur si c'est son post
+  const userPhoto = (userProfile && post && post.userId === userProfile.uid && userProfile.photoURL) 
+    ? userProfile.photoURL 
+    : post?.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face';
+
+  // Fonction pour déterminer si on doit utiliser OptimizedImage ou Image standard
+  const isCloudinaryUrl = (url: string) => {
+    return url && (url.includes('cloudinary.com') || url.includes('res.cloudinary.com'));
+  };
+
   const handleAddToWishlist = () => {
     if (post) {
       addToWishlist(post);
@@ -294,14 +314,28 @@ export default function TripDetailScreen() {
           <View style={styles.userHeader}>
             <View style={styles.userHeaderRow}>
               <Image 
-                source={{ uri: post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face' }}
+                source={{ uri: userPhoto }}
                 style={styles.userProfilePhotoSmall}
                 defaultSource={require('@/assets/images/placeholder.png')}
               />
               <Text style={[styles.userHeaderName, { color: textColor }]}>{post.userName}</Text>
             </View>
           </View>
-          <Image source={{ uri: post.photo }} style={styles.coverImage} />
+          {isCloudinaryUrl(post.photo) ? (
+            <OptimizedImage 
+              source={{ uri: post.photo }} 
+              style={styles.coverImage}
+              variant="cover"
+              placeholder={false}
+            />
+          ) : (
+            <Image 
+              source={{ uri: post.photo }} 
+              style={styles.coverImage}
+              resizeMode="cover"
+              defaultSource={require('@/assets/images/placeholder.png')}
+            />
+          )}
           <View style={styles.postDetails}>
             <Text style={[styles.cityName, { color: textColor }]}> 
               {post.city}, {post.country}
@@ -364,11 +398,23 @@ export default function TripDetailScreen() {
                   >
                     {currentItems.map(item => 
                       item.images?.map(image => (
-                        <Image 
-                          key={`${item.id}-${image.id}`}
-                          source={{ uri: image.uri }} 
-                          style={styles.itemPhoto} 
-                        />
+                        isCloudinaryUrl(image.uri) ? (
+                          <OptimizedImage 
+                            key={`${item.id}-${image.id}`}
+                            source={{ uri: image.uri }} 
+                            variant="thumbnail"
+                            style={styles.itemPhoto}
+                            placeholder={false}
+                          />
+                        ) : (
+                          <Image 
+                            key={`${item.id}-${image.id}`}
+                            source={{ uri: image.uri }} 
+                            style={styles.itemPhoto}
+                            resizeMode="cover"
+                            defaultSource={require('@/assets/images/placeholder.png')}
+                          />
+                        )
                       ))
                     )}
                   </ScrollView>
