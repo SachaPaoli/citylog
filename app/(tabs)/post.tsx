@@ -3,6 +3,7 @@ import { getCountryName } from '@/constants/CountryNames';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
@@ -287,6 +288,13 @@ export default function PostScreen() {
   const { addOrUpdateCity } = useVisitedCities();
   // State for city autocomplete suggestions
   const [citySuggestions, setCitySuggestions] = useState<any[]>([]);
+  
+  // Key pour AsyncStorage
+  const DRAFT_KEY = 'post_draft';
+  
+  // State pour indiquer si on sauvegarde
+  const [isSaving, setIsSaving] = useState(false);
+  
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const backgroundColor = useThemeColor({}, 'background');
@@ -341,9 +349,104 @@ export default function PostScreen() {
     setIsPublic(true);
     publicPrivateAnimation.setValue(1);
     setActiveTab('staying');
+    // Supprimer le brouillon sauvegardé
+    AsyncStorage.removeItem(DRAFT_KEY);
   };
 
-  // Réinitialiser le formulaire d'item
+  // Sauvegarder automatiquement le brouillon
+  const saveDraft = async () => {
+    try {
+      setIsSaving(true);
+      const draft = {
+        stayingItems,
+        restaurantItems,
+        activitiesItems,
+        otherItems,
+        cityName,
+        countryName,
+        tripDescription,
+        isPublic,
+        activeTab,
+        coverImage,
+        timestamp: Date.now()
+      };
+      await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      console.log('✅ Brouillon sauvegardé automatiquement');
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde brouillon:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Restaurer le brouillon au chargement
+  const loadDraft = async () => {
+    try {
+      const draftJson = await AsyncStorage.getItem(DRAFT_KEY);
+      if (draftJson) {
+        const draft = JSON.parse(draftJson);
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+        
+        // Si le brouillon a moins d'1 heure, on propose de le restaurer
+        if (now - draft.timestamp < oneHour) {
+          Alert.alert(
+            'Brouillon trouvé',
+            'Un brouillon de post a été trouvé. Voulez-vous le restaurer ?',
+            [
+              {
+                text: 'Non',
+                onPress: () => AsyncStorage.removeItem(DRAFT_KEY),
+                style: 'cancel',
+              },
+              {
+                text: 'Oui',
+                onPress: () => {
+                  setStayingItems(draft.stayingItems || []);
+                  setRestaurantItems(draft.restaurantItems || []);
+                  setActivitiesItems(draft.activitiesItems || []);
+                  setOtherItems(draft.otherItems || []);
+                  setCityName(draft.cityName || '');
+                  setCountryName(draft.countryName || '');
+                  setTripDescription(draft.tripDescription || '');
+                  setIsPublic(draft.isPublic !== undefined ? draft.isPublic : true);
+                  setActiveTab(draft.activeTab || 'staying');
+                  setCoverImage(draft.coverImage || null);
+                  Alert.alert('Brouillon restauré !', 'Votre travail a été récupéré.');
+                },
+              },
+            ],
+          );
+        } else {
+          // Brouillon trop ancien, on le supprime
+          AsyncStorage.removeItem(DRAFT_KEY);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement brouillon:', error);
+    }
+  };
+
+  // Charger le brouillon au montage du composant
+  useEffect(() => {
+    loadDraft();
+  }, []);
+
+  // Sauvegarder automatiquement toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Sauvegarder seulement s'il y a du contenu
+      if (cityName || tripDescription || coverImage || 
+          stayingItems.length > 0 || restaurantItems.length > 0 || 
+          activitiesItems.length > 0 || otherItems.length > 0) {
+        saveDraft();
+      }
+    }, 30000); // 30 secondes
+
+    return () => clearInterval(interval);
+  }, [cityName, tripDescription, coverImage, stayingItems, restaurantItems, activitiesItems, otherItems, isPublic, activeTab]);
+
+  // Réinitialiser le formulaire
   const resetItemForm = () => {
     setTempItem({
       id: '',
@@ -503,71 +606,82 @@ export default function PostScreen() {
 
   // Poster le voyage
   const handlePost = async () => {
-    // Validation
-    if (!coverImage) {
-      Alert.alert('Photo manquante', 'Veuillez ajouter une photo de couverture pour votre post.');
-      return;
-    }
-    
-    if (!cityName.trim() || !countryName.trim()) {
-      Alert.alert('Informations manquantes', 'Veuillez renseigner la ville et le pays.');
-      return;
-    }
-
-    if (!userProfile) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour poster.');
+    // Validation silencieuse - on ne poste que si tout est OK
+    if (!coverImage || !cityName.trim() || !countryName.trim() || !userProfile) {
       return;
     }
 
     const averageRating = calculateAverageRating();
+    const fullCountryName = getCountryName(countryName.trim());
 
-    try {
-      const fullCountryName = getCountryName(countryName.trim());
-      const post = await createPost({
-        city: cityName.trim(),
-        country: fullCountryName,
-        photo: coverImage,
-        rating: averageRating,
-        description: tripDescription.trim() || `Voyage à ${cityName}, ${fullCountryName}`,
-        stayingItems,
-        restaurantItems,
-        activitiesItems,
-        otherItems,
-        isPublic,
-      });
-      // Ajoute la ville dans le contexte local pour affichage immédiat dans MyCities
-      addOrUpdateCity({
-        name: cityName.trim(),
-        country: fullCountryName,
-        flag: '',
-        rating: averageRating,
-        beenThere: true,
-        source: 'post',
-        postId: post // post est l'id string
-      });
-      // Ajout unique dans Firestore via addOrUpdateCity (inclut postId)
-      // Rafraîchir les posts pour que le nombre soit à jour sur le profil
-      if (typeof refreshPosts === 'function') {
-        await refreshPosts();
+    // Fermer le modal IMMÉDIATEMENT pour une UX rapide
+    setShowPostModal(false);
+
+    // Ajouter la ville IMMÉDIATEMENT dans le contexte local (optimiste)
+    addOrUpdateCity({
+      name: cityName.trim(),
+      country: fullCountryName,
+      flag: '',
+      rating: averageRating,
+      beenThere: true,
+      source: 'post',
+      postId: `temp-${Date.now()}` // ID temporaire
+    });
+
+    // Sauvegarder et publier en arrière-plan
+    const publishInBackground = async () => {
+      try {
+        // Sauvegarde une dernière fois
+        await saveDraft();
+        
+        console.log('🚀 Publication en arrière-plan...');
+        
+        const post = await createPost({
+          city: cityName.trim(),
+          country: fullCountryName,
+          photo: coverImage,
+          rating: averageRating,
+          description: tripDescription.trim() || `Voyage à ${cityName}, ${fullCountryName}`,
+          stayingItems,
+          restaurantItems,
+          activitiesItems,
+          otherItems,
+          isPublic,
+        });
+        
+        console.log('✅ Post créé avec succès:', post);
+        
+        // Mettre à jour avec le vrai ID du post
+        addOrUpdateCity({
+          name: cityName.trim(),
+          country: fullCountryName,
+          flag: '',
+          rating: averageRating,
+          beenThere: true,
+          source: 'post',
+          postId: post
+        });
+        
+        // Rafraîchir les posts
+        if (typeof refreshPosts === 'function') {
+          await refreshPosts();
+        }
+
+        // Supprimer le brouillon
+        await AsyncStorage.removeItem(DRAFT_KEY);
+        
+        console.log('🎉 Publication terminée !');
+      } catch (error) {
+        console.error('❌ Erreur publication arrière-plan:', error);
+        // En cas d'erreur, on garde le brouillon
       }
+    };
 
-      Alert.alert(
-        'Voyage posté !', 
-        `Votre voyage à ${cityName} a été publié avec succès !`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowPostModal(false);
-              resetForm(); // Réinitialiser le formulaire
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Erreur lors de la publication:', error);
-      Alert.alert('Erreur', 'Impossible de publier votre voyage. Veuillez réessayer.');
-    }
+    // Lancer la publication en arrière-plan
+    publishInBackground();
+
+    // Réinitialiser le formulaire immédiatement
+    resetForm();
   };
 
   // Contenu de chaque onglet
@@ -648,7 +762,13 @@ return (
     {/* Onglets + tabs + separator all on dark background */}
     <View>
       <View style={[styles.header, { backgroundColor: 'transparent' }]}> 
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>New trip</Text>
+        <View style={styles.headerTop}>
+          {isSaving && (
+            <View style={styles.savingIndicator}>
+              <Text style={styles.savingText}>💾 Sauvegarde...</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.tabsContainer}>
           {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
             <TouchableOpacity
@@ -1541,5 +1661,22 @@ const styles = StyleSheet.create({
   },
   privacyButtonTextActive: {
     color: '#FFFFFF',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  savingIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+  },
+  savingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

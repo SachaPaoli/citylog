@@ -1,5 +1,5 @@
-import { StarRating } from '@/components/StarRating';
 import { OptimizedImage } from '@/components/OptimizedImage';
+import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';

@@ -1,6 +1,6 @@
 import { CloudinaryService } from '@/services/CloudinaryService';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View, ImageStyle } from 'react-native';
+import { ActivityIndicator, Image, ImageStyle, StyleSheet, Text, View } from 'react-native';
 
 interface OptimizedImageProps {
   source: { uri: string };
