@@ -5,6 +5,7 @@ import { Post } from '@/types/Post';
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ProfileImage } from './ProfileImage';
 import { StarRating } from './StarRating';
 
 interface TravelPostCardProps {
@@ -51,10 +52,9 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
         <View style={styles.infoContainer}>
           {/* Photo de profil et nom */}
           <View style={styles.userInfo}>
-            <Image 
-              source={{ uri: userPhoto }} 
-              style={styles.userPhoto}
-              defaultSource={require('@/assets/images/placeholder.png')}
+            <ProfileImage 
+              uri={userPhoto}
+              size={32}
             />
             <Text style={[styles.userName, { color: textColor }]}>
               {post.userName}
@@ -125,13 +125,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-  },
-  userPhoto: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-    backgroundColor: '#333',
+    gap: 8,
   },
   userName: {
     fontSize: 14,

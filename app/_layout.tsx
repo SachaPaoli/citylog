@@ -40,6 +40,13 @@ export default function RootLayout() {
               <Stack.Screen name="trip-detail" options={{ headerShown: false }} />
               <Stack.Screen name="city-detail" options={{ headerShown: false }} />
               <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+              <Stack.Screen 
+                name="user-profile" 
+                options={{ 
+                  headerShown: false,
+                  animation: 'none'
+                }} 
+              />
               <Stack.Screen name="+not-found" />
             </Stack>
           </AuthProvider>

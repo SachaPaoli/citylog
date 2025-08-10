@@ -1,3 +1,4 @@
+import { ProfileImage } from '@/components/ProfileImage';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -78,7 +79,11 @@ export default function ProfileScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header du profil */}
         <View style={styles.profileHeader}>
-          <Image source={{ uri: userProfile.photo }} style={styles.profilePhoto} />
+          <ProfileImage 
+            uri={userProfile.photo} 
+            size={100} 
+            style={styles.profilePhoto} 
+          />
           <Text style={[styles.userName, { color: textColor }]}>{userProfile.name}</Text>
           
           {/* Stats followers/following */}

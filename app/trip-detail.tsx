@@ -1,4 +1,5 @@
 import { OptimizedImage } from '@/components/OptimizedImage';
+import { ProfileImage } from '@/components/ProfileImage';
 import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
@@ -254,17 +255,14 @@ export default function TripDetailScreen() {
           style={styles.headerUserProfile}
           onPress={() => {
             if (post.userId && post.userId !== userProfile?.uid) {
-              setTimeout(() => {
-                router.navigate(`/user-profile?userId=${post.userId}`);
-              }, 100);
+              router.push(`/user-profile?userId=${post.userId}`);
             }
           }}
-          activeOpacity={0.7}
+          activeOpacity={0.6}
         >
-          <Image 
-            source={{ uri: userPhoto }}
-            style={styles.headerUserPhoto}
-            defaultSource={require('@/assets/images/placeholder.png')}
+          <ProfileImage 
+            uri={userPhoto}
+            size={32}
           />
           <Text style={[styles.headerUserName, { color: whiteColor }]}>{post.userName}</Text>
         </TouchableOpacity>
@@ -493,12 +491,6 @@ const styles = StyleSheet.create({
     gap: 8,
     flex: 1,
     justifyContent: 'center',
-  },
-  headerUserPhoto: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#444',
   },
   headerUserName: {
     fontSize: 16,

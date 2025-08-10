@@ -11,6 +11,7 @@ function getCountryCode(countryName: string): string {
   return map[countryName] || '';
 }
 
+import { ProfileImage } from '@/components/ProfileImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,7 +147,7 @@ export default function UserProfileScreen() {
 
   const displayProfile = {
     name: userProfile.displayName || 'Utilisateur',
-    photo: userProfile.photoURL || userProfile.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
+    photo: userProfile.photoURL || userProfile.profileImage,
     followers: userStats.followers,
     following: userStats.following,
     visitedCountries: userStats.visitedCountries,
@@ -207,20 +208,20 @@ export default function UserProfileScreen() {
                 <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
                 <Text style={[styles.profileStatLabel, { color: textColor }]}>Followers</Text>
               </View>
-              <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
+              <ProfileImage 
+                uri={displayProfile.photo} 
+                size={100}
+              />
               <View style={styles.profileStatCol}>
                 <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.following}</Text>
                 <Text style={[styles.profileStatLabel, { color: textColor }]}>Following</Text>
               </View>
             </View>
 
-            {/* Boutons Follow/Message (optionnel) */}
+            {/* Bouton Follow centré */}
             <View style={styles.actionButtonsContainer}>
               <TouchableOpacity style={styles.followButton}>
                 <Text style={styles.followButtonText}>Follow</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.messageButton}>
-                <Text style={styles.messageButtonText}>Message</Text>
               </TouchableOpacity>
             </View>
 
@@ -357,14 +358,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 8,
+    justifyContent: 'center',
   },
   followButton: {
     backgroundColor: '#2051A4',
     paddingVertical: 10,
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
     borderRadius: 20,
-    flex: 1,
     alignItems: 'center',
+    minWidth: 120,
   },
   followButtonText: {
     color: '#fff',
