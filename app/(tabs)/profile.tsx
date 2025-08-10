@@ -11,6 +11,7 @@ function getCountryCode(countryName: string): string {
   return map[countryName] || '';
 }
 import { useAuth } from '@/contexts/AuthContext';
+import { useFollowStats } from '@/hooks/useFollowStats';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +61,7 @@ export default function ProfileScreen() {
   );
   const { logout, userProfile: authUserProfile } = useAuth();
   const { travelData, loading: travelLoading } = useUserTravels();
+  const { stats: followStats, loading: followStatsLoading } = useFollowStats(authUserProfile?.uid);
 
   // Fetch all posts, then filter by userId (after authUserProfile is defined)
   const { posts, loading: postsLoading } = usePosts();
@@ -72,8 +74,8 @@ export default function ProfileScreen() {
   const displayProfile = {
     name: authUserProfile?.displayName || 'Utilisateur',
     photo: authUserProfile?.photoURL || authUserProfile?.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
-    followers: 0, // À remplacer par vraie donnée
-    following: 0, // À remplacer par vraie donnée
+    followers: followStats.followersCount,
+    following: followStats.followingCount,
     visitedCountries: travelData.visitedCountries,
     totalCities: travelData.totalCities
   };

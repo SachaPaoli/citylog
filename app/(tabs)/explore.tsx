@@ -1,6 +1,8 @@
 import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
+import { UserSearchCard } from '@/components/UserSearchCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
+import { UserSearchService, UserSearchResult } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +24,9 @@ export default function ExploreScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [cities, setCities] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userLoading, setUserLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'cities' | 'members'>('cities');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCity, setSelectedCity] = useState<any>(null);
@@ -73,14 +77,55 @@ export default function ExploreScreen() {
     setSearchDone(true);
   };
 
+  // Rechercher des utilisateurs
+  const searchUsers = async (query: string) => {
+    if (!query.trim()) {
+      // Si pas de recherche, charger quelques utilisateurs populaires
+      setUserLoading(true);
+      try {
+        const popularUsers = await UserSearchService.getPopularUsers(15);
+        console.log(`Utilisateurs populaires chargés: ${popularUsers.length}`);
+        setUsers(popularUsers);
+      } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs populaires:', error);
+        setUsers([]);
+      }
+      setUserLoading(false);
+      return;
+    }
+
+    setUserLoading(true);
+    try {
+      console.log(`🔍 Recherche d'utilisateurs pour: "${query}"`);
+      const results = await UserSearchService.searchUsersByName(query, 20);
+      console.log(`✅ Trouvé ${results.length} utilisateurs:`, results.map(u => u.displayName));
+      setUsers(results);
+    } catch (error) {
+      console.error('Erreur recherche utilisateurs:', error);
+      setUsers([]);
+    }
+    setUserLoading(false);
+  };
+
   // Recherche automatique quand on tape
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      searchCities(searchQuery);
+      if (activeTab === 'cities') {
+        searchCities(searchQuery);
+      } else if (activeTab === 'members') {
+        searchUsers(searchQuery);
+      }
     }, 100); // Délai réduit à 100ms pour accélérer le loading
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, activeTab]);
+
+  // Charger des utilisateurs populaires au démarrage
+  useEffect(() => {
+    if (activeTab === 'members') {
+      searchUsers(''); // Chargera les utilisateurs populaires
+    }
+  }, [activeTab]);
 
   // Injecte le rating et beenThere du contexte dans la modale
   const handleCityPress = (city: any) => {
@@ -285,13 +330,32 @@ export default function ExploreScreen() {
 
         {/* ...existing code... */}
         {activeTab === 'members' && (
-          <View style={styles.instructionContainer}>
-            <Text style={[styles.instructionText, { color: textColor }]}> 
-              Section Members
-            </Text>
-            <Text style={[styles.instructionSubtext, { color: textColor }]}> 
-              Fonctionnalité à venir...
-            </Text>
+          <View style={{ flex: 1 }}>
+            {users.length > 0 ? (
+              <View style={{ paddingTop: 16 }}>
+                {users.map((user) => (
+                  <UserSearchCard key={user.uid} user={user} />
+                ))}
+              </View>
+            ) : searchQuery.trim() === '' && !userLoading ? (
+              <View style={styles.instructionContainer}>
+                <Text style={[styles.instructionText, { color: textColor }]}> 
+                  Rechercher des voyageurs
+                </Text>
+                <Text style={[styles.instructionSubtext, { color: textColor }]}> 
+                  Utilisez la barre de recherche pour trouver d'autres utilisateurs
+                </Text>
+              </View>
+            ) : searchQuery.trim() !== '' && !userLoading && users.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
+                  Aucun utilisateur trouvé
+                </Text>
+                <Text style={[styles.instructionSubtext, { color: textColor }]}>
+                  Essayez un autre terme de recherche
+                </Text>
+              </View>
+            ) : null}
           </View>
         )}
       </ScrollView>

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CityLogTitle } from '@/components/CityLogTitle';
 import { TravelPostCard } from '@/components/TravelPostCard';
 import { usePosts } from '@/hooks/usePosts';
+import { useFollowingPosts } from '@/hooks/useFollowingPosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function HomeScreen() {
@@ -16,13 +17,18 @@ export default function HomeScreen() {
   const borderColor = useThemeColor({}, 'borderColor');
   
   const { posts, loading, error, refreshPosts } = usePosts();
+  const { posts: followingPosts, loading: followingLoading, refreshFollowingPosts } = useFollowingPosts();
   const [refreshing, setRefreshing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'cities' | 'trips'>('cities');
   const router = useRouter();
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refreshPosts();
+    if (activeTab === 'cities') {
+      await refreshFollowingPosts();
+    } else {
+      await refreshPosts();
+    }
     setRefreshing(false);
   };
 
@@ -73,7 +79,7 @@ export default function HomeScreen() {
           }
         >
           {/* Messages d'état */}
-          {loading && !refreshing && (
+          {((activeTab === 'cities' && followingLoading) || (activeTab === 'trips' && loading)) && !refreshing && (
             <View style={styles.centerContent}>
               <ActivityIndicator size="large" color={textActiveColor} />
               <Text style={[styles.loadingText, { color: textColor }]}> 
@@ -92,17 +98,17 @@ export default function HomeScreen() {
           <View style={styles.postsContainer}>
             {activeTab === 'cities' && (
               <>
-                {!loading && posts.length === 0 && (
+                {!followingLoading && followingPosts.length === 0 && (
                   <View style={styles.centerContent}>
                     <Text style={[styles.emptyText, { color: textColor }]}> 
-                      Aucun voyage partagé pour le moment.
+                      Aucun voyage dans votre feed.
                     </Text>
                     <Text style={[styles.emptySubtext, { color: textColor }]}> 
-                      Soyez le premier à partager votre aventure ! ✈️
+                      Suivez des utilisateurs pour voir leurs voyages ! 👥
                     </Text>
                   </View>
                 )}
-                {posts.filter(post => post.isPublic).map((post) => (
+                {followingPosts.map((post) => (
                   <TravelPostCard 
                     key={post.id} 
                     post={post}

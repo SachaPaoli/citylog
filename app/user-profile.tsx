@@ -14,6 +14,7 @@ function getCountryCode(countryName: string): string {
 import { ProfileImage } from '@/components/ProfileImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useFollow } from '@/hooks/useFollow';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -44,6 +45,7 @@ export default function UserProfileScreen() {
   
   const { userProfile: currentUserProfile } = useAuth();
   const { posts, loading: postsLoading } = usePosts();
+  const { isFollowing, followStats, loading: followLoading, handleFollow } = useFollow(userId);
   
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -52,6 +54,15 @@ export default function UserProfileScreen() {
     followers: 0,
     following: 0
   });
+
+  // Mettre à jour les stats quand followStats change
+  useEffect(() => {
+    setUserStats(prev => ({
+      ...prev,
+      followers: followStats.followers,
+      following: followStats.following
+    }));
+  }, [followStats]);
   const [favorites, setFavorites] = useState<any[]>([null, null, null]);
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
   const [loading, setLoading] = useState(true);
@@ -121,8 +132,8 @@ export default function UserProfileScreen() {
         setUserStats({
           visitedCountries: uniqueCountries.size,
           totalCities: uniqueCities.size,
-          followers: 0, // À implémenter selon ton système de followers
-          following: 0, // À implémenter selon ton système de following
+          followers: followStats.followers,
+          following: followStats.following,
         });
         
       } catch (error) {
@@ -148,8 +159,8 @@ export default function UserProfileScreen() {
   const displayProfile = {
     name: userProfile.displayName || 'Utilisateur',
     photo: userProfile.photoURL || userProfile.profileImage,
-    followers: userStats.followers,
-    following: userStats.following,
+    followers: followStats.followers,
+    following: followStats.following,
     visitedCountries: userStats.visitedCountries,
     totalCities: userStats.totalCities
   };
@@ -220,8 +231,17 @@ export default function UserProfileScreen() {
 
             {/* Bouton Follow centré */}
             <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity style={styles.followButton}>
-                <Text style={styles.followButtonText}>Follow</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.followButton,
+                  isFollowing && { backgroundColor: '#666' }
+                ]}
+                onPress={handleFollow}
+                disabled={followLoading || userId === currentUserProfile?.uid}
+              >
+                <Text style={styles.followButtonText}>
+                  {followLoading ? 'Chargement...' : isFollowing ? 'Unfollow' : 'Follow'}
+                </Text>
               </TouchableOpacity>
             </View>
 
