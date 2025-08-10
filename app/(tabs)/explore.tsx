@@ -6,7 +6,10 @@ import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, Touc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
+import { useRouter } from 'expo-router';
+
 export default function ExploreScreen() {
+  const router = useRouter();
   // Ajout d'un état pour savoir si la recherche a été effectuée (évite le clignotement)
   const [searchDone, setSearchDone] = useState(false);
   const { addOrUpdateCity, removeCity, removeCitySource, cities: visitedCities } = useVisitedCities();
@@ -81,21 +84,16 @@ export default function ExploreScreen() {
 
   // Injecte le rating et beenThere du contexte dans la modale
   const handleCityPress = (city: any) => {
-    // Find both manual and post entries for this city
-    const manualEntry = visitedCities.find(
-      c => c.name === city.name && c.country === city.country && c.source === 'note'
-    );
-    const postEntry = visitedCities.find(
-      c => c.name === city.name && c.country === city.country && c.source === 'post'
-    );
-    setSelectedCity({
-      ...city,
-      userRating: manualEntry?.rating ?? postEntry?.rating,
-      beenThere: manualEntry?.beenThere ?? postEntry?.beenThere,
-      hasManualNote: !!manualEntry,
-      hasPost: !!postEntry,
+    router.push({
+      pathname: '/city-detail',
+      params: {
+        city: city.name,
+        country: city.country,
+        countryCode: city.countryCode,
+        flag: city.flag,
+        population: city.population,
+      },
     });
-    setModalVisible(true);
   };
 
   // Ajout/MAJ/Suppression d'une ville visitée ou notée

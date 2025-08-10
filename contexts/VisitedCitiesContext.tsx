@@ -125,6 +125,7 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     const id = `${name}-${city.country}`;
     const cityObj: VisitedCity = { ...city, name, id };
     console.log('[addOrUpdateCity] Called with:', city);
+    console.log('[addOrUpdateCity] Created cityObj:', cityObj);
     const ref = doc(db, 'users', userId);
     // Remove any previous manual note for this city (source 'note')
     const snap = await getDoc(ref);
@@ -132,25 +133,46 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
       const arr: VisitedCity[] = (snap.data().visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
       const manualNote = arr.find(c => (c.name === name || c.city === name) && c.country === city.country && c.source === 'note');
       if (manualNote) {
+        console.log('[addOrUpdateCity] Removing previous manual note:', manualNote);
         await updateDoc(ref, { visitedCities: arrayRemove(manualNote) });
       }
     }
     // Add or update the city
     if ((city.rating === undefined || city.rating === null) && !city.beenThere) {
+      console.log('[addOrUpdateCity] Removing city (no rating and not beenThere)');
       await updateDoc(ref, {
         visitedCities: arrayRemove(cityObj)
       });
     } else {
+      console.log('[addOrUpdateCity] Adding city to Firebase:', cityObj);
       await updateDoc(ref, {
         visitedCities: arrayUnion(cityObj)
       });
     }
+    console.log('[addOrUpdateCity] Firebase operation completed');
   };
 
   const removeCity = async (name: string, country: string) => {
     if (!userId) return;
-    const id = `${name}-${country}`;
     console.log('[removeCity] Called with:', name, country);
+    const ref = doc(db, 'users', userId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      const visitedCitiesArr: VisitedCity[] = (data.visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
+      // Trouve toutes les entrées pour cette ville (toutes les sources)
+      const citiesToRemove = visitedCitiesArr.filter((c: VisitedCity) =>
+        (c.name === name || c.city === name) && c.country === country
+      );
+      console.log('[removeCity] Cities to remove:', citiesToRemove);
+      // Supprime toutes les entrées une par une
+      for (const cityToRemove of citiesToRemove) {
+        await updateDoc(ref, {
+          visitedCities: arrayRemove(cityToRemove)
+        });
+        console.log('[removeCity] Removed:', cityToRemove);
+      }
+    }
   };
 
   return (
