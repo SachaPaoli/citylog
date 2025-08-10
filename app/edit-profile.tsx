@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { CloudinaryService } from '@/services/CloudinaryService';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -50,7 +51,22 @@ export default function EditProfileScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setProfilePhoto(result.assets[0].uri);
+        // Upload vers Cloudinary au lieu de stocker localement
+        setIsLoading(true);
+        try {
+          console.log('📸 Upload de la photo de profil vers Cloudinary...');
+          const cloudinaryUrl = await CloudinaryService.uploadImage(
+            result.assets[0].uri, 
+            'citylog/profiles'
+          );
+          setProfilePhoto(cloudinaryUrl);
+          console.log('✅ Photo de profil uploadée:', cloudinaryUrl);
+        } catch (error) {
+          console.error('❌ Erreur upload photo profil:', error);
+          Alert.alert('Erreur', 'Impossible d\'uploader la photo. Vérifiez votre connexion.');
+        } finally {
+          setIsLoading(false);
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la sélection d\'image:', error);
@@ -117,14 +133,20 @@ export default function EditProfileScreen() {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Photo de profil */}
           <View style={styles.photoSection}>
-            <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
+            <TouchableOpacity 
+              onPress={pickImage} 
+              style={[styles.photoContainer, isLoading && styles.photoLoading]}
+              disabled={isLoading}
+            >
               <Image source={{ uri: profilePhoto }} style={styles.profilePhoto} />
               <View style={[styles.photoOverlay, { backgroundColor: '#fff' }]}> 
-                <Text style={styles.photoOverlayText}>📷</Text>
+                <Text style={styles.photoOverlayText}>
+                  {isLoading ? '⏳' : '📷'}
+                </Text>
               </View>
             </TouchableOpacity>
             <Text style={[styles.photoHint, { color: textColor }]}>
-              Appuyez pour changer votre photo
+              {isLoading ? 'Upload en cours...' : 'Appuyez pour changer votre photo'}
             </Text>
           </View>
 
@@ -231,6 +253,9 @@ const styles = StyleSheet.create({
   photoContainer: {
     position: 'relative',
     marginBottom: 10,
+  },
+  photoLoading: {
+    opacity: 0.6,
   },
   profilePhoto: {
     width: 120,

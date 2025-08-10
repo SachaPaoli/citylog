@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { CreatePostData, Post } from '../types/Post';
+import { CloudinaryService } from './CloudinaryService';
 
 // Collection reference
 const postsCollection = collection(db, 'posts');
@@ -24,20 +25,66 @@ export class PostService {
   // Créer un nouveau post
   static async createPost(postData: CreatePostData, userId: string, userName: string): Promise<string> {
     try {
+      console.log('🚀 Début de la création du post...');
+      
+      // Créer un ID temporaire pour organiser les images
+      const tempPostId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // Upload de la photo principale si elle existe
+      let mainPhotoUrl = '';
+      if (postData.photo) {
+        console.log('📸 Upload de la photo principale vers Cloudinary...');
+        mainPhotoUrl = await CloudinaryService.uploadImage(postData.photo, `citylog/posts/${tempPostId}/main`);
+      }
+      
+      // Upload des images pour chaque catégorie d'items
+      console.log('🏨 Upload des images des logements...');
+      const uploadedStayingItems = await Promise.all(
+        postData.stayingItems.map(async (item) => ({
+          ...item,
+          images: await CloudinaryService.uploadItemImages(item.images, 'staying', tempPostId)
+        }))
+      );
+      
+      console.log('🍽️ Upload des images des restaurants...');
+      const uploadedRestaurantItems = await Promise.all(
+        postData.restaurantItems.map(async (item) => ({
+          ...item,
+          images: await CloudinaryService.uploadItemImages(item.images, 'restaurant', tempPostId)
+        }))
+      );
+      
+      console.log('🎯 Upload des images des activités...');
+      const uploadedActivitiesItems = await Promise.all(
+        postData.activitiesItems.map(async (item) => ({
+          ...item,
+          images: await CloudinaryService.uploadItemImages(item.images, 'activities', tempPostId)
+        }))
+      );
+      
+      console.log('📝 Upload des images des autres items...');
+      const uploadedOtherItems = await Promise.all(
+        postData.otherItems.map(async (item) => ({
+          ...item,
+          images: await CloudinaryService.uploadItemImages(item.images, 'other', tempPostId)
+        }))
+      );
+
+      console.log('💾 Sauvegarde du post dans Firestore...');
       const newPost = {
         userId,
         userName,
         userPhoto: '', // À ajouter plus tard avec le profil utilisateur
         city: postData.city,
         country: postData.country,
-        photo: postData.photo,
+        photo: mainPhotoUrl,
         rating: postData.rating,
         description: postData.description,
-        stayingItems: postData.stayingItems,
-        restaurantItems: postData.restaurantItems,
-        activitiesItems: postData.activitiesItems,
-        otherItems: postData.otherItems,
-        isPublic: postData.isPublic, // Ajouté pour la visibilité du post
+        stayingItems: uploadedStayingItems,
+        restaurantItems: uploadedRestaurantItems,
+        activitiesItems: uploadedActivitiesItems,
+        otherItems: uploadedOtherItems,
+        isPublic: postData.isPublic,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         likes: [],
@@ -45,9 +92,10 @@ export class PostService {
       };
 
       const docRef = await addDoc(postsCollection, newPost);
+      console.log('✅ Post créé avec succès avec ID:', docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Erreur lors de la création du post:', error);
+      console.error('❌ Erreur lors de la création du post:', error);
       throw error;
     }
   }
