@@ -1,7 +1,7 @@
 import { ProfileImage } from '@/components/ProfileImage';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFollow } from '@/hooks/useFollow';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';

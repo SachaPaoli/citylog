@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { getFollowStats } from '../services/FollowService';
 import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useEffect, useState } from 'react';
+import { getFollowStats } from '../services/FollowService';
 
 export const useFollowStats = (userId?: string) => {
   const [stats, setStats] = useState({

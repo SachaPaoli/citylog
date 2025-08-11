@@ -6,8 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CityLogTitle } from '@/components/CityLogTitle';
 import { TravelPostCard } from '@/components/TravelPostCard';
-import { usePosts } from '@/hooks/usePosts';
 import { useFollowingPosts } from '@/hooks/useFollowingPosts';
+import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function HomeScreen() {
