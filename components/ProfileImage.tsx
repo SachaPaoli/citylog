@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface ProfileImageProps {
   uri?: string | null;
@@ -38,6 +39,9 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
           },
           style
         ]}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={200}
         onError={(error) => {
           console.log('ProfileImage - Erreur de chargement, switch vers icône:', error);
           setImageError(true);

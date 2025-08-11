@@ -1,4 +1,3 @@
-import { OptimizedImage } from '@/components/OptimizedImage';
 import { ProfileImage } from '@/components/ProfileImage';
 import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,11 +6,11 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post, TripItem } from '@/types/Post';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -331,21 +330,13 @@ export default function TripDetailScreen() {
       >
         {/* Informations du voyage */}
         <View style={[styles.postInfo, !post.description && styles.postInfoCompact]}>
-          {isCloudinaryUrl(post.photo) ? (
-            <OptimizedImage 
-              source={{ uri: post.photo }} 
-              style={styles.coverImage}
-              variant="cover"
-              placeholder={false}
-            />
-          ) : (
-            <Image 
-              source={{ uri: post.photo }} 
-              style={styles.coverImage}
-              resizeMode="cover"
-              defaultSource={require('@/assets/images/placeholder.png')}
-            />
-          )}
+          <Image 
+            source={{ uri: post.photo }} 
+            style={styles.coverImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
           <View style={styles.postDetails}>
             <Text style={[styles.cityName, { color: textColor }]}> 
               {post.city}, {post.country}
@@ -409,13 +400,13 @@ export default function TripDetailScreen() {
                     >
                       {item.images.map((image, imgIndex) => {
                         return (
-                          <OptimizedImage 
+                          <Image 
                             key={`${item.id}-${image.id}`}
                             source={{ uri: image.uri }} 
-                            variant="medium"
                             style={styles.itemPhoto}
-                            placeholder={false}
-                            resizeMode="cover"
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={200}
                           />
                         );
                       })}

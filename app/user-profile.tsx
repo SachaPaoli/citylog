@@ -17,8 +17,9 @@ import { useFollow } from '@/hooks/useFollow';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePosts } from '../hooks/usePosts';
 import { getUserFavorites, getUserProfile } from '../services/UserService';
@@ -261,13 +262,15 @@ export default function UserProfileScreen() {
                         ? <Image
                             source={{ uri: `https://flagcdn.com/w80/${fav.countryCode}.png` }}
                             style={styles.favoriteFlagImg}
-                            resizeMode="cover"
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
                           />
                         : getCountryCode(fav.country)
                           ? <Image
                               source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
                               style={styles.favoriteFlagImg}
-                              resizeMode="cover"
+                              contentFit="cover"
+                              cachePolicy="memory-disk"
                             />
                           : fav.flag
                             ? <Text style={styles.flag}>{fav.flag}</Text>

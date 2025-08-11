@@ -3,8 +3,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post } from '@/types/Post';
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ProfileImage } from './ProfileImage';
 import { StarRating } from './StarRating';
 
@@ -25,7 +26,7 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
     ? user.photoURL 
     : post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face';
 
-  // Pré-charger les images pour l'affichage instantané
+  // Précharger les images pour l'affichage instantané avec expo-image
   React.useEffect(() => {
     Image.prefetch(post.photo);
     if (userPhoto) {
@@ -44,7 +45,10 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
           <Image 
             source={{ uri: post.photo }} 
             style={styles.cityPhoto}
-            defaultSource={require('@/assets/images/placeholder.png')}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            placeholder={require('@/assets/images/placeholder.png')}
           />
         </View>
         
