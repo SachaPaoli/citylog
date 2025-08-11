@@ -2,7 +2,7 @@ import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
 import { UserSearchCard } from '@/components/UserSearchCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
-import { UserSearchService, UserSearchResult } from '@/services/UserSearchService';
+import { UserSearchResult, UserSearchService } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

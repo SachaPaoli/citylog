@@ -13,8 +13,8 @@ function getCountryCode(countryName: string): string {
 
 import { ProfileImage } from '@/components/ProfileImage';
 import { useAuth } from '@/contexts/AuthContext';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useFollow } from '@/hooks/useFollow';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';

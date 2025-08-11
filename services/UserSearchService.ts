@@ -1,4 +1,4 @@
-import { collection, getDocs, limit, orderBy, query, startAt, endAt, where } from 'firebase/firestore';
+import { collection, endAt, getDocs, limit, orderBy, query, startAt, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 export interface UserSearchResult {
