@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useNavigation, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNotifications } from '../hooks/useNotifications';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useNotifications } from '../hooks/useNotificationsSimple';
 
 const followNotifications = [
   { id: '1', message: 'Alice veut s\'abonner à vous.', user: 'Alice', date: 'Aujourd\'hui' },
@@ -14,17 +14,29 @@ const followNotifications = [
 export default function NotificationsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  
+  console.log('🔔 NotificationsScreen - Component rendering...');
+  
   const { notifications, loading, error, refreshNotifications } = useNotifications();
   const [refreshing, setRefreshing] = React.useState(false);
+
+  console.log('🔔 NotificationsScreen - Hook data:', { 
+    notificationsCount: notifications?.length || 0,
+    loading, 
+    error,
+    notifications: notifications
+  });
 
   React.useLayoutEffect(() => {
     navigation.setOptions?.({ headerShown: false });
   }, [navigation]);
 
   const handleRefresh = async () => {
+    console.log('🔄 Manual refresh started');
     setRefreshing(true);
     await refreshNotifications();
     setRefreshing(false);
+    console.log('🔄 Manual refresh completed');
   };
 
   const getNotificationIcon = (type: string) => {
@@ -41,6 +53,7 @@ export default function NotificationsScreen() {
   };
 
   const handleNotificationPress = (notification: any) => {
+    console.log('🔔 Notification pressed:', notification);
     if (notification.type === 'new_post' && notification.postId) {
       router.push(`/trip-detail?postId=${notification.postId}`);
     } else if (notification.userId) {
@@ -70,6 +83,21 @@ export default function NotificationsScreen() {
         }
       >
         <Text style={styles.sectionTitle}>Activités des personnes suivies</Text>
+        
+        {/* Debug info */}
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>
+            Debug: {notifications.length} notifications trouvées
+          </Text>
+          <Text style={styles.debugText}>
+            Loading: {loading ? 'Oui' : 'Non'}
+          </Text>
+          {error && (
+            <Text style={styles.debugText}>
+              Error: {error}
+            </Text>
+          )}
+        </View>
         
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -123,6 +151,9 @@ export default function NotificationsScreen() {
             <Ionicons name="notifications-outline" size={48} color="#666" />
             <Text style={styles.emptyActivityText}>
               Aucune activité récente de vos abonnements
+            </Text>
+            <Text style={styles.emptyActivityText}>
+              Tirez vers le bas pour actualiser
             </Text>
           </View>
         )}
@@ -193,6 +224,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 8,
     marginTop: 8,
+  },
+  debugContainer: {
+    backgroundColor: 'rgba(255,255,0,0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  debugText: {
+    color: '#ffff00',
+    fontSize: 12,
+    marginBottom: 4,
   },
   notifItem: {
     backgroundColor: 'rgba(255,255,255,0.04)',
@@ -296,4 +338,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

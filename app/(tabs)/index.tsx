@@ -39,7 +39,7 @@ export default function HomeScreen() {
         <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <CityLogTitle />
-            <TouchableOpacity onPress={() => router.push('/notifications-screen')} style={{ padding: 8 }}>
+            <TouchableOpacity onPress={() => router.push('/notifications')} style={{ padding: 8 }}>
               <Ionicons name="notifications-outline" size={28} color="#fff" />
             </TouchableOpacity>
           </View>

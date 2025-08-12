@@ -12,6 +12,7 @@ export type VisitedCity = {
   beenThere: boolean;
   source?: 'post' | 'note';
   postId?: string; // Ajouté pour lier à un post précis
+  timestamp?: Date; // Ajouté pour les notifications
 };
 
 type VisitedCitiesContextType = {
@@ -123,7 +124,11 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     const name = city.name || city.city;
     if (!name || !city.country) return;
     const id = `${name}-${city.country}`;
-    const cityObj: VisitedCity = { ...city, name, id };
+    
+    // Ajouter un timestamp pour les notifications
+    const timestamp = new Date();
+    const cityObj: VisitedCity = { ...city, name, id, timestamp };
+    
     console.log('[addOrUpdateCity] Called with:', city);
     console.log('[addOrUpdateCity] Created cityObj:', cityObj);
     const ref = doc(db, 'users', userId);
