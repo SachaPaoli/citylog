@@ -4,7 +4,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { UserSearchResult, UserSearchService } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
@@ -32,6 +32,46 @@ export default function ExploreScreen() {
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  
+  // Animation pour les onglets
+  const tabsOpacity = useState(new Animated.Value(0))[0];
+  
+  // Animation pour la ligne de séparation
+  const separatorMarginTop = useState(new Animated.Value(20))[0];
+
+  // Animation quand searchFocused change
+  useEffect(() => {
+    if (searchFocused) {
+      // Apparition des onglets + ligne qui descend
+      Animated.parallel([
+        Animated.timing(tabsOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(separatorMarginTop, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    } else {
+      // Disparition des onglets + ligne qui remonte
+      Animated.parallel([
+        Animated.timing(tabsOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(separatorMarginTop, {
+          toValue: 20,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [searchFocused]);
 
   // Rechercher des villes avec l'API 154k
   const searchCities = async (query: string) => {
@@ -198,6 +238,14 @@ export default function ExploreScreen() {
         </View>
       )}
       {/* ...existing code... */}
+      
+      {/* Titre Explore */}
+      <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, alignItems: 'center' }}>
+        <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' }}>
+          Explore
+        </Text>
+      </View>
+
       <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, marginTop: 12 }}>
         <View style={{ position: 'relative', justifyContent: 'center' }}>
           <TextInput
@@ -216,63 +264,98 @@ export default function ExploreScreen() {
             placeholderTextColor={`${textColor}80`}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => {
+              // Fermer les onglets si pas de texte dans la barre de recherche
+              if (searchQuery.trim().length === 0) {
+                setSearchFocused(false);
+              }
+            }}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ position: 'absolute', right: 10, top: 0, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+            <TouchableOpacity 
+              onPress={() => {
+                setSearchQuery(''); // Efface seulement le texte, garde les onglets ouverts
+              }} 
+              style={{ position: 'absolute', right: 10, top: 0, height: '100%', justifyContent: 'center', alignItems: 'center' }}
+            >
               <Text style={{ color: '#fff', fontSize: 18 }}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* ...existing code... */}
-      <View style={[styles.tabsContainer, { backgroundColor: headerColor }]}> 
-        <TouchableOpacity
+      {/* Onglets avec animation fluide */}
+      {searchFocused && (
+        <Animated.View 
           style={[
-            styles.tab,
-            activeTab === 'cities' && styles.activeTab
+            styles.tabsContainer, 
+            { 
+              backgroundColor: headerColor,
+              opacity: tabsOpacity,
+            }
           ]}
-          onPress={() => setActiveTab('cities')}
-        >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'cities' ? '#FFFFFF' : textColor }
-          ]}>
-            Cities
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'members' && styles.activeTab
-          ]}
-          onPress={() => setActiveTab('members')}
-        >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'members' ? '#FFFFFF' : textColor }
-          ]}>
-            Members
-          </Text>
-        </TouchableOpacity>
-      </View>
+        > 
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'cities' && styles.activeTab
+            ]}
+            onPress={() => setActiveTab('cities')}
+          >
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'cities' ? '#FFFFFF' : textColor }
+            ]}>
+              Cities
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'members' && styles.activeTab
+            ]}
+            onPress={() => setActiveTab('members')}
+          >
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'members' ? '#FFFFFF' : textColor }
+            ]}>
+              Members
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* Ligne de séparation avec animation fluide */}
+      <Animated.View 
+        style={{ 
+          backgroundColor: '#181C24', 
+          borderBottomWidth: 1, 
+          borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+          marginTop: separatorMarginTop
+        }} 
+      />
 
       {/* ...existing code... */}
       <ScrollView style={[styles.content, { backgroundColor: headerColor }]} showsVerticalScrollIndicator={false}> 
-        {activeTab === 'cities' && (
-          <>
-            {loading && searchQuery.length > 0 && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={textActiveColor} />
-                <Text style={[styles.loadingText, { color: textColor }]}> 
-                  Recherche en cours...
-                </Text>
-              </View>
-            )}
+        <View>
+          {searchFocused ? (
+            <>
+              {activeTab === 'cities' && (
+              <>
+                {loading && searchQuery.length > 0 && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={textActiveColor} />
+                    <Text style={[styles.loadingText, { color: textColor }]}> 
+                      Recherche en cours...
+                    </Text>
+                  </View>
+                )}
 
-            {/* ...existing code... */}
-            {!loading && cities.length > 0 && (
+                {/* ...existing code... */}
+                {!loading && cities.length > 0 && (
               <View style={styles.citiesList}>
                 {cities.map((city, index) => {
                   // ...existing code...
@@ -358,6 +441,18 @@ export default function ExploreScreen() {
             ) : null}
           </View>
         )}
+          </>
+        ) : (
+          <View style={styles.instructionContainer}>
+            <Text style={[styles.instructionText, { color: textColor }]}>
+              Bienvenue dans Explore
+            </Text>
+            <Text style={[styles.instructionSubtext, { color: textColor }]}>
+              Cliquez sur la barre de recherche pour commencer à explorer
+            </Text>
+          </View>
+        )}
+        </View>
       </ScrollView>
 
       {/* ...existing code... */}
@@ -448,8 +543,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   tab: {
     flex: 1,
