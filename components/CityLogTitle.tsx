@@ -1,7 +1,7 @@
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export function CityLogTitle() {
   const textColor = useThemeColor({}, 'text');
