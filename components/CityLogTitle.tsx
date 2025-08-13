@@ -1,6 +1,7 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export function CityLogTitle() {
   const textColor = useThemeColor({}, 'text');
@@ -11,15 +12,7 @@ export function CityLogTitle() {
       <View style={styles.titleContainer}>
         <Text style={[styles.title, { color: textActiveColor }]}>Ci</Text>
         <View style={styles.airplaneContainer}>
-          {/* Forme d'avion réaliste */}
-          <View style={styles.airplane}>
-            {/* Corps de l'avion */}
-            <View style={[styles.airplaneBody, { backgroundColor: textActiveColor }]} />
-            {/* Ailes */}
-            <View style={[styles.airplaneWings, { backgroundColor: textActiveColor }]} />
-            {/* Queue */}
-            <View style={[styles.airplaneTail, { backgroundColor: textActiveColor }]} />
-          </View>
+          <IconSymbol size={22} name="paperplane.fill" color={textActiveColor} />
         </View>
         <Text style={[styles.title, { color: textActiveColor }]}>yLog</Text>
       </View>
@@ -44,38 +37,9 @@ const styles = StyleSheet.create({
   },
   airplaneContainer: {
     marginHorizontal: 3,
-    width: 18,
+    width: 22,
     height: 26,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  airplane: {
-    position: 'relative',
-    width: 20,
-    height: 28,
-  },
-  airplaneBody: {
-    position: 'absolute',
-    width: 2.5,
-    height: 22,
-    left: 8.75,
-    top: 3,
-    borderRadius: 1.25,
-  },
-  airplaneWings: {
-    position: 'absolute',
-    width: 20,
-    height: 6,
-    left: 0,
-    top: 11,
-    borderRadius: 3,
-  },
-  airplaneTail: {
-    position: 'absolute',
-    width: 10,
-    height: 4,
-    left: 5,
-    top: 22,
-    borderRadius: 2,
   },
 });

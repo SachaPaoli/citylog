@@ -20,49 +20,56 @@ export default function TabLayout() {
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
+          tabBarShowLabel: false, // Cache les labels
           tabBarStyle: Platform.select({
             ios: {
               position: 'absolute',
               backgroundColor: '#fff', // Fond blanc
+              height: 80, // Hauteur plus confortable
+              paddingTop: 10, // Padding pour centrer verticalement
+              paddingBottom: 10,
             },
             default: {
               backgroundColor: '#fff', // Fond blanc
+              height: 80, // Hauteur plus confortable
+              paddingTop: 10, // Padding pour centrer verticalement
+              paddingBottom: 10,
             },
           }),
         }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house" color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="paperplane.fill" color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane" color={color} />,
         }}
       />
       <Tabs.Screen
         name="post"
         options={{
-          title: 'Post',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="plus.circle.fill" color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle" color={color} />,
         }}
       />
       <Tabs.Screen
         name="ranking"
         options={{
-          title: 'Ranking',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="trophy.fill" color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="trophy" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.circle" color={color} />,
         }}
       />
     </Tabs>
