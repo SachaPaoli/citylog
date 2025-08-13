@@ -1,8 +1,8 @@
+import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getFollowingList } from '../services/FollowService';
-import { collection, doc, getDoc, getDocs, orderBy, query, where, limit } from 'firebase/firestore';
-import { db } from '../config/firebase';
 
 export interface Notification {
   id: string;

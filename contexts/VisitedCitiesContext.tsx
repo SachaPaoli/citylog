@@ -20,6 +20,7 @@ type VisitedCitiesContextType = {
   addOrUpdateCity: (city: Omit<VisitedCity, 'id'>) => Promise<void>;
   removeCity: (name: string, country: string) => Promise<void>;
   removeCitySource: (name: string, country: string, source: 'post' | 'note', postId?: string) => Promise<void>;
+  cleanupDuplicates: () => Promise<void>;
 };
 
 const VisitedCitiesContext = createContext<VisitedCitiesContextType | undefined>(undefined);
@@ -100,12 +101,35 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
         const data = snap.data();
         // Clean and normalize all entries
         const cleaned: VisitedCity[] = (data.visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
-        // Remove duplicates
+        // Remove duplicates with better logic
         const seen = new Set<string>();
         const deduped: VisitedCity[] = cleaned.filter((c: VisitedCity) => {
-          const key = `${c.id}-${c.source || ''}-${c.postId || ''}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
+          // Pour les notes manuelles : une seule par nom de ville (peu importe l'ID exact)
+          if (c.source === 'note') {
+            const normalizedName = c.name.toLowerCase().trim();
+            const key = `${normalizedName}-note`;
+            if (seen.has(key)) {
+              console.log(`[Dedup] Removing duplicate note for ${c.name}`);
+              return false;
+            }
+            seen.add(key);
+            return true;
+          }
+          // Pour les posts : un seul par postId
+          if (c.source === 'post' && c.postId) {
+            // Exclure les postId temporaires
+            if (c.postId.startsWith('temp-')) {
+              console.log(`[Dedup] Removing temporary post ${c.postId} for ${c.name}`);
+              return false;
+            }
+            const key = `post-${c.postId}`;
+            if (seen.has(key)) {
+              console.log(`[Dedup] Removing duplicate post ${c.postId} for ${c.name}`);
+              return false;
+            }
+            seen.add(key);
+            return true;
+          }
           return true;
         });
         setCities(deduped);
@@ -129,19 +153,46 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     const timestamp = new Date();
     const cityObj: VisitedCity = { ...city, name, id, timestamp };
     
+    // Firebase doesn't store undefined values, so remove undefined rating
+    if (cityObj.rating === undefined) {
+      delete (cityObj as any).rating;
+    }
+    
     console.log('[addOrUpdateCity] Called with:', city);
     console.log('[addOrUpdateCity] Created cityObj:', cityObj);
     const ref = doc(db, 'users', userId);
-    // Remove any previous manual note for this city (source 'note')
+    
+    // Remove any previous entries for this city/post
     const snap = await getDoc(ref);
     if (snap.exists()) {
       const arr: VisitedCity[] = (snap.data().visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
-      const manualNote = arr.find(c => (c.name === name || c.city === name) && c.country === city.country && c.source === 'note');
-      if (manualNote) {
-        console.log('[addOrUpdateCity] Removing previous manual note:', manualNote);
-        await updateDoc(ref, { visitedCities: arrayRemove(manualNote) });
+      
+      if (city.source === 'note') {
+        // Pour les notes manuelles, supprime TOUTES les notes pour cette ville (peu importe l'ID exact)
+        const normalizedName = name.toLowerCase().trim();
+        const toRemove = arr.filter(c => 
+          c.source === 'note' && 
+          c.name.toLowerCase().trim() === normalizedName
+        );
+        for (const item of toRemove) {
+          console.log('[addOrUpdateCity] Removing previous manual note:', item);
+          await updateDoc(ref, { visitedCities: arrayRemove(item) });
+        }
+      } else if (city.source === 'post' && city.postId) {
+        // Pour les posts, supprime TOUS les posts avec le même postId OU les posts temporaires pour cette ville
+        const toRemove = arr.filter(c => 
+          c.source === 'post' && (
+            c.postId === city.postId || 
+            (c.postId?.startsWith('temp-') && c.name === name && c.country === city.country)
+          )
+        );
+        for (const item of toRemove) {
+          console.log('[addOrUpdateCity] Removing previous/temp post:', item);
+          await updateDoc(ref, { visitedCities: arrayRemove(item) });
+        }
       }
     }
+    
     // Add or update the city
     if ((city.rating === undefined || city.rating === null) && !city.beenThere) {
       console.log('[addOrUpdateCity] Removing city (no rating and not beenThere)');
@@ -155,6 +206,63 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
       });
     }
     console.log('[addOrUpdateCity] Firebase operation completed');
+  };
+
+  const cleanupDuplicates = async () => {
+    if (!userId) return;
+    
+    console.log('[cleanupDuplicates] Starting cleanup...');
+    const ref = doc(db, 'users', userId);
+    const snap = await getDoc(ref);
+    
+    if (snap.exists()) {
+      const arr: VisitedCity[] = (snap.data().visitedCities || []).map(normalizeCity).filter((c: VisitedCity | null): c is VisitedCity => !!c);
+      
+      // Find duplicates
+      const seen = new Set<string>();
+      const toKeep: VisitedCity[] = [];
+      const toRemove: VisitedCity[] = [];
+      
+      for (const city of arr) {
+        if (city.source === 'note') {
+          const normalizedName = city.name.toLowerCase().trim();
+          const key = `${normalizedName}-note`;
+          if (seen.has(key)) {
+            toRemove.push(city);
+          } else {
+            seen.add(key);
+            toKeep.push(city);
+          }
+        } else if (city.source === 'post' && city.postId) {
+          if (city.postId.startsWith('temp-')) {
+            toRemove.push(city);
+          } else {
+            const key = `post-${city.postId}`;
+            if (seen.has(key)) {
+              toRemove.push(city);
+            } else {
+              seen.add(key);
+              toKeep.push(city);
+            }
+          }
+        } else {
+          toKeep.push(city);
+        }
+      }
+      
+      if (toRemove.length > 0) {
+        console.log(`[cleanupDuplicates] Removing ${toRemove.length} duplicates:`, toRemove);
+        
+        // Remove all duplicates
+        for (const city of toRemove) {
+          await updateDoc(ref, { visitedCities: arrayRemove(city) });
+        }
+        
+        console.log(`[cleanupDuplicates] Cleanup completed. Kept ${toKeep.length} unique cities.`);
+      } else {
+        console.log('[cleanupDuplicates] No duplicates found.');
+      }
+    }
   };
 
   const removeCity = async (name: string, country: string) => {
@@ -181,7 +289,7 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <VisitedCitiesContext.Provider value={{ cities, addOrUpdateCity, removeCity, removeCitySource }}>
+    <VisitedCitiesContext.Provider value={{ cities, addOrUpdateCity, removeCity, removeCitySource, cleanupDuplicates }}>
       {children}
     </VisitedCitiesContext.Provider>
   );

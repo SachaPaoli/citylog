@@ -1,7 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { collection, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StarRating } from '../components/StarRating';
+import { db } from '../config/firebase';
 import { useVisitedCities } from '../contexts/VisitedCitiesContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 // Mapping code -> nom complet
@@ -27,6 +29,66 @@ export default function CityDetailScreen() {
   const headerColor = '#181C24'; // Même couleur que trip-detail
   const whiteColor = '#FFFFFF';
 
+  // État pour stocker la note moyenne globale
+  const [globalAverageRating, setGlobalAverageRating] = useState<number | null>(null);
+  const [isLoadingAverage, setIsLoadingAverage] = useState(false);
+
+  // Calcule la note moyenne de TOUS les utilisateurs pour cette ville
+  const calculateGlobalAverageRating = async () => {
+    if (!city || !country) return null;
+    
+    try {
+      setIsLoadingAverage(true);
+      console.log('[CityDetail] Calculating global average for:', city, country);
+      
+      // Récupère tous les utilisateurs
+      const usersQuery = query(collection(db, 'users'));
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      const allRatings: number[] = [];
+      
+      usersSnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        const visitedCities = userData.visitedCities || [];
+        
+        // Cherche toutes les notes pour cette ville de cet utilisateur
+        visitedCities.forEach((cityData: any) => {
+          if (cityData.name === city && 
+              cityData.country === country && 
+              cityData.rating !== undefined && 
+              cityData.rating > 0) {
+            allRatings.push(cityData.rating);
+            console.log('[CityDetail] Found rating:', cityData.rating, 'from user:', userDoc.id);
+          }
+        });
+      });
+      
+      console.log('[CityDetail] All ratings found:', allRatings);
+      
+      if (allRatings.length === 0) {
+        setGlobalAverageRating(null);
+        return null;
+      }
+      
+      const average = allRatings.reduce((sum, rating) => sum + rating, 0) / allRatings.length;
+      console.log('[CityDetail] Global average calculated:', average);
+      setGlobalAverageRating(average);
+      return average;
+      
+    } catch (error) {
+      console.error('[CityDetail] Error calculating global average:', error);
+      setGlobalAverageRating(null);
+      return null;
+    } finally {
+      setIsLoadingAverage(false);
+    }
+  };
+
+  // Charge la note moyenne au montage du composant
+  useEffect(() => {
+    calculateGlobalAverageRating();
+  }, [city, country]);
+
   // Récupère la note et le statut pour cette ville
   const manualEntry = visitedCities.find(
     c => c.name === city && c.country === country && c.source === 'note'
@@ -35,11 +97,12 @@ export default function CityDetailScreen() {
     c => c.name === city && c.country === country && c.source === 'post'
   );
   const initialRating = manualEntry?.rating ?? postEntry?.rating ?? 0;
-  const initialBeenThere = manualEntry?.beenThere ?? postEntry?.beenThere ?? false;
+  const initialBeenThere = Boolean(manualEntry?.beenThere || postEntry?.beenThere);
 
   const [userRating, setUserRating] = useState(initialRating);
   const [hasBeenThere, setHasBeenThere] = useState(initialBeenThere);
-  const curtainAnimation = useState(new Animated.Value(0))[0];
+  const [prevHasBeenThere, setPrevHasBeenThere] = useState(initialBeenThere);
+  const curtainAnimation = useState(new Animated.Value(initialBeenThere ? 1 : 0))[0];
 
   // Synchronise les états avec les données du contexte quand elles changent
   useEffect(() => {
@@ -57,23 +120,29 @@ export default function CityDetailScreen() {
     console.log('[CityDetail] Found postEntry:', postEntry);
     
     const currentRating = manualEntry?.rating ?? postEntry?.rating ?? 0;
-    const currentBeenThere = manualEntry?.beenThere ?? postEntry?.beenThere ?? false;
+    // Vérifie beenThere pour toutes les entrées de cette ville
+    const currentBeenThere = Boolean(manualEntry?.beenThere || postEntry?.beenThere);
     
     console.log('[CityDetail] Setting userRating to:', currentRating);
     console.log('[CityDetail] Setting hasBeenThere to:', currentBeenThere);
     
     setUserRating(currentRating);
     setHasBeenThere(currentBeenThere);
+    setPrevHasBeenThere(currentBeenThere); // Évite l'animation lors de la sync
   }, [visitedCities, city, country]);
 
-  // Animation du rideau
+  // Animation du rideau - évite l'animation inutile quand on est déjà dans le bon état
   useEffect(() => {
-    Animated.timing(curtainAnimation, {
-      toValue: hasBeenThere ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [hasBeenThere, curtainAnimation]);
+    // Ne lance l'animation que si l'état a vraiment changé
+    if (prevHasBeenThere !== hasBeenThere) {
+      Animated.timing(curtainAnimation, {
+        toValue: hasBeenThere ? 1 : 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+      setPrevHasBeenThere(hasBeenThere);
+    }
+  }, [hasBeenThere, prevHasBeenThere, curtainAnimation]);
 
   const handleRatingChange = (rating: number) => {
     console.log('[CityDetail] handleRatingChange called with:', rating);
@@ -89,10 +158,16 @@ export default function CityDetailScreen() {
       removeCitySource(city as string, country as string, 'note');
       setUserRating(0);
       setHasBeenThere(false);
+      setPrevHasBeenThere(false); // Évite l'animation
       return;
     }
+    
     console.log('[CityDetail] Adding/updating city with rating:', userRating);
-    // Ajoute/met à jour la ville avec la note (comme dans l'ancienne version)
+    
+    // Vérifie si la ville était déjà marquée comme visitée
+    const wasAlreadyVisited = hasBeenThere;
+    
+    // Ajoute/met à jour la ville avec la note
     addOrUpdateCity({
       name: city as string,
       country: country as string,
@@ -101,38 +176,58 @@ export default function CityDetailScreen() {
       beenThere: true, // TOUJOURS true quand on donne une note
       source: 'note',
     });
-    setHasBeenThere(true);
+    
+    if (wasAlreadyVisited) {
+      // Ville déjà visitée → retour immédiat sans animation
+      router.back();
+    } else {
+      // Ville vierge → animation puis retour après un délai
+      setHasBeenThere(true);
+      // Retour automatique après l'animation
+      setTimeout(() => {
+        router.back();
+      }, 500); // 500ms pour laisser le temps à l'animation de se jouer
+    }
   };
 
   const toggleHasBeenThere = () => {
     if (!city || !country) return;
+    
+    console.log('[CityDetail] toggleHasBeenThere called, current hasBeenThere:', hasBeenThere);
     
     // Vérifie s'il y a une note manuelle (comme dans l'ancienne version)
     const manualNote = visitedCities.find(
       c => (c.name === city || c.city === city) && c.country === country && c.source === 'note' && typeof c.rating === 'number'
     );
     
+    console.log('[CityDetail] Found manualNote:', manualNote);
+    
     const newValue = !hasBeenThere;
+    console.log('[CityDetail] newValue will be:', newValue);
     
     if (!newValue && manualNote) {
       // Si on essaie de retirer "beenThere" mais qu'il y a une note, on ne fait rien
       // (dans l'ancienne version ça affichait une erreur)
+      console.log('[CityDetail] Cannot remove beenThere because there is a manual note');
       return;
     }
     
     setHasBeenThere(newValue);
+    setPrevHasBeenThere(newValue); // Met à jour immédiatement pour éviter l'animation
     
     if (newValue) {
+      console.log('[CityDetail] Adding city as visited without rating');
       // Ajoute la ville comme visitée (comme dans l'ancienne version)
       addOrUpdateCity({
         name: city as string,
         country: country as string,
         flag: (flag as string) || '', // Évite undefined
-        rating: userRating || undefined,
+        rating: userRating > 0 ? userRating : undefined, // Seulement si rating > 0
         beenThere: true,
         source: 'note',
       });
     } else {
+      console.log('[CityDetail] Removing city completely');
       // Retire complètement la ville (comme dans l'ancienne version)
       removeCity(city as string, country as string);
       setUserRating(0);
@@ -145,6 +240,7 @@ export default function CityDetailScreen() {
     removeCitySource(city as string, country as string, 'note');
     setUserRating(0);
     setHasBeenThere(false);
+    setPrevHasBeenThere(false); // Évite l'animation
   };
 
   const flagUrl = `https://flagcdn.com/w80/${
@@ -266,6 +362,32 @@ export default function CityDetailScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Section Average rating */}
+        {globalAverageRating && (
+          <View style={styles.averageRatingSection}>
+            <Text style={[styles.averageRatingTitle, { color: textColor }]}>Average rating</Text>
+            <View style={styles.averageRatingContainer}>
+              <View style={styles.averageStarsWrapper}>
+                <StarRating 
+                  rating={globalAverageRating} 
+                  onRatingChange={() => {}} // Read-only
+                  size="medium"
+                  color="#f5c518"
+                  showRating={false}
+                />
+              </View>
+              <Text style={[styles.averageRatingText, { color: textColor }]}>
+                {globalAverageRating.toFixed(1)}/5
+              </Text>
+              {isLoadingAverage && (
+                <Text style={[styles.loadingText, { color: textColor }]}>
+                  Calculating...
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   </>
@@ -422,5 +544,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  averageRatingSection: {
+    paddingHorizontal: 20,
+    marginTop: 30,
+    paddingBottom: 20,
+  },
+  averageRatingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  averageRatingContainer: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  averageStarsWrapper: {
+    transform: [{ scale: 1.1 }],
+  },
+  averageRatingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    opacity: 0.8,
+  },
+  loadingText: {
+    fontSize: 14,
+    opacity: 0.6,
+    fontStyle: 'italic',
   },
 });

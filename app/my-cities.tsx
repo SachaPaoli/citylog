@@ -19,15 +19,21 @@ export default function MyCitiesScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions?.({ headerShown: false });
   }, [navigation]);
+  
   const { cities: visitedCities } = useVisitedCities();
+  
   React.useEffect(() => {
     console.log('[MyCities] visitedCities state:', visitedCities);
   }, [visitedCities]);
+  
   const textColor = useThemeColor({}, 'text');
   // Calcul instantané des villes à afficher à chaque render
   const displayCities = React.useMemo(() => {
     // Always group and lookup by ISO code
     const validCities = visitedCities.filter(city => typeof city.name === 'string' && city.name.length > 0 && city.country);
+    
+    console.log('[MyCities] All visitedCities:', visitedCities);
+    
     type GroupedCity = {
       name: string;
       countryCode: string; // ISO code
@@ -65,25 +71,44 @@ export default function MyCitiesScreen() {
           groupedCities[key].postCount += 1;
         }
       } else if (city.source === 'post') {
+        // Post sans note (juste "been there")
         groupedCities[key].postCount += 1;
+      } else if (city.source === 'note') {
+        // Note manuelle sans rating (juste "been there")
+        groupedCities[key].manualCount += 1;
       }
       if (city.beenThere) {
         groupedCities[key].hasBeenThere = true;
       }
     });
     return Object.values(groupedCities).map((city: GroupedCity) => {
+      // Calculer la moyenne de TOUTES les notes (manuelles + posts)
       const averageRating = city.ratings.length > 0 ? (city.ratings.reduce((a, b) => a + b, 0) / city.ratings.length) : null;
+      
       let sourceText = '';
       if (city.manualCount > 0 && city.postCount > 0) {
-        const ratingText = city.manualCount === 1 ? 'your rating' : `${city.manualCount} ratings`;
-        sourceText = `based on ${ratingText} and ${city.postCount} post${city.postCount > 1 ? 's' : ''}`;
+        // Tu as à la fois une note manuelle ET des posts
+        const postText = city.postCount === 1 ? '1 post' : `${city.postCount} posts`;
+        if (city.ratings.length > 0) {
+          sourceText = `based on your rating and ${postText}`;
+        } else {
+          sourceText = `based on your visit and ${postText}`;
+        }
       } else if (city.manualCount > 0) {
-        sourceText = city.manualCount === 1 ? 'based on your rating' : `based on ${city.manualCount} ratings`;
+        // Seulement une note manuelle
+        if (city.ratings.length > 0) {
+          sourceText = 'based on your rating';
+        } else {
+          sourceText = 'based on your visit';
+        }
       } else if (city.postCount > 0) {
+        // Seulement des posts
         sourceText = `based on ${city.postCount} post${city.postCount > 1 ? 's' : ''}`;
       } else if (city.hasBeenThere) {
-        sourceText = `been there`;
+        // Juste "been there"
+        sourceText = 'been there';
       }
+      
       return {
         ...city,
         averageRating,
