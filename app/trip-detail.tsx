@@ -3,6 +3,7 @@ import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUserPhotoCache } from '@/hooks/useUserPhotoCache';
 import { Post, TripItem } from '@/types/Post';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -85,6 +86,9 @@ export default function TripDetailScreen() {
   const [scrollY, setScrollY] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
+
+  // Récupérer la photo de profil de l'utilisateur du post si elle n'est pas présente
+  const { userPhoto: fetchedUserPhoto, loading: photoLoading } = useUserPhotoCache(post?.userId || '');
 
   useEffect(() => {
     console.log('TripDetailScreen - postId recu:', postId);
@@ -221,7 +225,7 @@ export default function TripDetailScreen() {
   // Utiliser la photo de profil actuelle de l'utilisateur si c'est son post
   const userPhoto = (userProfile && post && post.userId === userProfile.uid && userProfile.photoURL) 
     ? userProfile.photoURL 
-    : post?.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face';
+    : post?.userPhoto || fetchedUserPhoto;
 
   // Fonction pour déterminer si on doit utiliser OptimizedImage ou Image standard
   const isCloudinaryUrl = (url: string) => {
@@ -259,10 +263,15 @@ export default function TripDetailScreen() {
           }}
           activeOpacity={0.6}
         >
-          <ProfileImage 
-            uri={userPhoto}
-            size={32}
-          />
+          {/* Attendre que la photo soit chargée avant d'afficher ProfileImage */}
+          {photoLoading ? (
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'transparent' }} />
+          ) : (
+            <ProfileImage 
+              uri={userPhoto}
+              size={32}
+            />
+          )}
           <Text style={[styles.headerUserName, { color: whiteColor }]}>{post.userName}</Text>
         </TouchableOpacity>
         

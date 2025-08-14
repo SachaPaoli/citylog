@@ -15,6 +15,7 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
   style 
 }) => {
   const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   
   // Vérifier si on a une URI valide ET pas d'erreur de chargement
   const shouldShowImage = uri && 
@@ -22,9 +23,13 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
     !imageError &&
     (uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('file://'));
 
-  console.log('ProfileImage - URI:', uri);
-  console.log('ProfileImage - shouldShowImage:', shouldShowImage);
-  console.log('ProfileImage - imageError:', imageError);
+  // Reset des états quand l'URI change
+  React.useEffect(() => {
+    if (uri && shouldShowImage) {
+      setImageLoading(true);
+      setImageError(false);
+    }
+  }, [uri, shouldShowImage]);
 
   if (shouldShowImage) {
     return (
@@ -43,13 +48,32 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
         cachePolicy="memory-disk"
         transition={200}
         onError={(error) => {
-          console.log('ProfileImage - Erreur de chargement, switch vers icône:', error);
+          console.log('ProfileImage - Erreur de chargement, switch vers icône');
           setImageError(true);
+          setImageLoading(false);
         }}
         onLoad={() => {
           console.log('ProfileImage - Image chargée avec succès');
           setImageError(false);
+          setImageLoading(false);
         }}
+      />
+    );
+  }
+
+  // Si on est en train de charger et qu'on n'a pas encore d'URI, afficher un placeholder transparent
+  if (imageLoading && (!uri || uri.trim() === '')) {
+    return (
+      <View 
+        style={[
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: 'transparent', // Transparent pendant le chargement
+          },
+          style
+        ]}
       />
     );
   }

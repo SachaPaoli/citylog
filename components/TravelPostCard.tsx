@@ -1,6 +1,7 @@
 import { getCountryName } from '@/constants/CountryNames';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUserPhotoCache } from '@/hooks/useUserPhotoCache';
 import { Post } from '@/types/Post';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -21,10 +22,20 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
   const backgroundColor = useThemeColor({}, 'background');
   const { user } = useAuth();
 
+  // Récupérer la photo de profil de l'utilisateur du post si elle n'est pas présente
+  const { userPhoto: fetchedUserPhoto } = useUserPhotoCache(post.userId);
+
   // Utiliser la photo de profil actuelle de l'utilisateur si c'est son post
   const userPhoto = (user && post.userId === user.uid && user.photoURL) 
     ? user.photoURL 
-    : post.userPhoto || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=100&h=100&fit=crop&crop=face';
+    : post.userPhoto || fetchedUserPhoto;
+
+  // Debug temporaire pour Tristan
+  if (post.userName === 'Tristan') {
+    console.log('TravelPostCard TRISTAN - post.userPhoto:', post.userPhoto);
+    console.log('TravelPostCard TRISTAN - fetchedUserPhoto:', fetchedUserPhoto);
+    console.log('TravelPostCard TRISTAN - userPhoto FINAL:', userPhoto);
+  }
 
   // Précharger les images pour l'affichage instantané avec expo-image
   React.useEffect(() => {

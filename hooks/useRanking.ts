@@ -60,7 +60,7 @@ export const useRanking = () => {
           usersWithCities.push({
             id: userId,
             name: userId === userProfile.uid ? 'Toi' : (userData.displayName || userData.email || 'Utilisateur'),
-            avatar: userData.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
+            avatar: userData.photoURL || '', // Ne plus mettre d'URL par défaut ici
             citiesVisited: uniqueCities.size,
             rank: 0, // Sera calculé après tri
             isCurrentUser: userId === userProfile.uid

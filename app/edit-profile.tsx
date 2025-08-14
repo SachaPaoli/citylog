@@ -28,7 +28,7 @@ export default function EditProfileScreen() {
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [email, setEmail] = useState(userProfile?.email || '');
   const [profilePhoto, setProfilePhoto] = useState(
-    userProfile?.photoURL || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face'
+    userProfile?.photoURL || '' // Pas de photo par défaut
   );
   const [bio, setBio] = useState(''); // Nouvelle fonctionnalité bio
   const [isLoading, setIsLoading] = useState(false);

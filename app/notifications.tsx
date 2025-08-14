@@ -124,13 +124,21 @@ export default function NotificationsScreen() {
               </View>
               <View style={styles.notificationContent}>
                 <View style={styles.notificationHeader}>
-                  <Image 
-                    source={{ uri: notification.userPhoto || 'https://via.placeholder.com/32' }}
-                    style={styles.avatar}
-                    cachePolicy="memory-disk"
-                    contentFit="cover"
-                    transition={200}
-                  />
+                  {notification.userPhoto && notification.userPhoto.trim() !== '' ? (
+                    <Image 
+                      source={{ uri: notification.userPhoto }}
+                      style={styles.avatar}
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  ) : (
+                    <View style={styles.defaultAvatar}>
+                      <Text style={styles.defaultAvatarText}>
+                        {(notification.userName || '?').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.userInfo}>
                     <Text style={styles.userName}>
                       {notification.userName}
@@ -281,6 +289,20 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     marginRight: 8,
+  },
+  defaultAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E5C9A6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  defaultAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   userInfo: {
     flex: 1,

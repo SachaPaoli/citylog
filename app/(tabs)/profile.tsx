@@ -73,7 +73,7 @@ export default function ProfileScreen() {
   // Combine les données du contexte auth avec les vraies données de voyage
   const displayProfile = {
     name: authUserProfile?.displayName || 'Utilisateur',
-    photo: authUserProfile?.photoURL || authUserProfile?.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b5739775?w=200&h=200&fit=crop&crop=face',
+    photo: authUserProfile?.photoURL || authUserProfile?.profileImage || '', // Pas de photo par défaut
     followers: followStats.followersCount,
     following: followStats.followingCount,
     visitedCountries: travelData.visitedCountries,

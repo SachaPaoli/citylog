@@ -23,7 +23,7 @@ const postsCollection = collection(db, 'posts');
 
 export class PostService {
   // Créer un nouveau post
-  static async createPost(postData: CreatePostData, userId: string, userName: string): Promise<string> {
+  static async createPost(postData: CreatePostData, userId: string, userName: string, userPhoto?: string): Promise<string> {
     try {
       console.log('🚀 Début de la création du post...');
       
@@ -74,7 +74,7 @@ export class PostService {
       const newPost = {
         userId,
         userName,
-        userPhoto: '', // À ajouter plus tard avec le profil utilisateur
+        userPhoto: userPhoto || '', // Utiliser la photo de profil fournie
         city: postData.city,
         country: postData.country,
         photo: mainPhotoUrl,

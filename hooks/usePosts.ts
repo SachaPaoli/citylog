@@ -34,7 +34,8 @@ export const usePosts = () => {
       const postId = await PostService.createPost(
         postData,
         user.uid,
-        userProfile.displayName
+        userProfile.displayName,
+        userProfile.photoURL
       );
       
       // Recharger les posts pour inclure le nouveau

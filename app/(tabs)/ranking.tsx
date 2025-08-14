@@ -1,6 +1,6 @@
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRanking } from '@/hooks/useRanking';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -133,10 +133,7 @@ export default function RankingScreen() {
                 {rankingData.map((user) => (
                   <View 
                     key={user.id}
-                    style={[
-                      styles.rankingCard,
-                      user.isCurrentUser && { backgroundColor: beigeColor + '20' }
-                    ]}
+                    style={styles.rankingCard}
                   >
                     <View style={styles.rankInfo}>
                       <Text style={[styles.rankNumber, getRankStyle(user.rank)]}>
@@ -144,22 +141,37 @@ export default function RankingScreen() {
                       </Text>
                     </View>
 
-                    <Image 
-                      source={{ uri: user.avatar }}
-                      style={styles.avatar}
-                    />
+                    <View style={styles.avatarContainer}>
+                      {user.avatar && user.avatar.trim() !== '' ? (
+                        <Image 
+                          source={{ uri: user.avatar }}
+                          style={styles.avatar}
+                          onError={() => console.log('Erreur chargement avatar pour:', user.name)}
+                        />
+                      ) : (
+                        <View style={styles.defaultAvatar}>
+                          <Text style={styles.defaultAvatarText}>
+                            {(user.name || '?').charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
 
                     <View style={styles.userInfo}>
-                      <Text style={[
-                        styles.userName, 
-                        { color: '#999' }, // Gris normal pour tous
-                        user.isCurrentUser && { fontWeight: 'bold', color: beigeColor }
-                      ]}>
-                        {user.name}
-                      </Text>
-                      <Text style={[styles.citiesText, { color: '#FFFFFF' }]}>
-                        {user.citiesVisited} villes visitées
-                      </Text>
+                      <View style={styles.userInfoRow}>
+                        <Text style={[
+                          styles.userName, 
+                          { color: '#FFFFFF', flex: 1 }, // Blanc pour tous les noms + flex pour prendre l'espace
+                          user.isCurrentUser && { fontWeight: 'bold', color: '#FFFFFF' } // Reste blanc même pour l'utilisateur actuel
+                        ]}>
+                          {user.isCurrentUser ? 'You' : user.name}
+                        </Text>
+                        
+                        <View style={styles.citiesContainer}>
+                          <Text style={styles.citiesNumber}>{user.citiesVisited}</Text>
+                          <IconSymbol size={16} name="building.2" color="#FFFFFF" />
+                        </View>
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -285,10 +297,41 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+  },
+  avatarContainer: {
     marginHorizontal: 15,
+  },
+  defaultAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E5C9A6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  defaultAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   userInfo: {
     flex: 1,
+  },
+  userInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  citiesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  citiesNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginRight: 6,
   },
   userName: {
     fontSize: 16,
