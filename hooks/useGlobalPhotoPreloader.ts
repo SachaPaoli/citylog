@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
+import { useEffect } from 'react';
 import { db } from '../config/firebase';
 
 // Cache global des photos de profil - disponible immédiatement

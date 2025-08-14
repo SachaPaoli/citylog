@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { globalPhotoCache } from './useGlobalPhotoPreloader';
 import { Post } from '../types/Post';
+import { globalPhotoCache } from './useGlobalPhotoPreloader';
 
 export const useEnrichedPosts = (posts: Post[]) => {
   const [enrichedPosts, setEnrichedPosts] = useState<Post[]>([]);

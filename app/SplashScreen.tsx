@@ -1,6 +1,6 @@
+import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { globalPhotoCache } from '../hooks/useGlobalPhotoPreloader';
 
