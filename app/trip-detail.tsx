@@ -3,14 +3,13 @@ import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useUserPhotoCache } from '@/hooks/useUserPhotoCache';
+import { getInstantUserPhoto } from '@/hooks/useGlobalPhotoPreloader';
 import { Post, TripItem } from '@/types/Post';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   SafeAreaView,
@@ -79,7 +78,6 @@ export default function TripDetailScreen() {
   const headerColor = '#181C24'; // Electric dark gray comme le fond général
 
   const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('staying');
   const [showMenu, setShowMenu] = useState(false);
   const { addToWishlist, isInWishlist } = useWishlist();
@@ -88,19 +86,19 @@ export default function TripDetailScreen() {
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
 
   // Récupérer la photo de profil de l'utilisateur du post si elle n'est pas présente
-  const { userPhoto: fetchedUserPhoto, loading: photoLoading } = useUserPhotoCache(post?.userId || '');
+  // Maintenant les posts arrivent déjà enrichis avec les photos, donc pas besoin de hook séparé
 
   useEffect(() => {
     console.log('TripDetailScreen - postId recu:', postId);
     if (postId) {
-      // D'abord chercher dans les posts déjà chargés pour un affichage instantané
+      // Recherche instantanée dans les posts enrichis
       const cachedPost = posts.find(p => p.id === postId);
       if (cachedPost) {
-        console.log('Post trouvé en cache:', cachedPost);
+        console.log('✅ Post trouvé instantanément:', cachedPost.city, 'Photo:', cachedPost.userPhoto ? 'OUI' : 'NON');
         setPost(cachedPost);
-        setLoading(false);
       } else {
         // Si pas en cache, charger depuis Firebase
+        console.log('🔄 Post non trouvé en cache, chargement...');
         loadPost();
       }
     }
@@ -109,16 +107,15 @@ export default function TripDetailScreen() {
   const loadPost = async () => {
     if (!postId) return;
     
-    console.log('Chargement du post avec ID:', postId);
-    setLoading(true);
+    console.log('🔥 Chargement du post avec ID:', postId);
     try {
       const fetchedPost = await getPostById(postId);
-      console.log('Post recupere:', fetchedPost);
-      setPost(fetchedPost);
+      console.log('📦 Post récupéré:', fetchedPost?.city, 'Photo:', fetchedPost?.userPhoto ? 'OUI' : 'NON');
+      if (fetchedPost) {
+        setPost(fetchedPost);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement du post:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -162,35 +159,7 @@ export default function TripDetailScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
-        <View style={[styles.header, { backgroundColor: headerColor }]}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={whiteColor} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.menuButton}
-            onPress={() => setShowMenu(true)}
-          >
-            <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.loadingContainer, { backgroundColor }]}>
-          <ActivityIndicator size="large" color={whiteColor} />
-          <Text style={[styles.loadingText, { color: textColor }]}>
-            Chargement du voyage...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Vérifie si le post appartient à l'utilisateur courant (doit être après la déclaration de post)
+  // Vérifie si le post appartient à l'utilisateur courant
   const isMyPost = post && userProfile && (post.userId === userProfile.uid);
 
   if (!post) {
@@ -222,10 +191,8 @@ export default function TripDetailScreen() {
 
   const currentItems = getCurrentItems();
 
-  // Utiliser la photo de profil actuelle de l'utilisateur si c'est son post
-  const userPhoto = (userProfile && post && post.userId === userProfile.uid && userProfile.photoURL) 
-    ? userProfile.photoURL 
-    : post?.userPhoto || fetchedUserPhoto;
+  // Photo de profil : utiliser celle enrichie du post directement
+  const userPhoto = post?.userPhoto || '';
 
   // Fonction pour déterminer si on doit utiliser OptimizedImage ou Image standard
   const isCloudinaryUrl = (url: string) => {
@@ -263,15 +230,11 @@ export default function TripDetailScreen() {
           }}
           activeOpacity={0.6}
         >
-          {/* Attendre que la photo soit chargée avant d'afficher ProfileImage */}
-          {photoLoading ? (
-            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'transparent' }} />
-          ) : (
-            <ProfileImage 
-              uri={userPhoto}
-              size={32}
-            />
-          )}
+          {/* Photo de profil directement car les posts arrivent enrichis */}
+          <ProfileImage 
+            uri={userPhoto}
+            size={32}
+          />
           <Text style={[styles.headerUserName, { color: whiteColor }]}>{post.userName}</Text>
         </TouchableOpacity>
         

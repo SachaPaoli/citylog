@@ -15,21 +15,12 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
   style 
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
   
   // Vérifier si on a une URI valide ET pas d'erreur de chargement
   const shouldShowImage = uri && 
     uri.trim() !== '' && 
     !imageError &&
-    (uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('file://'));
-
-  // Reset des états quand l'URI change
-  React.useEffect(() => {
-    if (uri && shouldShowImage) {
-      setImageLoading(true);
-      setImageError(false);
-    }
-  }, [uri, shouldShowImage]);
+    (uri.startsWith('http://') || uri.startsWith('https://'));
 
   if (shouldShowImage) {
     return (
@@ -46,40 +37,18 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
         ]}
         contentFit="cover"
         cachePolicy="memory-disk"
-        transition={200}
-        onError={(error) => {
-          console.log('ProfileImage - Erreur de chargement, switch vers icône');
+        transition={0} // Suppression de la transition pour un affichage instantané
+        onError={() => {
           setImageError(true);
-          setImageLoading(false);
         }}
         onLoad={() => {
-          console.log('ProfileImage - Image chargée avec succès');
           setImageError(false);
-          setImageLoading(false);
         }}
       />
     );
   }
 
-  // Si on est en train de charger et qu'on n'a pas encore d'URI, afficher un placeholder transparent
-  if (imageLoading && (!uri || uri.trim() === '')) {
-    return (
-      <View 
-        style={[
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: 'transparent', // Transparent pendant le chargement
-          },
-          style
-        ]}
-      />
-    );
-  }
-
-  // Fallback : icône par défaut
-  console.log('ProfileImage - Affichage icône par défaut');
+  // Fallback : icône par défaut - affichage instantané
   return (
     <View 
       style={[
@@ -87,19 +56,19 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: 'rgba(255,255,255,0.04)', // Même couleur que les cartes de villes
+          backgroundColor: 'rgba(255,255,255,0.04)',
           justifyContent: 'center',
           alignItems: 'center',
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.18)', // Bordure subtile comme les cartes
+          borderColor: 'rgba(255,255,255,0.18)',
         },
         style
       ]}
     >
       <Ionicons 
-        name="person-outline" // Version outline pour avoir juste le contour
+        name="person-outline"
         size={Math.max(size * 0.5, 20)} 
-        color="#bbb" // Gris comme les textes secondaires
+        color="#bbb"
       />
     </View>
   );

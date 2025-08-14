@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getFollowingList } from '../services/FollowService';
+import { getInstantUserPhoto } from './useGlobalPhotoPreloader';
 
 interface RankingUser {
   id: string;
@@ -15,19 +16,18 @@ interface RankingUser {
 
 export const useRanking = () => {
   const [rankingData, setRankingData] = useState<RankingUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Désactivé par défaut
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useAuth();
 
   const loadRanking = async () => {
     if (!userProfile?.uid) {
-      setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
       setError(null);
+      console.log('🏆 Chargement du ranking instantané...');
 
       // Récupérer la liste des utilisateurs suivis
       const followingList = await getFollowingList(userProfile.uid);
@@ -57,10 +57,13 @@ export const useRanking = () => {
             }
           });
           
+          // Utiliser le cache global pour la photo
+          const cachedPhoto = getInstantUserPhoto(userId);
+          
           usersWithCities.push({
             id: userId,
             name: userId === userProfile.uid ? 'Toi' : (userData.displayName || userData.email || 'Utilisateur'),
-            avatar: userData.photoURL || '', // Ne plus mettre d'URL par défaut ici
+            avatar: cachedPhoto || userData.photoURL || '', // Cache en priorité
             citiesVisited: uniqueCities.size,
             rank: 0, // Sera calculé après tri
             isCurrentUser: userId === userProfile.uid
@@ -82,12 +85,11 @@ export const useRanking = () => {
         usersWithCities[i].rank = currentRank;
       }
       
+      console.log(`✅ Ranking chargé instantanément: ${usersWithCities.length} utilisateurs`);
       setRankingData(usersWithCities);
     } catch (err) {
       setError('Erreur lors du chargement du classement');
       console.error('Erreur ranking:', err);
-    } finally {
-      setLoading(false);
     }
   };
 

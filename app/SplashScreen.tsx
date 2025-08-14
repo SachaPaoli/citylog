@@ -1,5 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { globalPhotoCache } from '../hooks/useGlobalPhotoPreloader';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -9,43 +12,91 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const textFadeAnim = useRef(new Animated.Value(1)).current;
   const planeAnim = useRef(new Animated.Value(0)).current;
+  const [isPreloadingComplete, setIsPreloadingComplete] = useState(false);
 
   const { width, height } = Dimensions.get('window');
 
-  useEffect(() => {
-    // Séquence d'animations
-    const animationSequence = Animated.sequence([
-      // 1. Attendre un peu pour montrer le titre
-      Animated.delay(600),
+  // Fonction de pré-chargement des photos
+  const preloadUserPhotos = async () => {
+    console.log('🚀 Début du pré-chargement des photos utilisateurs...');
+    
+    try {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      let photosLoaded = 0;
       
-      // 2. Animation simultanée : texte qui disparaît + avion qui s'envole
-      Animated.parallel([
-        // Texte qui disparaît avec fade
-        Animated.timing(textFadeAnim, {
-          toValue: 0,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        // Avion qui s'envole vers le haut très vite (90°)
-        Animated.timing(planeAnim, {
-          toValue: -height,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-      ]),
+      usersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        const photoURL = userData.photoURL || '';
+        globalPhotoCache.set(doc.id, photoURL);
+        if (photoURL) photosLoaded++;
+        console.log(`📸 ${userData.displayName || doc.id}: ${photoURL ? 'PHOTO CHARGÉE' : 'PAS DE PHOTO'}`);
+      });
       
-      // 3. Fade out final
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]);
+      console.log(`✅ Pré-chargement terminé: ${photosLoaded}/${usersSnapshot.size} photos chargées`);
+      setIsPreloadingComplete(true);
+    } catch (error) {
+      console.error('❌ Erreur pré-chargement:', error);
+      setIsPreloadingComplete(true); // Continuer même en cas d'erreur
+    }
+  };
 
-    animationSequence.start(() => {
-      onFinish();
-    });
-  }, []);
+  useEffect(() => {
+    // Démarrer le pré-chargement immédiatement
+    preloadUserPhotos();
+    
+    // Animation qui dure minimum 1.5 secondes (style Letterboxd)
+    const startAnimation = () => {
+      const animationSequence = Animated.sequence([
+        // 1. Attendre un peu pour montrer le titre
+        Animated.delay(800),
+        
+        // 2. Animation simultanée : texte qui disparaît + avion qui s'envole
+        Animated.parallel([
+          // Texte qui disparaît avec fade
+          Animated.timing(textFadeAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          // Avion qui s'envole vers le haut très vite
+          Animated.timing(planeAnim, {
+            toValue: -height,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        
+        // 3. Fade out final
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]);
+
+      animationSequence.start(() => {
+        onFinish();
+      });
+    };
+
+    // Attendre minimum 1.5 secondes ET que le pré-chargement soit fini
+    const minimumDelay = setTimeout(() => {
+      if (isPreloadingComplete) {
+        startAnimation();
+      }
+    }, 1500);
+
+    // Si pré-chargement fini avant 1.5s, attendre quand même
+    if (isPreloadingComplete) {
+      clearTimeout(minimumDelay);
+      const remainingTime = 1500;
+      setTimeout(startAnimation, Math.max(0, remainingTime));
+    }
+
+    return () => {
+      clearTimeout(minimumDelay);
+    };
+  }, [isPreloadingComplete]);
 
   return (
     <View style={styles.container}>

@@ -1,9 +1,9 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { getInstantUserPhoto } from '@/hooks/useGlobalPhotoPreloader';
 import { useRanking } from '@/hooks/useRanking';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import React from 'react';
 import {
-  ActivityIndicator,
   Image,
   RefreshControl,
   ScrollView,
@@ -98,17 +98,6 @@ export default function RankingScreen() {
       >
         {activeTab === 'city' && (
           <>
-  
-
-            {loading && !refreshing && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={beigeColor} />
-                <Text style={[styles.loadingText, { color: textColor }]}>
-                  Chargement du classement...
-                </Text>
-              </View>
-            )}
-
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={[styles.errorText, { color: 'red' }]}>
@@ -117,7 +106,7 @@ export default function RankingScreen() {
               </View>
             )}
 
-            {!loading && !error && rankingData.length === 0 && (
+            {rankingData.length === 0 && !error && (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: textColor }]}>
                   Aucun utilisateur à classer
@@ -128,7 +117,7 @@ export default function RankingScreen() {
               </View>
             )}
 
-            {!loading && rankingData.length > 0 && (
+            {rankingData.length > 0 && (
               <View style={styles.rankingList}>
                 {rankingData.map((user) => (
                   <View 
@@ -149,11 +138,22 @@ export default function RankingScreen() {
                           onError={() => console.log('Erreur chargement avatar pour:', user.name)}
                         />
                       ) : (
-                        <View style={styles.defaultAvatar}>
-                          <Text style={styles.defaultAvatarText}>
-                            {(user.name || '?').charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
+                        // Essayer de récupérer depuis le cache global sinon icône par défaut
+                        (() => {
+                          const cachedPhoto = getInstantUserPhoto(user.id);
+                          return cachedPhoto ? (
+                            <Image 
+                              source={{ uri: cachedPhoto }}
+                              style={styles.avatar}
+                            />
+                          ) : (
+                            <View style={styles.defaultAvatar}>
+                              <Text style={styles.defaultAvatarText}>
+                                {(user.name || '?').charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
+                          );
+                        })()
                       )}
                     </View>
 
@@ -178,7 +178,7 @@ export default function RankingScreen() {
               </View>
             )}
 
-            {!loading && rankingData.length > 0 && (
+            {rankingData.length > 0 && (
               <View style={styles.footer}>
                 <Text style={[styles.footerText, { color: textColor }]}>
                   Continue à explorer pour grimper dans le classement ! 🌍

@@ -2,12 +2,20 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { PostService } from '../services/PostService';
 import { CreatePostData, Post } from '../types/Post';
+import { useEnrichedPosts } from './useEnrichedPosts';
+import { getInstantUserPhoto } from './useGlobalPhotoPreloader';
 
 export const usePosts = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [rawPosts, setRawPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, userProfile } = useAuth();
+
+  // Enrichir les posts avec les photos de profil
+  const { enrichedPosts, loading: enrichmentLoading } = useEnrichedPosts(rawPosts);
+
+  // Les posts finaux sont les posts enrichis
+  const posts = enrichedPosts;
 
   // Charger tous les posts
   const loadPosts = async () => {
@@ -15,7 +23,7 @@ export const usePosts = () => {
       setLoading(true);
       setError(null);
       const fetchedPosts = await PostService.getAllPosts();
-      setPosts(fetchedPosts);
+      setRawPosts(fetchedPosts);
     } catch (err) {
       setError('Erreur lors du chargement des posts');
       console.error('Erreur posts:', err);
@@ -56,14 +64,14 @@ export const usePosts = () => {
       await PostService.toggleLike(postId, user.uid);
       
       // Mettre à jour localement
-      setPosts(prevPosts => 
-        prevPosts.map(post => {
+      setRawPosts((prevPosts: Post[]) => 
+        prevPosts.map((post: Post) => {
           if (post.id === postId) {
             const isLiked = post.likes.includes(user.uid);
             return {
               ...post,
               likes: isLiked 
-                ? post.likes.filter(id => id !== user.uid)
+                ? post.likes.filter((id: string) => id !== user.uid)
                 : [...post.likes, user.uid]
             };
           }
@@ -80,7 +88,7 @@ export const usePosts = () => {
   const deletePost = async (postId: string) => {
     try {
       await PostService.deletePost(postId);
-      setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+      setRawPosts((prevPosts: Post[]) => prevPosts.filter((post: Post) => post.id !== postId));
     } catch (err) {
       setError('Erreur lors de la suppression');
       console.error('Erreur suppression:', err);
@@ -88,10 +96,20 @@ export const usePosts = () => {
     }
   };
 
-  // Récupérer un post spécifique par ID
+  // Récupérer un post spécifique par ID avec enrichissement instantané
   const getPostById = async (postId: string): Promise<Post | null> => {
     try {
-      return await PostService.getPostById(postId);
+      const post = await PostService.getPostById(postId);
+      if (!post) return null;
+      
+      // Enrichir instantanément avec la photo du cache global
+      const enrichedPost = {
+        ...post,
+        userPhoto: post.userPhoto || getInstantUserPhoto(post.userId) || ''
+      };
+      
+      console.log(`📸 Post ${postId} enrichi instantanément - Photo: ${enrichedPost.userPhoto ? 'OUI' : 'NON'}`);
+      return enrichedPost;
     } catch (err) {
       setError('Erreur lors de la récupération du post');
       console.error('Erreur getPostById:', err);
