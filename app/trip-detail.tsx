@@ -468,16 +468,15 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: 8,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    borderRadius: 20,
-    width: 40,
+    width: 50,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingLeft: 5,
+    paddingTop: -5,
   },
   menuButtonText: {
-    fontSize: 24,
+    fontSize: 40,
     fontWeight: 'bold',
   },
   modalOverlay: {

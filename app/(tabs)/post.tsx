@@ -5,6 +5,7 @@ import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { BlurView } from 'expo-blur';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -291,6 +292,12 @@ export default function PostScreen() {
   const { addOrUpdateCity } = useVisitedCities();
   // State for city autocomplete suggestions
   const [citySuggestions, setCitySuggestions] = useState<any[]>([]);
+  
+  // Référence pour le ScrollView du modal
+  const modalScrollRef = React.useRef<ScrollView>(null);
+  
+  // État pour l'input de description flottant
+  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   
   // Key pour AsyncStorage
   const DRAFT_KEY = 'post_draft';
@@ -887,7 +894,12 @@ return (
               </TouchableOpacity>
             </View>
             
-            <View style={styles.postModalContent}>
+            <ScrollView 
+              ref={modalScrollRef}
+              style={styles.postModalScroll} 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               <Text style={[styles.postTitle, { color: textColor }]}>
                 Post when you finished your visit!
               </Text>
@@ -1009,17 +1021,14 @@ return (
                 <Text style={[styles.descriptionLabel, { color: textColor }]}>
                   Description (optional):
                 </Text>
-                <TextInput
-                  style={[styles.descriptionTextArea, { color: textColor, borderColor: borderColor }]}
-                  placeholder="Describe your journey
-                  ..."
-                  placeholderTextColor="#666"
-                  value={tripDescription}
-                  onChangeText={setTripDescription}
-                  multiline
-                  numberOfLines={2}
-                  textAlignVertical="top"
-                />
+                <TouchableOpacity
+                  style={[styles.descriptionTextArea, { borderColor: borderColor, justifyContent: 'center' }]}
+                  onPress={() => setIsDescriptionFocused(true)}
+                >
+                  <Text style={[{ color: tripDescription ? textColor : '#666', fontSize: 16 }]}>
+                    {tripDescription || "Describe your journey..."}
+                  </Text>
+                </TouchableOpacity>
               </View>
               
               <View style={styles.averageRatingContainer}>
@@ -1067,7 +1076,7 @@ return (
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </ScrollView>
             
             {/* Bouton flottant dans le modal */}
             <View style={styles.modalButtonContainer}>
@@ -1079,6 +1088,44 @@ return (
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
+        
+        {/* Input de description flottant - DEHORS du modal pour couvrir tout l'écran */}
+        {isDescriptionFocused && (
+          <BlurView intensity={50} style={styles.floatingDescriptionFullScreen}>
+            <TouchableWithoutFeedback onPress={() => {
+              Keyboard.dismiss();
+              setIsDescriptionFocused(false);
+            }}>
+              <View style={{ flex: 1 }} />
+            </TouchableWithoutFeedback>
+            <View style={styles.floatingDescriptionContainer}>
+              <Text style={[styles.floatingDescriptionLabel, { color: textColor }]}>
+                Description (optional):
+              </Text>
+              <TextInput
+                style={[styles.floatingDescriptionInput, { color: textColor, borderColor: borderColor }]}
+                placeholder="Describe your journey..."
+                placeholderTextColor="#666"
+                value={tripDescription}
+                onChangeText={setTripDescription}
+                multiline
+                numberOfLines={8}
+                textAlignVertical="top"
+                scrollEnabled={true}
+                autoFocus={true}
+              />
+              <TouchableOpacity 
+                style={styles.floatingDescriptionDone}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setIsDescriptionFocused(false);
+                }}
+              >
+                <Text style={styles.floatingDescriptionDoneText}>Terminé</Text>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        )}
       </Modal>
 
       {/* Modal d'ajout/modification d'item */}
@@ -1440,6 +1487,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 20,
   },
+  postModalScroll: {
+    flex: 1,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
   modalButtonContainer: {
     paddingHorizontal: 20,
     paddingBottom: 60,
@@ -1538,11 +1590,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 18,
-    paddingVertical: 18,
-    fontSize: 14,
-    minHeight: 48,
+    paddingVertical: 20,
+    fontSize: 16,
+    minHeight: 56,
     minWidth: 0,
-    height: 56,
+    height: 64,
     // Make input visually larger and modern
   },
   descriptionSection: {
@@ -1557,10 +1609,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 16,
     height: 60,
-    textAlignVertical: 'top',
+    textAlignVertical: 'center',
+    maxHeight: 60,
   },
   // Nouveaux styles pour les cartes d'items
   cardImageContainer: {
@@ -1673,13 +1726,13 @@ const styles = StyleSheet.create({
   },
   privacySection: {
     alignItems: 'center',
-    marginTop: 0,
+    marginTop: -5,
     marginBottom: 0,
   },
   privacyLabel: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 1,
+    marginBottom: 8,
     textAlign: 'center',
   },
   privacyButton: {
@@ -1738,6 +1791,71 @@ const styles = StyleSheet.create({
   savingText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  // Styles pour l'input de description flottant
+  floatingDescriptionOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    justifyContent: 'flex-start',
+  },
+  floatingDescriptionFullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 2000,
+    justifyContent: 'flex-start',
+  },
+  floatingDescriptionContainer: {
+    position: 'absolute',
+    top: 120,
+    left: 10,
+    right: 10,
+    backgroundColor: '#181C24',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  floatingDescriptionLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  floatingDescriptionInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 16,
+    height: 120,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  floatingDescriptionDone: {
+    backgroundColor: '#2051A4',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  floatingDescriptionDoneText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });
