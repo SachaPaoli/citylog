@@ -3,7 +3,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
@@ -25,6 +25,16 @@ export default function SearchCityScreen() {
   const params = useLocalSearchParams();
   const favoriteIndex = Number(params.favoriteIndex ?? 0);
 
+  // Fonction pour normaliser les chaînes (insensible à la casse et aux accents)
+  const normalizeString = (str: string) => {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+      .replace(/[^a-z0-9\s]/g, '') // Garde seulement lettres, chiffres et espaces
+      .trim();
+  };
+
   // Recherche des villes via l'API (comme Explore)
   const searchCities = async (query: string) => {
     if (!query.trim()) {
@@ -36,17 +46,33 @@ export default function SearchCityScreen() {
     setSearchDone(false);
     try {
       const results = await RealCitiesService.searchCities(query, 50);
+      
       // Filtrer les doublons (même nom, même pays)
       const uniqueCities = [];
       const seen = new Set();
       for (const city of results) {
-        const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
+        const key = `${normalizeString(city.name)}-${normalizeString(city.country)}`;
         if (!seen.has(key)) {
           seen.add(key);
           uniqueCities.push(city);
         }
       }
-      setCities(uniqueCities);
+      
+      // Tri : d'abord les villes dont le nom correspond exactement à la recherche, puis les autres, le tout trié par population
+      const normalizedQuery = normalizeString(query);
+      const sortedCities = uniqueCities.sort((a, b) => {
+        const aExact = normalizeString(a.name) === normalizedQuery;
+        const bExact = normalizeString(b.name) === normalizedQuery;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        // Si les deux sont exacts ou les deux ne le sont pas, trie par population décroissante
+        const popA = typeof a.population === 'number' ? a.population : 0;
+        const popB = typeof b.population === 'number' ? b.population : 0;
+        return popB - popA;
+      });
+      
+      console.log(`Trouvé ${sortedCities.length} villes uniques pour: ${query}`);
+      setCities(sortedCities);
     } catch (error) {
       setCities([]);
     }
@@ -55,10 +81,8 @@ export default function SearchCityScreen() {
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      searchCities(searchQuery);
-    }, 100); // Délai réduit à 100ms pour accélérer le loading
-    return () => clearTimeout(timeoutId);
+    // Recherche instantanée sans délai
+    searchCities(searchQuery);
   }, [searchQuery]);
 
   const handleSelect = (city: any) => {
@@ -92,7 +116,8 @@ export default function SearchCityScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor }]}> 
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={[styles.container, { backgroundColor }]}> 
       {/* Nouveau header style my-posts */}
       <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, marginTop: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -182,6 +207,7 @@ export default function SearchCityScreen() {
         </View>
       )}
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 

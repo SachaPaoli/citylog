@@ -10,16 +10,19 @@ import {
   Alert,
   Animated,
   Image,
+  Keyboard,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
+import { RealCitiesService } from '@/services/RealCitiesService';
 // Table exhaustive ISO 3166-1 alpha-2 code -> nom anglais (same as explore/search)
 const countryNamesEn: Record<string, string> = {
   AF: 'Afghanistan',
@@ -336,6 +339,56 @@ export default function PostScreen() {
     images: []
   });
 
+  // Fonction pour normaliser les chaînes (insensible à la casse et aux accents)
+  const normalizeString = (str: string) => {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+      .replace(/[^a-z0-9\s]/g, '') // Garde seulement lettres, chiffres et espaces
+      .trim();
+  };
+
+  // Recherche de villes instantanée (comme dans explore.tsx)
+  const searchCities = async (query: string) => {
+    if (query.length <= 1) {
+      setCitySuggestions([]);
+      return;
+    }
+
+    try {
+      const results = await RealCitiesService.searchCities(query, 10);
+      
+      // Filtrer les doublons (même nom, même pays)
+      const uniqueCities = [];
+      const seen = new Set();
+      for (const city of results) {
+        const key = `${normalizeString(city.name)}-${normalizeString(city.country)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueCities.push(city);
+        }
+      }
+      
+      // Tri : d'abord les villes dont le nom correspond exactement à la recherche, puis les autres, le tout trié par population
+      const normalizedQuery = normalizeString(query);
+      const sortedCities = uniqueCities.sort((a, b) => {
+        const aExact = normalizeString(a.name) === normalizedQuery;
+        const bExact = normalizeString(b.name) === normalizedQuery;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        // Si les deux sont exacts ou les deux ne le sont pas, trie par population décroissante
+        const popA = typeof a.population === 'number' ? a.population : 0;
+        const popB = typeof b.population === 'number' ? b.population : 0;
+        return popB - popA;
+      });
+      
+      setCitySuggestions(sortedCities);
+    } catch {
+      setCitySuggestions([]);
+    }
+  };
+
   // Réinitialiser le formulaire
   const resetForm = () => {
     setStayingItems([]);
@@ -431,6 +484,11 @@ export default function PostScreen() {
   useEffect(() => {
     loadDraft();
   }, []);
+
+  // Recherche automatique de villes (comme dans explore.tsx)
+  useEffect(() => {
+    searchCities(cityName);
+  }, [cityName]);
 
   // Sauvegarder automatiquement toutes les 30 secondes
   useEffect(() => {
@@ -758,7 +816,8 @@ export default function PostScreen() {
   };
 
 return (
-  <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
+  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
     {/* Onglets + tabs + separator all on dark background */}
     <View>
       <View style={[styles.header, { backgroundColor: 'transparent' }]}> 
@@ -809,8 +868,16 @@ return (
         transparent={true}
         onRequestClose={() => setShowPostModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor }]}>
+        <TouchableWithoutFeedback onPress={() => {
+          Keyboard.dismiss();
+          setShowPostModal(false);
+        }}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => {
+              e.stopPropagation();
+              Keyboard.dismiss();
+            }}>
+              <View style={[styles.modalContent, { backgroundColor }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity 
                 style={styles.closeButton}
@@ -864,29 +931,9 @@ return (
                         placeholder="City"
                         placeholderTextColor="#666"
                         value={cityName}
-                        onChangeText={async (text) => {
+                        onChangeText={(text) => {
                           setCityName(text);
-                          if (text.length > 1) {
-                            try {
-                              const { RealCitiesService } = await import('@/services/RealCitiesService');
-                              const results = await RealCitiesService.searchCities(text, 10);
-                              // Remove duplicates
-                              const uniqueCities = [];
-                              const seen = new Set();
-                              for (const city of results) {
-                                const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
-                                if (!seen.has(key)) {
-                                  seen.add(key);
-                                  uniqueCities.push(city);
-                                }
-                              }
-                              setCitySuggestions(uniqueCities);
-                            } catch {
-                              setCitySuggestions([]);
-                            }
-                          } else {
-                            setCitySuggestions([]);
-                          }
+                          // La recherche se fera automatiquement via useEffect
                         }}
                       />
                       {cityName.length > 0 && (
@@ -937,6 +984,7 @@ return (
                               setCityName(city.name);
                               setCountryName(countryDisplay); // Always set full country name
                               setCitySuggestions([]);
+                              Keyboard.dismiss(); // Fermer le clavier automatiquement
                             }}
                           >
                             <Image
@@ -1027,8 +1075,10 @@ return (
                 <Text style={styles.modalPostButtonText}>Poster le voyage</Text>
               </TouchableOpacity>
             </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Modal d'ajout/modification d'item */}
@@ -1038,8 +1088,16 @@ return (
         transparent={true}
         onRequestClose={() => setShowItemModal(false)}
       >
-        <View style={styles.itemModalOverlay}>
-          <View style={[styles.itemModalContent, { backgroundColor }]}>
+        <TouchableWithoutFeedback onPress={() => {
+          Keyboard.dismiss();
+          setShowItemModal(false);
+        }}>
+          <View style={styles.itemModalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => {
+              e.stopPropagation();
+              Keyboard.dismiss();
+            }}>
+              <View style={[styles.itemModalContent, { backgroundColor }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity 
                 style={styles.closeButton}
@@ -1137,11 +1195,14 @@ return (
                 </Text>
               </TouchableOpacity>
             </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
-  );
+  </TouchableWithoutFeedback>
+);
 }
 
 const styles = StyleSheet.create({

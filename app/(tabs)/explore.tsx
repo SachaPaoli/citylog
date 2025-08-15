@@ -4,7 +4,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { UserSearchResult, UserSearchService } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
@@ -73,6 +73,16 @@ export default function ExploreScreen() {
     }
   }, [searchFocused]);
 
+  // Fonction pour normaliser les chaînes (insensible à la casse et aux accents)
+  const normalizeString = (str: string) => {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+      .replace(/[^a-z0-9\s]/g, '') // Garde seulement lettres, chiffres et espaces
+      .trim();
+  };
+
   // Rechercher des villes avec l'API 154k
   const searchCities = async (query: string) => {
     if (!query.trim()) {
@@ -85,21 +95,23 @@ export default function ExploreScreen() {
     setSearchDone(false);
     try {
       const results = await RealCitiesService.searchCities(query, 50);
+      
       // Filtrer les doublons (même nom, même pays)
       const uniqueCities = [];
       const seen = new Set();
       for (const city of results) {
-        const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
+        const key = `${normalizeString(city.name)}-${normalizeString(city.country)}`;
         if (!seen.has(key)) {
           seen.add(key);
           uniqueCities.push(city);
         }
       }
+      
       // Tri : d'abord les villes dont le nom correspond exactement à la recherche, puis les autres, le tout trié par population
-      const normalizedQuery = query.trim().toLowerCase();
+      const normalizedQuery = normalizeString(query);
       const sortedCities = uniqueCities.sort((a, b) => {
-        const aExact = a.name.toLowerCase() === normalizedQuery;
-        const bExact = b.name.toLowerCase() === normalizedQuery;
+        const aExact = normalizeString(a.name) === normalizedQuery;
+        const bExact = normalizeString(b.name) === normalizedQuery;
         if (aExact && !bExact) return -1;
         if (!aExact && bExact) return 1;
         // Si les deux sont exacts ou les deux ne le sont pas, trie par population décroissante
@@ -107,6 +119,7 @@ export default function ExploreScreen() {
         const popB = typeof b.population === 'number' ? b.population : 0;
         return popB - popA;
       });
+      
       console.log(`Trouvé ${sortedCities.length} villes uniques pour: ${query}`);
       setCities(sortedCities);
     } catch (error) {
@@ -149,15 +162,12 @@ export default function ExploreScreen() {
 
   // Recherche automatique quand on tape
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (activeTab === 'cities') {
-        searchCities(searchQuery);
-      } else if (activeTab === 'members') {
-        searchUsers(searchQuery);
-      }
-    }, 100); // Délai réduit à 100ms pour accélérer le loading
-
-    return () => clearTimeout(timeoutId);
+    // Recherche instantanée sans délai
+    if (activeTab === 'cities') {
+      searchCities(searchQuery);
+    } else if (activeTab === 'members') {
+      searchUsers(searchQuery);
+    }
   }, [searchQuery, activeTab]);
 
   // Charger des utilisateurs populaires au démarrage
@@ -223,7 +233,8 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
       {/* Error message overlay always at the top, above all content */}
       {showError && errorMessage && (
         <View style={{ position: 'absolute', left: 0, right: 0, top: 48, alignItems: 'center', zIndex: 99999, elevation: 99 }} pointerEvents="box-none">
@@ -500,6 +511,7 @@ export default function ExploreScreen() {
         }}
       />
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

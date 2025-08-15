@@ -85,6 +85,16 @@ export class RealCitiesService {
   private static rawCities: RawCityData[] = citiesData as RawCityData[];
   private static cities: RealCityData[] | null = null;
 
+  // Fonction pour normaliser les chaînes (insensible à la casse et aux accents)
+  private static normalizeString(str: string): string {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+      .replace(/[^a-z0-9\s]/g, '') // Garde seulement lettres, chiffres et espaces
+      .trim();
+  }
+
   // Convertir les données brutes en format standardisé
   private static convertRawCity(rawCity: RawCityData, index: number): RealCityData {
     return {
@@ -216,12 +226,14 @@ export class RealCitiesService {
         return;
       }
 
-      const searchTerm = query.toLowerCase().trim();
+      const normalizedQuery = this.normalizeString(query);
       const results = this.cities
-        .filter(city => 
-          city.name.toLowerCase().includes(searchTerm) ||
-          city.country.toLowerCase().includes(searchTerm)
-        )
+        .filter(city => {
+          const normalizedCityName = this.normalizeString(city.name);
+          const normalizedCountryName = this.normalizeString(city.country);
+          return normalizedCityName.includes(normalizedQuery) ||
+                 normalizedCountryName.includes(normalizedQuery);
+        })
         .slice(0, limit)
         .map(city => this.enrichCity(city));
       
