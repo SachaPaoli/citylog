@@ -3,9 +3,10 @@ import { getCountryName } from '@/constants/CountryNames';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { RealCitiesService } from '@/services/RealCitiesService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -23,7 +24,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
-import { RealCitiesService } from '@/services/RealCitiesService';
 // Table exhaustive ISO 3166-1 alpha-2 code -> nom anglais (same as explore/search)
 const countryNamesEn: Record<string, string> = {
   AF: 'Afghanistan',

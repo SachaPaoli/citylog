@@ -83,6 +83,8 @@ export default function TripDetailScreen() {
   const [scrollY, setScrollY] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [isDescriptionMultiline, setIsDescriptionMultiline] = useState(false);
+  const [isTextTruncated, setIsTextTruncated] = useState(false);
 
   // Récupérer la photo de profil de l'utilisateur du post si elle n'est pas présente
   // Maintenant les posts arrivent déjà enrichis avec les photos, donc pas besoin de hook séparé
@@ -95,6 +97,10 @@ export default function TripDetailScreen() {
       if (cachedPost) {
         console.log('✅ Post trouvé instantanément:', cachedPost.city, 'Photo:', cachedPost.userPhoto ? 'OUI' : 'NON');
         setPost(cachedPost);
+        // Initialiser l'état de la description
+        if (cachedPost.description && cachedPost.description.length > 40) {
+          setIsDescriptionMultiline(true);
+        }
       } else {
         // Si pas en cache, charger depuis Firebase
         console.log('🔄 Post non trouvé en cache, chargement...');
@@ -203,6 +209,38 @@ export default function TripDetailScreen() {
       addToWishlist(post);
       Alert.alert('Ajouté à la wishlist', 'Ce voyage a bien été ajouté à votre wishlist !');
       setShowMenu(false);
+    }
+  };
+
+  // Fonction pour vérifier si la description fait plus de 40 caractères
+  const checkDescriptionLines = (event: any) => {
+    if (post?.description) {
+      const shouldShowChevron = post.description.length > 40;
+      console.log('Description length:', post.description.length, 'Should show chevron:', shouldShowChevron);
+      setIsDescriptionMultiline(shouldShowChevron);
+    }
+  };
+
+  // Fonction pour tronquer la description à 40 caractères avec "..."
+  const getDisplayedDescription = () => {
+    if (!post?.description) return '';
+    if (post.description.length <= 40) return post.description;
+    
+    // Trouver le dernier espace avant la limite pour ne pas couper un mot
+    const truncated = post.description.substring(0, 40);
+    const lastSpaceIndex = truncated.lastIndexOf(' ');
+    
+    if (lastSpaceIndex > 0) {
+      return truncated.substring(0, lastSpaceIndex) + '...';
+    }
+    return truncated + '...';
+  };
+
+  // Fonction pour naviguer vers la page de description complète
+  const handleDescriptionPress = () => {
+    console.log('Description pressed, multiline:', isDescriptionMultiline);
+    if (post?.description) {
+      router.push(`/description-detail?description=${encodeURIComponent(post.description)}`);
     }
   };
 
@@ -321,9 +359,24 @@ export default function TripDetailScreen() {
                 color="#f5c518"
               />
             </View>
-            <Text style={[styles.description, { color: textColor }]}> 
-              {post.description}
-            </Text>
+            {post.description && (
+              <TouchableOpacity 
+                style={styles.descriptionContainer}
+                onPress={handleDescriptionPress}
+                activeOpacity={0.7}
+              >
+                <Text 
+                  style={[styles.description, { color: textColor, flex: 1 }]}
+                  numberOfLines={1}
+                  onTextLayout={checkDescriptionLines}
+                > 
+                  {getDisplayedDescription()}
+                </Text>
+                {isDescriptionMultiline && (
+                  <Ionicons name="chevron-forward" size={20} color={textColor} style={styles.descriptionIcon} />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -594,6 +647,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginTop: 10,
+  },
+  descriptionContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
+  descriptionIcon: {
+    marginLeft: 8,
+    marginBottom: 2,
   },
   tabsContainer: {
     flexDirection: 'row',
