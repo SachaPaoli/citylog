@@ -1,5 +1,5 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import React from 'react';
 import {
   Alert,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Trip {
   id: string;
@@ -102,31 +103,33 @@ export default function TripsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={[styles.backButtonText, { color: textColor }]}>←</Text>
-        </TouchableOpacity>
-        
-        <Text style={[styles.headerTitle, { color: textColor }]}>Mes Trips</Text>
-        
-        <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: beigeColor }]}
-          onPress={() => router.push('/trips/create')}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: '#181C24' }]}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={[styles.backButtonText, { color: '#fff' }]}>←</Text>
+          </TouchableOpacity>
+          
+          <Text style={[styles.headerTitle, { color: '#fff' }]}>Mes Trips</Text>
+          
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => router.push('/trips/create')}
+          >
+            <Text style={[styles.addButtonText, { color: '#fff' }]}>+</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Content */}
-      <ScrollView 
-        style={[styles.content, { backgroundColor }]}
-        showsVerticalScrollIndicator={false}
-      >
+        {/* Content */}
+        <ScrollView 
+          style={[styles.content, { backgroundColor }]}
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.tripsGrid}>
           {tripsData.map((trip) => (
             <TouchableOpacity
@@ -162,12 +165,11 @@ export default function TripsScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
-}
-
-const styles = StyleSheet.create({
+}const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -177,7 +179,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 50, // Espace pour la status bar
     borderBottomWidth: 1,
     borderBottomColor: '#444',
   },
@@ -198,16 +199,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButtonText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
   },
   content: {
     flex: 1,

@@ -260,7 +260,7 @@ export default function ProfileScreen() {
                   <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButtonRow}>
+              <TouchableOpacity style={styles.profileButtonRow} onPress={() => router.push('/trips')}>
                 <View style={styles.profileButtonLeft}>
                   <Text style={styles.profileButtonText}>Trips</Text>
                 </View>
