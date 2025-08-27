@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type PostActionModalProps = {
   visible: boolean;

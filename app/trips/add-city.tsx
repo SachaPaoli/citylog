@@ -1,4 +1,5 @@
 import { StarRating } from '@/components/StarRating';
+import { TravelPostCard } from '@/components/TravelPostCard';
 import { getCountryName } from '@/constants/CountryNames';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
@@ -113,6 +114,23 @@ interface TripItem {
 type PostTabType = 'staying' | 'restaurant' | 'activities' | 'other';
 
 export default function AddCityScreen() {
+  // Import posts from your source (adjust path if needed)
+  const { posts: allPosts = [] } = require('../../hooks/usePosts').usePosts?.() || {};
+  // ...existing code...
+  // Helper: get posts for a city (replace with your real data source)
+  function getPostsForCity(city: any): any[] {
+    // Filter posts by city name and country code
+    if (!city || !city.name || !city.countryCode) return [];
+    return allPosts.filter((post: any) => {
+      // Adjust post.city and post.country to match your data
+      const cityMatch = post.city?.toLowerCase() === city.name?.toLowerCase();
+      const countryMatch = post.country?.toUpperCase() === city.countryCode?.toUpperCase();
+      return cityMatch && countryMatch;
+    });
+  }
+  // Modal state for viewing posts and rating
+  const [showCityModal, setShowCityModal] = useState(false);
+  const [modalCity, setModalCity] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'new' | 'visited'>('new');
   
   // Post functionality state
@@ -524,11 +542,209 @@ export default function AddCityScreen() {
     </TouchableWithoutFeedback>
   );
 
+  // Visited cities tab logic (copied from my-cities.tsx)
+  const { cities: visitedCities } = require('../../contexts/VisitedCitiesContext').useVisitedCities();
+  // Mapping from country name to ISO code for flag display
+  const countryCodeToName = countryNamesEn;
+  const countryNameToCode = Object.fromEntries(Object.entries(countryNamesEn).map(([code, name]) => [name, code]));
+
+  type VisitedCity = {
+    name: string;
+    country: string;
+    countryCode?: string;
+    rating?: number;
+    source?: string;
+    beenThere?: boolean;
+  };
+  type GroupedCity = {
+    name: string;
+    countryCode: string;
+    ratings: number[];
+    manualCount: number;
+    postCount: number;
+    hasBeenThere: boolean;
+  };
+  const displayCities = React.useMemo(() => {
+    const validCities = (visitedCities as VisitedCity[]).filter((city: VisitedCity) => typeof city.name === 'string' && city.name.length > 0 && city.country);
+    const groupedCities: { [key: string]: GroupedCity } = {};
+    validCities.forEach((city: VisitedCity) => {
+      let code = city.country.trim();
+      if (code.length > 2) {
+        code = countryNameToCode[code] || code;
+      }
+      code = code.toUpperCase();
+      const key = `${city.name.trim().toLowerCase()}-${code}`;
+      if (!groupedCities[key]) {
+        groupedCities[key] = {
+          name: city.name,
+          countryCode: code,
+          ratings: [],
+          manualCount: 0,
+          postCount: 0,
+          hasBeenThere: false,
+        };
+      }
+      if (city.rating !== undefined && city.rating !== null) {
+        groupedCities[key].ratings.push(Number(city.rating));
+        if (city.source === 'note' || city.source === undefined) {
+          groupedCities[key].manualCount += 1;
+        }
+        if (city.source === 'post') {
+          groupedCities[key].postCount += 1;
+        }
+      } else if (city.source === 'post') {
+        groupedCities[key].postCount += 1;
+      } else if (city.source === 'note') {
+        groupedCities[key].manualCount += 1;
+      }
+      if (city.beenThere) {
+        groupedCities[key].hasBeenThere = true;
+      }
+    });
+    return Object.values(groupedCities).map((city: GroupedCity) => {
+      const averageRating = city.ratings.length > 0 ? (city.ratings.reduce((a: number, b: number) => a + b, 0) / city.ratings.length) : null;
+      let sourceText = '';
+      if (city.manualCount > 0 && city.postCount > 0) {
+        const postText = city.postCount === 1 ? '1 post' : `${city.postCount} posts`;
+        if (city.ratings.length > 0) {
+          sourceText = `based on your rating and ${postText}`;
+        } else {
+          sourceText = `based on your visit and ${postText}`;
+        }
+      } else if (city.manualCount > 0) {
+        if (city.ratings.length > 0) {
+          sourceText = 'based on your rating';
+        } else {
+          sourceText = 'based on your visit';
+        }
+      } else if (city.postCount > 0) {
+        sourceText = `based on ${city.postCount} post${city.postCount > 1 ? 's' : ''}`;
+      } else if (city.hasBeenThere) {
+        sourceText = 'been there';
+      }
+      return {
+        ...city,
+        averageRating,
+        sourceText,
+      };
+    });
+  }, [visitedCities]);
+
   const renderVisitedCityTab = () => (
     <View style={styles.visitedCityTab}>
-      <Text style={{ color: '#fff', textAlign: 'center', marginTop: 50 }}>
-        Contenu pour visited city
-      </Text>
+      {displayCities.length === 0 ? (
+        <View style={styles.centered}>
+          <Text style={{ color: textColor, opacity: 0.7, fontSize: 16, textAlign: 'center' }}>
+            You haven't added any cities yet.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+          {[...displayCities].reverse().map((city, idx) => {
+            const isSimpleRating = city.averageRating !== null && city.manualCount === 1 && city.postCount === 0;
+            const hasPosts = city.postCount > 0;
+            const handlePress = () => {
+              if (isSimpleRating) {
+                require('expo-router').router.push({
+                  pathname: '/trips/create',
+                  params: {
+                    cityName: city.name,
+                    countryName: countryCodeToName[city.countryCode] || city.countryCode,
+                    rating: city.averageRating,
+                  }
+                });
+              } else if (hasPosts) {
+                setModalCity(city);
+                setShowCityModal(true);
+              }
+            };
+            return (
+              <React.Fragment key={`${city.name || 'city'}-${city.countryCode || 'country'}-${idx}`}>
+                <TouchableOpacity
+                  style={styles.cityCard}
+                  activeOpacity={isSimpleRating || hasPosts ? 0.7 : 1}
+                  onPress={handlePress}
+                  disabled={!(isSimpleRating || hasPosts)}
+                >
+                  <Image
+                    source={{
+                      uri: city.countryCode && countryCodeToName[city.countryCode]
+                        ? `https://flagcdn.com/w80/${city.countryCode.toLowerCase()}.png`
+                        : undefined
+                    }}
+                    style={styles.flag}
+                    resizeMode="cover"
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cityName}>
+                      {city.name}, {countryCodeToName[city.countryCode] || city.countryCode}
+                    </Text>
+                    {city.averageRating !== null ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={styles.cityRating}>
+                          {city.averageRating.toFixed(1).replace('.', ',')} <Text style={{ color: '#FFD700' }}>★</Text>
+                        </Text>
+                        {city.manualCount === 1 && city.postCount === 0 ? (
+                          <Text style={styles.citySourceGray}>based on your rating</Text>
+                        ) : city.sourceText ? (
+                          <Text style={styles.citySourceGray}>{city.sourceText}</Text>
+                        ) : null}
+                      </View>
+                    ) : (
+                      <Text style={styles.cityBeenThere}>I have been there</Text>
+                    )}
+                  </View>
+                  <View style={styles.cityPlusButton}>
+                    <Text style={styles.cityPlusText}>+</Text>
+                  </View>
+                </TouchableOpacity>
+                <View style={{ height: 16 }} />
+              </React.Fragment>
+            );
+          })}
+        </ScrollView>
+      )}
+      {/* Modal for posts and rating */}
+      {showCityModal && modalCity && (
+        <Modal
+          visible={showCityModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowCityModal(false)}
+        >
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ height: '75%', backgroundColor: '#181C24', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 }}>
+              <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 8 }} onPress={() => setShowCityModal(false)}>
+                <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>×</Text>
+              </TouchableOpacity>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* City rating card if present */}
+                {modalCity.averageRating !== null && modalCity.manualCount > 0 && (
+                  <View style={styles.cityCard}>
+                    <Image
+                      source={{
+                        uri: modalCity.countryCode ? `https://flagcdn.com/w80/${modalCity.countryCode.toLowerCase()}.png` : undefined
+                      }}
+                      style={styles.flag}
+                      resizeMode="cover"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cityName}>{modalCity.name}, {countryCodeToName[modalCity.countryCode] || modalCity.countryCode}</Text>
+                      <Text style={styles.cityRating}>★ {modalCity.averageRating !== null ? modalCity.averageRating.toFixed(1).replace('.', ',') : ''}</Text>
+                    </View>
+                  </View>
+                )}
+                {/* TravelPostCards for each post */}
+                {getPostsForCity(modalCity).length > 0 && getPostsForCity(modalCity).map((post, i) => (
+                  <View key={post.id || i} style={{ marginVertical: 12 }}>
+                    <TravelPostCard post={post as any} />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 
@@ -941,6 +1157,18 @@ export default function AddCityScreen() {
 }
 
 const styles = StyleSheet.create({
+  cityPlusButton: {
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cityPlusText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    lineHeight: 24,
+  },
   container: {
     flex: 1,
   },
@@ -1004,6 +1232,52 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   // Post styles
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  flag: {
+    width: 32,
+    height: 22,
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  cityName: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  cityRating: {
+    color: '#FFD700',
+    fontSize: 13,
+  },
+  cityBeenThere: {
+    color: '#bbb',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  citySourceGray: {
+    color: '#bbb',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginLeft: 4,
+  },
   postHeader: {
     paddingHorizontal: 0,
     paddingVertical: 6,

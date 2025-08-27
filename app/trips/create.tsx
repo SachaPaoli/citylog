@@ -190,22 +190,46 @@ export default function CreateTripScreen() {
   const [localTrips, setLocalTrips] = useState<LocalTrip[]>([]);
   const beigeColor = '#E5C9A6';
 
+  // Get params from router
+  const { useLocalSearchParams } = require('expo-router');
+  const params = useLocalSearchParams();
+
   // Charger les trips locaux depuis AsyncStorage
   const loadLocalTrips = useCallback(async () => {
     try {
       const storedTrips = await AsyncStorage.getItem('local_trips');
-      if (storedTrips) {
-        const trips = JSON.parse(storedTrips);
-        console.log('📚 Trips chargés:', trips);
-        setLocalTrips(trips);
-      } else {
-        setLocalTrips([]);
+      let trips = storedTrips ? JSON.parse(storedTrips) : [];
+
+      // If params from visited city, add as new trip if not already present
+      if (params.cityName && params.countryName && params.rating) {
+        const alreadyExists = trips.some(
+          (t: LocalTrip) => t.city === params.cityName && t.country === params.countryName
+        );
+        if (!alreadyExists) {
+          const newTrip: LocalTrip = {
+            id: `trip-${Date.now()}`,
+            city: params.cityName,
+            country: params.countryName,
+            coverImage: '',
+            rating: Number(params.rating),
+            description: `Voyage à ${params.cityName}, ${params.countryName}`,
+            stayingItems: [],
+            restaurantItems: [],
+            activitiesItems: [],
+            otherItems: [],
+            isPublic: true,
+            createdAt: Date.now(),
+          };
+          trips = [...trips, newTrip];
+          await AsyncStorage.setItem('local_trips', JSON.stringify(trips));
+        }
       }
+      setLocalTrips(trips);
     } catch (error) {
       console.error('❌ Erreur chargement trips:', error);
       setLocalTrips([]);
     }
-  }, []);
+  }, [params.cityName, params.countryName, params.rating]);
 
   // Supprimer un trip local
   const deleteTrip = useCallback(async (tripId: string) => {
@@ -256,39 +280,71 @@ export default function CreateTripScreen() {
             showsVerticalScrollIndicator={false}
           >
             <Text style={[styles.tripsTitle, { color: '#fff' }]}>Mes trips :</Text>
-            {localTrips.map((trip, index) => (
-              <View key={trip.id}>
-                <View style={styles.tripCard}>
-                  <TouchableOpacity 
-                    style={styles.deleteButton}
-                    onPress={() => deleteTrip(trip.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>×</Text>
-                  </TouchableOpacity>
-                  
-                  <Image source={{ uri: trip.coverImage }} style={styles.tripCoverImage} />
-                  <View style={styles.tripInfo}>
-                    <Text style={[styles.tripCity, { color: '#fff' }]}>{trip.city}</Text>
-                    <Text style={[styles.tripCountry, { color: '#888' }]}>{trip.country}</Text>
-                    <View style={styles.tripRating}>
-                      <StarRating 
-                        rating={trip.rating} 
-                        readonly 
-                        size="small" 
-                        color="#f5c518"
-                        showRating={true}
-                      />
+            {localTrips.map((trip, index) => {
+              // If trip has no coverImage and no items, display as a simple visited city card
+              const isSimpleVisited = !trip.coverImage && trip.stayingItems.length === 0 && trip.restaurantItems.length === 0 && trip.activitiesItems.length === 0 && trip.otherItems.length === 0;
+              // Try to get country code from country name (for flag)
+              let countryCode = '';
+              if (trip.country && trip.country.length === 2) {
+                countryCode = trip.country.toLowerCase();
+              } else {
+                // Try to map country name to code using ISO table
+                const countryNamesEn = {
+                  AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AS: 'American Samoa', AD: 'Andorra', AO: 'Angola', AI: 'Anguilla', AQ: 'Antarctica', AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh', BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin', BM: 'Bermuda', BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia and Herzegovina', BW: 'Botswana', BV: 'Bouvet Island', BR: 'Brazil', IO: 'British Indian Ocean Territory', BN: 'Brunei Darussalam', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia', CM: 'Cameroon', CA: 'Canada', CV: 'Cape Verde', KY: 'Cayman Islands', CF: 'Central African Republic', TD: 'Chad', CL: 'Chile', CN: 'China', CX: 'Christmas Island', CC: 'Cocos (Keeling) Islands', CO: 'Colombia', KM: 'Comoros', CG: 'Congo', CD: 'Congo, the Democratic Republic of the', CK: 'Cook Islands', CR: 'Costa Rica', CI: "Cote d'Ivoire", HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus', CZ: 'Czech Republic', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic', EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea', EE: 'Estonia', ET: 'Ethiopia', FK: 'Falkland Islands (Malvinas)', FO: 'Faroe Islands', FJ: 'Fiji', FI: 'Finland', FR: 'France', GF: 'French Guiana', PF: 'French Polynesia', TF: 'French Southern Territories', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany', GH: 'Ghana', GI: 'Gibraltar', GR: 'Greece', GL: 'Greenland', GD: 'Grenada', GP: 'Guadeloupe', GU: 'Guam', GT: 'Guatemala', GG: 'Guernsey', GN: 'Guinea', GW: 'Guinea-Bissau', GY: 'Guyana', HT: 'Haiti', HM: 'Heard Island and McDonald Islands', VA: 'Holy See (Vatican City State)', HN: 'Honduras', HK: 'Hong Kong', HU: 'Hungary', IS: 'Iceland', IN: 'India', ID: 'Indonesia', IR: 'Iran, Islamic Republic of', IQ: 'Iraq', IE: 'Ireland', IM: 'Isle of Man', IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JE: 'Jersey', JO: 'Jordan', KZ: 'Kazakhstan', KE: 'Kenya', KI: 'Kiribati', KP: 'Korea, Democratic People\'s Republic of', KR: 'Korea, Republic of', KW: 'Kuwait', KG: 'Kyrgyzstan', LA: 'Lao People\'s Democratic Republic', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia', LY: 'Libyan Arab Jamahiriya', LI: 'Liechtenstein', LT: 'Lithuania', LU: 'Luxembourg', MO: 'Macao', MK: 'Macedonia, the Former Yugoslav Republic of', MG: 'Madagascar', MW: 'Malawi', MY: 'Malaysia', MV: 'Maldives', ML: 'Mali', MT: 'Malta', MH: 'Marshall Islands', MQ: 'Martinique', MR: 'Mauritania', MU: 'Mauritius', YT: 'Mayotte', MX: 'Mexico', FM: 'Micronesia, Federated States of', MD: 'Moldova, Republic of', MC: 'Monaco', MN: 'Mongolia', ME: 'Montenegro', MS: 'Montserrat', MA: 'Morocco', MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NR: 'Nauru', NP: 'Nepal', NL: 'Netherlands', AN: 'Netherlands Antilles', NC: 'New Caledonia', NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', NU: 'Niue', NF: 'Norfolk Island', MP: 'Northern Mariana Islands', NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PW: 'Palau', PS: 'Palestinian Territory, Occupied', PA: 'Panama', PG: 'Papua New Guinea', PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PN: 'Pitcairn', PL: 'Poland', PT: 'Portugal', PR: 'Puerto Rico', QA: 'Qatar', RE: 'Reunion', RO: 'Romania', RU: 'Russian Federation', RW: 'Rwanda', BL: 'Saint Barthelemy', SH: 'Saint Helena', KN: 'Saint Kitts and Nevis', LC: 'Saint Lucia', MF: 'Saint Martin', PM: 'Saint Pierre and Miquelon', VC: 'Saint Vincent and the Grenadines', WS: 'Samoa', SM: 'San Marino', ST: 'Sao Tome and Principe', SA: 'Saudi Arabia', SN: 'Senegal', RS: 'Serbia', SC: 'Seychelles', SL: 'Sierra Leone', SG: 'Singapore', SK: 'Slovakia', SI: 'Slovenia', SB: 'Solomon Islands', SO: 'Somalia', ZA: 'South Africa', GS: 'South Georgia and the South Sandwich Islands', ES: 'Spain', LK: 'Sri Lanka', SD: 'Sudan', SR: 'Suriname', SJ: 'Svalbard and Jan Mayen', SZ: 'Swaziland', SE: 'Sweden', CH: 'Switzerland', SY: 'Syrian Arab Republic', TW: 'Taiwan, Province of China', TJ: 'Tajikistan', TZ: 'Tanzania, United Republic of', TH: 'Thailand', TL: 'Timor-Leste', TG: 'Togo', TK: 'Tokelau', TO: 'Tonga', TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan', TC: 'Turks and Caicos Islands', TV: 'Tuvalu', UG: 'Uganda', UA: 'Ukraine', AE: 'United Arab Emirates', GB: 'United Kingdom', US: 'United States', UM: 'United States Minor Outlying Islands', UY: 'Uruguay', UZ: 'Uzbekistan', VU: 'Vanuatu', VE: 'Venezuela', VN: 'Viet Nam', VG: 'Virgin Islands, British', VI: 'Virgin Islands, U.S.', WF: 'Wallis and Futuna', EH: 'Western Sahara', YE: 'Yemen', ZM: 'Zambia', ZW: 'Zimbabwe', };
+                const nameToCode = Object.fromEntries(Object.entries(countryNamesEn).map(([code, name]) => [name, code]));
+                if (trip.country && nameToCode[trip.country]) {
+                  countryCode = nameToCode[trip.country].toLowerCase();
+                }
+              }
+              return (
+                <View key={trip.id}>
+                  {isSimpleVisited ? (
+                    <View style={styles.cityCard}>
+                      {/* Flag */}
+                      {countryCode ? (
+                        <Image
+                          source={{ uri: `https://flagcdn.com/w80/${countryCode}.png` }}
+                          style={styles.flag}
+                          resizeMode="cover"
+                        />
+                      ) : null}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.cityName}>{trip.city}, {trip.country}</Text>
+                        <Text style={styles.cityRating}>★ {trip.rating}</Text>
+                      </View>
                     </View>
-                    <Text style={[styles.tripDescription, { color: '#ccc' }]} numberOfLines={2}>
-                      {trip.description}
-                    </Text>
-                  </View>
+                  ) : (
+                    <View style={styles.tripCard}>
+                      <TouchableOpacity 
+                        style={styles.deleteButton}
+                        onPress={() => deleteTrip(trip.id)}
+                      >
+                        <Text style={styles.deleteButtonText}>×</Text>
+                      </TouchableOpacity>
+                      <Image source={{ uri: trip.coverImage }} style={styles.tripCoverImage} />
+                      <View style={styles.tripInfo}>
+                        <Text style={[styles.tripCity, { color: '#fff' }]}>{trip.city}</Text>
+                        <Text style={[styles.tripCountry, { color: '#888' }]}>{trip.country}</Text>
+                        <View style={styles.tripRating}>
+                          <StarRating 
+                            rating={trip.rating} 
+                            readonly 
+                            size="small" 
+                            color="#f5c518"
+                            showRating={true}
+                          />
+                        </View>
+                        <Text style={[styles.tripDescription, { color: '#ccc' }]} numberOfLines={2}>
+                          {trip.description}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {/* Flèche ondulée après chaque trip */}
+                  <WavyArrow />
                 </View>
-                
-                {/* Flèche ondulée après chaque trip */}
-                <WavyArrow />
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
         )}
 
@@ -308,6 +364,49 @@ export default function CreateTripScreen() {
 }
 
 const styles = StyleSheet.create({
+  cityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
+    marginBottom: 12,
+  },
+  flag: {
+    width: 32,
+    height: 22,
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  cityName: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  cityRating: {
+    color: '#FFD700',
+    fontSize: 13,
+  },
+  cityPlusButton: {
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cityPlusText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    lineHeight: 24,
+  },
   container: {
     flex: 1,
   },
