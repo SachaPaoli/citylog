@@ -3,14 +3,174 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// WavyArrow component (flèche ondulée avec inputs)
+const WavyArrow = () => {
+  const [duration, setDuration] = useState('');
+  const [timeUnit, setTimeUnit] = useState('minutes');
+  const [selectedTransport, setSelectedTransport] = useState('⬜');
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [showTransportModal, setShowTransportModal] = useState(false);
+  
+  const timeUnits = [
+    { label: 'minutes', value: 'minutes' },
+    { label: 'hours', value: 'hours' },
+    { label: 'days', value: 'days' }
+  ];
+  
+  const transportModes = [
+    { label: '🚗', value: 'car', name: 'Voiture', icon: '⬜' },
+    { label: '🚲', value: 'bike', name: 'Vélo', icon: '○' },
+    { label: '🚂', value: 'train', name: 'Train', icon: '▬' },
+    { label: '🚌', value: 'bus', name: 'Bus', icon: '▭' },
+    { label: '🚇', value: 'metro', name: 'Métro', icon: 'Ⓜ' },
+    { label: '🏍️', value: 'moto', name: 'Moto', icon: '◦' },
+    { label: '✈️', value: 'plane', name: 'Avion', icon: '✈' }
+  ];
+
+  const selectTimeUnit = (unit: string) => {
+    setTimeUnit(unit);
+    setShowTimeModal(false);
+  };
+
+  const selectTransport = (transport: string) => {
+    setSelectedTransport(transport);
+    setShowTransportModal(false);
+  };
+
+  return (
+    <View style={styles.wavyArrowContainer}>
+      {/* Première partie de la flèche */}
+      <View style={styles.wavyPath}>
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '10deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-15deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '20deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-10deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '15deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-25deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '12deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-8deg' }] }]} />
+      </View>
+
+      {/* Container pour les 3 inputs */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.durationInput}
+          placeholder="Durée"
+          value={duration}
+          onChangeText={setDuration}
+          keyboardType="numeric"
+        />
+        
+        <TouchableOpacity 
+          style={styles.selectButton}
+          onPress={() => setShowTimeModal(true)}
+        >
+          <Text style={styles.selectText}>{timeUnit}</Text>
+          <Text style={styles.selectArrow}>▼</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.selectButton}
+          onPress={() => setShowTransportModal(true)}
+        >
+          <Text style={styles.selectText}>
+            {transportModes.find(mode => mode.icon === selectedTransport)?.icon || '⬜'}
+          </Text>
+          <Text style={styles.selectArrow}>▼</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Deuxième partie de la flèche */}
+      <View style={styles.wavyPath}>
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '18deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-12deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '22deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-16deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '14deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-20deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '10deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '-14deg' }] }]} />
+        <View style={[styles.arrowSegment, { transform: [{ rotate: '16deg' }] }]} />
+      </View>
+
+      {/* Pointe de la flèche */}
+      <View style={styles.arrowHead}>
+        <Text style={styles.arrowHeadText}>▼</Text>
+      </View>
+
+      {/* Modal pour sélection de l'unité de temps */}
+      <Modal
+        visible={showTimeModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTimeModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          onPress={() => setShowTimeModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Unité de temps</Text>
+            {timeUnits.map((unit) => (
+              <TouchableOpacity
+                key={unit.value}
+                style={[
+                  styles.modalOption,
+                  timeUnit === unit.value && styles.modalOptionSelected
+                ]}
+                onPress={() => selectTimeUnit(unit.value)}
+              >
+                <Text style={styles.modalOptionText}>{unit.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Modal pour sélection du transport */}
+      <Modal
+        visible={showTransportModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTransportModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          onPress={() => setShowTransportModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Moyen de transport</Text>
+            {transportModes.map((mode) => (
+              <TouchableOpacity
+                key={mode.value}
+                style={[
+                  styles.modalOption,
+                  selectedTransport === mode.icon && styles.modalOptionSelected
+                ]}
+                onPress={() => selectTransport(mode.icon)}
+              >
+                <Text style={styles.modalOptionText}>
+                  {mode.icon} {mode.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
 
 interface LocalTrip {
   id: string;
@@ -91,38 +251,50 @@ export default function CreateTripScreen() {
 
         {/* Liste des trips existants */}
         {localTrips.length > 0 && (
-          <ScrollView style={styles.tripsContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={[styles.tripsContainer, { marginBottom: 0 }]} 
+            contentContainerStyle={{ paddingBottom: 0 }}
+            showsVerticalScrollIndicator={false}
+          >
             <Text style={[styles.tripsTitle, { color: '#fff' }]}>Mes trips :</Text>
-            {localTrips.map((trip) => (
-              <View key={trip.id} style={styles.tripCard}>
-                <TouchableOpacity 
-                  style={styles.deleteButton}
-                  onPress={() => deleteTrip(trip.id)}
-                >
-                  <Text style={styles.deleteButtonText}>×</Text>
-                </TouchableOpacity>
-                
-                <Image source={{ uri: trip.coverImage }} style={styles.tripCoverImage} />
-                <View style={styles.tripInfo}>
-                  <Text style={[styles.tripCity, { color: '#fff' }]}>{trip.city}</Text>
-                  <Text style={[styles.tripCountry, { color: '#888' }]}>{trip.country}</Text>
-                  <View style={styles.tripRating}>
-                    <StarRating 
-                      rating={trip.rating} 
-                      readonly 
-                      size="small" 
-                      color="#f5c518"
-                      showRating={true}
-                    />
+            {localTrips.map((trip, index) => (
+              <View key={trip.id}>
+                <View style={styles.tripCard}>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => deleteTrip(trip.id)}
+                  >
+                    <Text style={styles.deleteButtonText}>×</Text>
+                  </TouchableOpacity>
+                  
+                  <Image source={{ uri: trip.coverImage }} style={styles.tripCoverImage} />
+                  <View style={styles.tripInfo}>
+                    <Text style={[styles.tripCity, { color: '#fff' }]}>{trip.city}</Text>
+                    <Text style={[styles.tripCountry, { color: '#888' }]}>{trip.country}</Text>
+                    <View style={styles.tripRating}>
+                      <StarRating 
+                        rating={trip.rating} 
+                        readonly 
+                        size="small" 
+                        color="#f5c518"
+                        showRating={true}
+                      />
+                    </View>
+                    <Text style={[styles.tripDescription, { color: '#ccc' }]} numberOfLines={2}>
+                      {trip.description}
+                    </Text>
                   </View>
-                  <Text style={[styles.tripDescription, { color: '#ccc' }]} numberOfLines={2}>
-                    {trip.description}
-                  </Text>
                 </View>
+                
+                {/* Flèche ondulée après chaque trip */}
+                <WavyArrow />
               </View>
             ))}
           </ScrollView>
         )}
+
+        {/* Flèche ondulée pour le premier trip (quand pas de trips) */}
+        {localTrips.length === 0 && <WavyArrow />}
 
         {/* Bouton Add a city */}
         <View style={localTrips.length > 0 ? styles.addCityContainerWithTrips : styles.addCityContainer}>
@@ -264,5 +436,105 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
+  },
+  // Styles pour WavyArrow
+  wavyArrowContainer: {
+    alignItems: 'center',
+    paddingVertical: 0,
+    marginTop: -5,
+    marginBottom: -5,
+    maxHeight: 400,
+  },
+  wavyPath: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  arrowSegment: {
+    width: 3,
+    height: 15,
+    backgroundColor: '#888',
+    marginVertical: 1,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 15,
+    borderRadius: 12,
+    marginVertical: 10,
+    width: '90%',
+  },
+  durationInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    fontSize: 16,
+    marginRight: 10,
+  },
+  selectButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 5,
+    minWidth: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  selectArrow: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    minWidth: 200,
+    maxWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#333',
+  },
+  modalOption: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#f0f0f0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+  },
+  arrowHead: {
+    alignItems: 'center',
+    marginTop: 0,
+    marginBottom: 30,
+  },
+  arrowHeadText: {
+    fontSize: 20,
+    color: '#888',
+    fontWeight: 'bold',
   },
 });

@@ -1,50 +1,32 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Modal, View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-export default function PostShortcutScreen() {
-  const [visible, setVisible] = useState(true);
+type PostActionModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  onNewPost: () => void;
+  onNewTrip: () => void;
+};
 
-  // Remettre visible à true à chaque ouverture de la page
-  useEffect(() => {
-    setVisible(true);
-  }, []);
-  const router = useRouter();
-
-  const handleNewPost = () => {
-    setVisible(false);
-    router.navigate('/post_final');
-  };
-
-  const handleNewTrip = () => {
-    setVisible(false);
-    router.navigate('/trips/create');
-  };
-
-  const handleCancel = () => {
-    setVisible(false);
-    router.back(); // Revenir à la page précédente
-  };
-
+export default function PostActionModal({ visible, onClose, onNewPost, onNewTrip }: PostActionModalProps) {
   return (
     <Modal
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={handleCancel}
+      onRequestClose={onClose}
     >
       <View style={styles.bottomModalOverlay}>
         <View style={styles.bottomModalContent}>
-          {/* Bouton Cancel en haut à droite */}
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Choose an action</Text>
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.button} onPress={handleNewPost}>
+            <TouchableOpacity style={styles.button} onPress={onNewPost}>
               <Text style={styles.buttonText}>New post</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={handleNewTrip}>
+            <TouchableOpacity style={styles.button} onPress={onNewTrip}>
               <Text style={styles.buttonText}>New trip</Text>
             </TouchableOpacity>
           </View>
