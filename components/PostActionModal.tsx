@@ -40,12 +40,12 @@ const styles = StyleSheet.create({
   bottomModalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(24,28,36,0.7)',
+    backgroundColor: 'transparent',
   },
   bottomModalContent: {
     width: '100%',
     height: '40%',
-    backgroundColor: '#181C24',
+  backgroundColor: '#2C3550',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 32,

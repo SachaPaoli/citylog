@@ -50,7 +50,7 @@ const WavyArrow = () => {
 
   return (
     <View style={styles.wavyArrowContainer}>
-      {/* Première partie de la flèche */}
+      {/* Première partie de la flèche (un segment retiré) */}
       <View style={styles.wavyPath}>
         <View style={[styles.arrowSegment, { transform: [{ rotate: '10deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-15deg' }] }]} />
@@ -59,7 +59,7 @@ const WavyArrow = () => {
         <View style={[styles.arrowSegment, { transform: [{ rotate: '15deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-25deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '12deg' }] }]} />
-        <View style={[styles.arrowSegment, { transform: [{ rotate: '-8deg' }] }]} />
+        {/* Un segment retiré */}
       </View>
 
       {/* Container pour les 3 inputs */}
@@ -91,7 +91,7 @@ const WavyArrow = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Deuxième partie de la flèche */}
+      {/* Deuxième partie de la flèche (un autre segment retiré) */}
       <View style={styles.wavyPath}>
         <View style={[styles.arrowSegment, { transform: [{ rotate: '18deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-12deg' }] }]} />
@@ -100,8 +100,7 @@ const WavyArrow = () => {
         <View style={[styles.arrowSegment, { transform: [{ rotate: '14deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-20deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '10deg' }] }]} />
-        <View style={[styles.arrowSegment, { transform: [{ rotate: '-14deg' }] }]} />
-        <View style={[styles.arrowSegment, { transform: [{ rotate: '16deg' }] }]} />
+        {/* Un autre segment retiré */}
       </View>
 
       {/* Pointe de la flèche */}
@@ -293,10 +292,7 @@ export default function CreateTripScreen() {
           </ScrollView>
         )}
 
-        {/* Flèche ondulée pour le premier trip (quand pas de trips) */}
-        {localTrips.length === 0 && <WavyArrow />}
-
-        {/* Bouton Add a city */}
+        {/* Bouton Add a city (toujours affiché, mais sans flèche si aucun trip) */}
         <View style={localTrips.length > 0 ? styles.addCityContainerWithTrips : styles.addCityContainer}>
           <TouchableOpacity 
             style={styles.addCityButton}
@@ -530,10 +526,10 @@ const styles = StyleSheet.create({
   arrowHead: {
     alignItems: 'center',
     marginTop: 0,
-    marginBottom: 30,
+    marginBottom: 10, // Shorter arrow head after inputs
   },
   arrowHeadText: {
-    fontSize: 20,
+    fontSize: 12,
     color: '#888',
     fontWeight: 'bold',
   },
