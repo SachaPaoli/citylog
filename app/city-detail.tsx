@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StarRating } from '../components/StarRating';
 import { db } from '../config/firebase';
 import { useVisitedCities } from '../contexts/VisitedCitiesContext';
@@ -38,6 +38,7 @@ export default function CityDetailScreen() {
 
 
   // Récupère une image de la ville via Wikimedia, avec cache et gestion des doublons
+  // Nouvelle logique : Wikidata P18
   async function fetchCityImage(cityName: string, countryName: string) {
     setIsLoadingImage(true);
     const baseName = getBaseCityName(cityName);
@@ -47,127 +48,64 @@ export default function CityDetailScreen() {
       setIsLoadingImage(false);
       return;
     }
-    // Essaye plusieurs variantes de recherche
-    const searchVariants = [
-      `${baseName}, ${countryName}`,
-      `${baseName} (${countryName})`,
-      `${baseName}`
-    ];
     let imgUrl: string | null = null;
-    let pageUrl: string | null = null;
-    for (const searchQuery of searchVariants) {
-      try {
-        const searchRes = await axios.get(`https://en.wikipedia.org/w/api.php`, {
+    let wikidataId: string | null = null;
+    // 1. Cherche la page Wikipedia pour la ville
+    try {
+      const searchRes = await axios.get('https://en.wikipedia.org/w/api.php', {
+        params: {
+          action: 'query',
+          list: 'search',
+          srsearch: `${baseName}, ${countryName}`,
+          format: 'json',
+          origin: '*',
+        },
+      });
+      const page = searchRes.data?.query?.search?.[0];
+      if (page) {
+        // 2. Récupère l'ID Wikidata via la page Wikipedia
+        const pageInfoRes = await axios.get('https://en.wikipedia.org/w/api.php', {
           params: {
             action: 'query',
-            list: 'search',
-            srsearch: searchQuery,
-            format: 'json',
-            origin: '*',
-          },
-        });
-        const page = searchRes.data?.query?.search?.[0];
-        if (!page) continue;
-        pageUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(page.title)}`;
-        // Essaye d'abord de récupérer le thumbnail principal
-        const pageRes = await axios.get(`https://en.wikipedia.org/w/api.php`, {
-          params: {
-            action: 'query',
-            prop: 'pageimages',
+            prop: 'pageprops',
             pageids: page.pageid,
             format: 'json',
             origin: '*',
-            pithumbsize: 600,
           },
         });
-        const pageData = pageRes.data?.query?.pages?.[page.pageid];
-        imgUrl = pageData?.thumbnail?.source || null;
-        // Si pas de thumbnail, essaye de récupérer une image de la page
-        if (!imgUrl) {
-          const imagesRes = await axios.get(`https://en.wikipedia.org/w/api.php`, {
-            params: {
-              action: 'query',
-              prop: 'images',
-              pageids: page.pageid,
-              format: 'json',
-              origin: '*',
-            },
-          });
-          const images = imagesRes.data?.query?.pages?.[page.pageid]?.images;
-          if (images && images.length > 0) {
-            // Prend la première image qui n'est pas un logo ou une icône
-            const imageTitle = images.find((img: any) => !img.title.toLowerCase().includes('logo') && !img.title.toLowerCase().includes('icon'))?.title;
-            if (imageTitle) {
-              // Récupère l'URL de l'image
-              const imageInfoRes = await axios.get(`https://en.wikipedia.org/w/api.php`, {
-                params: {
-                  action: 'query',
-                  titles: imageTitle,
-                  prop: 'imageinfo',
-                  iiprop: 'url',
-                  format: 'json',
-                  origin: '*',
-                },
-              });
-              const pages = imageInfoRes.data?.query?.pages;
-              const pageObj = Object.values(pages)[0];
-              const imageInfo =
-                pageObj && typeof pageObj === 'object' && pageObj !== null && 'imageinfo' in pageObj && Array.isArray((pageObj as any).imageinfo)
-                  ? (pageObj as any).imageinfo[0]?.url
-                  : undefined;
-              if (imageInfo) imgUrl = imageInfo;
-            }
-          }
-        }
-        if (imgUrl) break;
-      } catch (e) {
-        // ignore et continue
+        const pageData = pageInfoRes.data?.query?.pages?.[page.pageid];
+        wikidataId = pageData?.pageprops?.wikibase_item || null;
       }
+    } catch (e) {
+      // ignore
     }
-    // Fallback: si aucune image trouvée, va chercher la première image du titre de la page Wikipedia via l'API
-    if (!imgUrl && pageUrl) {
+    // 3. Si Wikidata trouvé, récupère l'image officielle (P18)
+    if (wikidataId) {
       try {
-        // Récupère le nom du fichier image principal via l'API Wikimedia
-        const title = decodeURIComponent(pageUrl.split('/wiki/')[1]);
-        const imageListRes = await axios.get('https://en.wikipedia.org/w/api.php', {
+        const wikidataRes = await axios.get(`https://www.wikidata.org/w/api.php`, {
           params: {
-            action: 'query',
-            prop: 'images',
-            titles: title,
+            action: 'wbgetclaims',
+            entity: wikidataId,
+            property: 'P18',
             format: 'json',
             origin: '*',
           },
         });
-        const pages = imageListRes.data?.query?.pages;
-        const pageObj = Object.values(pages)[0];
-        const images = pageObj && typeof pageObj === 'object' && 'images' in pageObj ? (pageObj as any).images : undefined;
-        if (images && images.length > 0) {
-          // Prend la première image qui n'est pas un logo ou une icône
-          const imageTitle = images.find((img: any) => !img.title.toLowerCase().includes('logo') && !img.title.toLowerCase().includes('icon'))?.title;
-          if (imageTitle) {
-            // Récupère l'URL de l'image
-            const imageInfoRes = await axios.get('https://en.wikipedia.org/w/api.php', {
-              params: {
-                action: 'query',
-                titles: imageTitle,
-                prop: 'imageinfo',
-                iiprop: 'url',
-                format: 'json',
-                origin: '*',
-              },
-            });
-            const pages2 = imageInfoRes.data?.query?.pages;
-            const pageObj2 = Object.values(pages2)[0];
-            const imageInfo =
-              pageObj2 && typeof pageObj2 === 'object' && pageObj2 !== null && 'imageinfo' in pageObj2 && Array.isArray((pageObj2 as any).imageinfo)
-                ? (pageObj2 as any).imageinfo[0]?.url
-                : undefined;
-            if (imageInfo && imageInfo.startsWith('https://upload.wikimedia.org/')) imgUrl = imageInfo;
-          }
+        const claims = wikidataRes.data?.claims?.P18;
+        if (claims && claims.length > 0) {
+          // P18 = nom du fichier image sur Wikimedia Commons
+          const fileName = claims[0].mainsnak.datavalue.value;
+          // Transforme le nom en URL
+          // https://commons.wikimedia.org/wiki/Special:FilePath/{fileName}
+          imgUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
         }
       } catch (e) {
         // ignore
       }
+    }
+    // 4. Fallback : drapeau si aucune image
+    if (!imgUrl) {
+      imgUrl = flagUrl;
     }
     cityImageCache.current[cacheKey] = imgUrl;
     setCityImageUrl(imgUrl);
@@ -405,7 +343,8 @@ export default function CityDetailScreen() {
     setPrevHasBeenThere(false); // Évite l'animation
   };
 
-  const flagUrl = `https://flagcdn.com/w80/${
+  // Flag haute résolution (320px)
+  const flagUrl = `https://flagcdn.com/w320/${
     countryCode
       ? (Array.isArray(countryCode) ? countryCode[0] : countryCode).toLowerCase()
       : country
@@ -413,155 +352,174 @@ export default function CityDetailScreen() {
         : ''
   }.png`;
 
+  // Loader minimal
+  const [showLoader, setShowLoader] = useState(true);
+  useEffect(() => {
+    if (isLoadingImage) {
+      setShowLoader(true);
+      const timer = setTimeout(() => {
+        setShowLoader(false);
+      }, 300); // 300ms max
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(false);
+    }
+  }, [isLoadingImage]);
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: headerColor }]}>
-        {/* Header avec bouton retour et drapeau */}
-        <View style={[styles.header, { backgroundColor: headerColor }]}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
-          </TouchableOpacity>
-          <Image source={{ uri: flagUrl }} style={[styles.headerFlag, { width: 40, height: 28 }]} />
+      {showLoader ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: headerColor }}>
+          <ActivityIndicator size="large" color="#2051A4" />
         </View>
-
-        {/* Image de la ville */}
-        <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
-          {isLoadingImage ? (
-            <Text style={{ color: textColor, fontStyle: 'italic', opacity: 0.7 }}>Loading image...</Text>
-          ) : cityImageUrl ? (
-            <Image source={{ uri: cityImageUrl }} style={{ width: '90%', height: 180, borderRadius: 16, resizeMode: 'cover' }} />
-          ) : (
-            <Image source={require('../assets/images/placeholder.png')} style={{ width: '90%', height: 180, borderRadius: 16, resizeMode: 'cover', opacity: 0.5 }} />
-          )}
-        </View>
-
-        <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
-          {/* Nom de la ville */}
-          <View style={styles.cityHeader}>
-            <Text style={[styles.cityName, { color: textColor }]}>{city}</Text>
-            <Text style={[styles.countryName, { color: textColor }]}> 
-              {country && (country as string).length <= 3
-                ? getCountryName(country as string)
-                : country}
-            </Text>
-            {population && (
-              <Text style={[styles.population, { color: textColor }]}> 
-                Population: {population}
-              </Text>
-            )}
-          </View>
-
-          {/* Votre note */}
-          <View style={styles.userRatingSection}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Votre note</Text>
-            <View style={styles.userRatingContainer}>
-              {/* Système de rating avec étoiles extra larges */}
-              <View style={styles.starsWrapper}>
-                <StarRating 
-                  rating={userRating} 
-                  onRatingChange={handleRatingChange}
-                  size="large"
-                  color="#f5c518"
-                  showRating={false}
-                />
-              </View>
-              <Text style={[styles.currentRating, { color: textColor }]}> 
-                {userRating > 0 ? `${userRating.toFixed(1)}/5` : 'Pas encore noté'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Boutons d'action */}
-          <View style={styles.actions}>
-            {/* Ligne des boutons de notation */}
-            {userRating > 0 && (
-              <View style={styles.actionRow}>
-                <TouchableOpacity 
-                  style={[styles.clearButton, { borderColor }]}
-                  onPress={handleDelete}
-                >
-                  <Text style={[styles.clearButtonText, { color: textColor }]}> 
-                    Delete
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.actionButton, { backgroundColor: mainBlue }]}
-                  onPress={handleSubmitRating}
-                >
-                  <Text style={styles.rateButtonText}>
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Bouton I have been there en dessous */}
+      ) : (
+        <View style={[styles.container, { backgroundColor: headerColor }]}> 
+          {/* Header avec bouton retour et drapeau */}
+          <View style={[styles.header, { backgroundColor: headerColor }]}> 
             <TouchableOpacity 
-              style={[
-                styles.visitedButtonFullWidth,
-                { borderColor: mainBlue },
-                hasBeenThere && { backgroundColor: mainBlue }
-              ]}
-              onPress={toggleHasBeenThere}
+              style={styles.backButton}
+              onPress={() => router.back()}
             >
-              <View style={styles.visitedButtonContainer}>
-                <Animated.View style={[
-                  styles.curtainEffect,
-                  {
-                    backgroundColor: mainBlue,
-                    width: curtainAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
-                    }),
-                  }
-                ]} />
-                <View style={styles.visitedButtonContent}>
-                  <Text style={[
-                    styles.visitedButtonTextNew, 
-                    hasBeenThere && styles.visitedButtonTextNewActive
-                  ]}>
-                    I have been there
-                  </Text>
-                  {hasBeenThere && (
-                    <Text style={styles.checkMarkNew}>✓</Text>
-                  )}
-                </View>
-              </View>
+              <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
             </TouchableOpacity>
+            <Image source={{ uri: flagUrl }} style={[styles.headerFlag, { width: 40, height: 28 }]} />
           </View>
 
-          {/* Section Average rating */}
-          {globalAverageRating && (
-            <View style={styles.averageRatingSection}>
-              <Text style={[styles.averageRatingTitle, { color: textColor }]}>Average rating</Text>
-              <View style={styles.averageRatingContainer}>
-                <View style={styles.averageStarsWrapper}>
+          {/* Image de la ville ou drapeau */}
+          <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
+            {cityImageUrl && cityImageUrl !== require('../assets/images/placeholder.png') && (
+              <Image
+                source={{ uri: cityImageUrl }}
+                style={{ width: '90%', height: 180, borderRadius: 16, resizeMode: 'cover' }}
+              />
+            )}
+          </View>
+
+          <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
+            {/* Nom de la ville */}
+            <View style={styles.cityHeader}>
+              <Text style={[styles.cityName, { color: textColor }]}>{city}</Text>
+              <Text style={[styles.countryName, { color: textColor }]}> 
+                {country && (country as string).length <= 3
+                  ? getCountryName(country as string)
+                  : country}
+              </Text>
+              {population && (
+                <Text style={[styles.population, { color: textColor }]}> 
+                  Population: {population}
+                </Text>
+              )}
+            </View>
+
+            {/* Votre note */}
+            <View style={styles.userRatingSection}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Votre note</Text>
+              <View style={styles.userRatingContainer}>
+                {/* Système de rating avec étoiles extra larges */}
+                <View style={styles.starsWrapper}>
                   <StarRating 
-                    rating={globalAverageRating} 
-                    onRatingChange={() => {}} // Read-only
-                    size="medium"
+                    rating={userRating} 
+                    onRatingChange={handleRatingChange}
+                    size="large"
                     color="#f5c518"
                     showRating={false}
                   />
                 </View>
-                <Text style={[styles.averageRatingText, { color: textColor }]}> 
-                  {globalAverageRating.toFixed(1)}/5
+                <Text style={[styles.currentRating, { color: textColor }]}> 
+                  {userRating > 0 ? `${userRating.toFixed(1)}/5` : 'Pas encore noté'}
                 </Text>
-                {isLoadingAverage && (
-                  <Text style={[styles.loadingText, { color: textColor }]}> 
-                    Calculating...
-                  </Text>
-                )}
               </View>
             </View>
-          )}
-        </ScrollView>
-      </View>
+
+            {/* Boutons d'action */}
+            <View style={styles.actions}>
+              {/* Ligne des boutons de notation */}
+              {userRating > 0 && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity 
+                    style={[styles.clearButton, { borderColor }]}
+                    onPress={handleDelete}
+                  >
+                    <Text style={[styles.clearButtonText, { color: textColor }]}> 
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, { backgroundColor: mainBlue }]}
+                    onPress={handleSubmitRating}
+                  >
+                    <Text style={styles.rateButtonText}>
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Bouton I have been there en dessous */}
+              <TouchableOpacity 
+                style={[
+                  styles.visitedButtonFullWidth,
+                  { borderColor: mainBlue },
+                  hasBeenThere && { backgroundColor: mainBlue }
+                ]}
+                onPress={toggleHasBeenThere}
+              >
+                <View style={styles.visitedButtonContainer}>
+                  <Animated.View style={[
+                    styles.curtainEffect,
+                    {
+                      backgroundColor: mainBlue,
+                      width: curtainAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      }),
+                    }
+                  ]} />
+                  <View style={styles.visitedButtonContent}>
+                    <Text style={[
+                      styles.visitedButtonTextNew, 
+                      hasBeenThere && styles.visitedButtonTextNewActive
+                    ]}>
+                      I have been there
+                    </Text>
+                    {hasBeenThere && (
+                      <Text style={styles.checkMarkNew}>✓</Text>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Section Average rating */}
+            {globalAverageRating && (
+              <View style={styles.averageRatingSection}>
+                <Text style={[styles.averageRatingTitle, { color: textColor }]}>Average rating</Text>
+                <View style={styles.averageRatingContainer}>
+                  <View style={styles.averageStarsWrapper}>
+                    <StarRating 
+                      rating={globalAverageRating} 
+                      onRatingChange={() => {}} // Read-only
+                      size="medium"
+                      color="#f5c518"
+                      showRating={false}
+                    />
+                  </View>
+                  <Text style={[styles.averageRatingText, { color: textColor }]}> 
+                    {globalAverageRating.toFixed(1)}/5
+                  </Text>
+                  {isLoadingAverage && (
+                    <Text style={[styles.loadingText, { color: textColor }]}> 
+                      Calculating...
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
     </>
   );
 }
