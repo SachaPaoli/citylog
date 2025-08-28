@@ -118,16 +118,32 @@ export default function AddCityScreen() {
   const { posts: allPosts = [] } = require('../../hooks/usePosts').usePosts?.() || {};
   // ...existing code...
   // Helper: get posts for a city (replace with your real data source)
-  function getPostsForCity(city: any): any[] {
-    // Filter posts by city name and country code
-    if (!city || !city.name || !city.countryCode) return [];
-    return allPosts.filter((post: any) => {
-      // Adjust post.city and post.country to match your data
-      const cityMatch = post.city?.toLowerCase() === city.name?.toLowerCase();
-      const countryMatch = post.country?.toUpperCase() === city.countryCode?.toUpperCase();
-      return cityMatch && countryMatch;
+  function normalize(str: string) {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\u0300-\u036f/g, "") // Remove accents
+      .trim();
+  }
+
+  function getPostsForCity(cityObj: any) {
+    if (!cityObj) return [];
+    const cityName = cityObj.city || cityObj.name || "";
+    // Try to match country using country, countryName, or countryCode
+    let countryName = cityObj.country || cityObj.countryName || cityObj.countryCode || "";
+    // If countryCode is used, convert to full country name if possible
+    if (countryName.length === 2 && countryNamesEn[countryName]) {
+      countryName = countryNamesEn[countryName];
+    }
+    return allPosts.filter((post: { city?: string; country?: string; }) => {
+      const postCity = post.city || "";
+      const postCountry = post.country || "";
+      return normalize(postCity) === normalize(cityName) &&
+             normalize(postCountry) === normalize(countryName);
     });
   }
+
   // Modal state for viewing posts and rating
   const [showCityModal, setShowCityModal] = useState(false);
   const [modalCity, setModalCity] = useState<any>(null);
@@ -656,6 +672,11 @@ export default function AddCityScreen() {
               } else if (hasPosts) {
                 setModalCity(city);
                 setShowCityModal(true);
+                // Debug: log posts for this city
+                setTimeout(() => {
+                  console.log('allPosts:', allPosts);
+                  console.log('getPostsForCity(modalCity):', getPostsForCity(city));
+                }, 500);
               }
             };
             return (
@@ -718,9 +739,31 @@ export default function AddCityScreen() {
                 <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>×</Text>
               </TouchableOpacity>
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* City rating card if present */}
-                {modalCity.averageRating !== null && modalCity.manualCount > 0 && (
-                  <View style={styles.cityCard}>
+                {/* Debug logs for modalCity and posts */}
+                {(() => {
+                  console.log('MODAL DEBUG: modalCity:', modalCity);
+                  console.log('MODAL DEBUG: allPosts:', allPosts);
+                  const postsForCity = getPostsForCity(modalCity);
+                  console.log('MODAL DEBUG: getPostsForCity(modalCity):', postsForCity);
+                  return null;
+                })()}
+                {/* Show manual rating card in modal only if manualCount > 0 and there is at least one post for the city */}
+                {modalCity.manualCount > 0 && modalCity.postCount > 0 && Array.isArray(modalCity.ratings) && modalCity.ratings.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.cityCard}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setShowCityModal(false);
+                      require('expo-router').router.push({
+                        pathname: '/trips/create',
+                        params: {
+                          cityName: modalCity.name,
+                          countryName: countryCodeToName[modalCity.countryCode] || modalCity.countryCode,
+                          rating: typeof modalCity.ratings[0] === 'number' ? modalCity.ratings[0] : ''
+                        }
+                      });
+                    }}
+                  >
                     <Image
                       source={{
                         uri: modalCity.countryCode ? `https://flagcdn.com/w80/${modalCity.countryCode.toLowerCase()}.png` : undefined
@@ -730,12 +773,12 @@ export default function AddCityScreen() {
                     />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cityName}>{modalCity.name}, {countryCodeToName[modalCity.countryCode] || modalCity.countryCode}</Text>
-                      <Text style={styles.cityRating}>★ {modalCity.averageRating !== null ? modalCity.averageRating.toFixed(1).replace('.', ',') : ''}</Text>
+                      <Text style={styles.cityRating}>★ {typeof modalCity.ratings[0] === 'number' ? modalCity.ratings[0].toFixed(1).replace('.', ',') : ''}</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 {/* TravelPostCards for each post */}
-                {getPostsForCity(modalCity).length > 0 && getPostsForCity(modalCity).map((post, i) => (
+                {getPostsForCity(modalCity).length > 0 && getPostsForCity(modalCity).map((post: any, i: number) => (
                   <View key={post.id || i} style={{ marginVertical: 12 }}>
                     <TravelPostCard post={post as any} />
                   </View>
