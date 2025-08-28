@@ -1,11 +1,11 @@
 import { StarRating } from '@/components/StarRating';
+import { db, auth } from '../../config/firebase';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { InteractionManager } from 'react-native';
 import {
-  Image,
-  Modal,
+  Image, InteractionManager, Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,20 +15,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// WavyArrow component (flèche ondulée avec inputs)
-const WavyArrow = () => {
-  const [duration, setDuration] = useState('');
-  const [timeUnit, setTimeUnit] = useState('minutes');
-  const [selectedTransport, setSelectedTransport] = useState('⬜');
+// WavyArrow refactor: controlled inputs via props
+const WavyArrow = ({
+  segment,
+  onChange,
+}: {
+  segment: SegmentInput;
+  onChange: (newSegment: SegmentInput) => void;
+}) => {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
-  
+
   const timeUnits = [
     { label: 'minutes', value: 'minutes' },
     { label: 'hours', value: 'hours' },
     { label: 'days', value: 'days' }
   ];
-  
+
   const transportModes = [
     { label: '🚗', value: 'car', name: 'Voiture', icon: '⬜' },
     { label: '🚲', value: 'bike', name: 'Vélo', icon: '○' },
@@ -39,19 +42,8 @@ const WavyArrow = () => {
     { label: '✈️', value: 'plane', name: 'Avion', icon: '✈' }
   ];
 
-  const selectTimeUnit = (unit: string) => {
-    setTimeUnit(unit);
-    setShowTimeModal(false);
-  };
-
-  const selectTransport = (transport: string) => {
-    setSelectedTransport(transport);
-    setShowTransportModal(false);
-  };
-
   return (
     <View style={styles.wavyArrowContainer}>
-      {/* Première partie de la flèche (un segment retiré) */}
       <View style={styles.wavyPath}>
         <View style={[styles.arrowSegment, { transform: [{ rotate: '10deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-15deg' }] }]} />
@@ -60,39 +52,32 @@ const WavyArrow = () => {
         <View style={[styles.arrowSegment, { transform: [{ rotate: '15deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-25deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '12deg' }] }]} />
-        {/* Un segment retiré */}
       </View>
-
-      {/* Container pour les 3 inputs */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.durationInput}
           placeholder="Durée"
-          value={duration}
-          onChangeText={setDuration}
+          value={segment.duration}
+          onChangeText={val => onChange({ ...segment, duration: val })}
           keyboardType="numeric"
         />
-        
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.selectButton}
           onPress={() => setShowTimeModal(true)}
         >
-          <Text style={styles.selectText}>{timeUnit}</Text>
+          <Text style={styles.selectText}>{segment.timeUnit}</Text>
           <Text style={styles.selectArrow}>▼</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.selectButton}
           onPress={() => setShowTransportModal(true)}
         >
           <Text style={styles.selectText}>
-            {transportModes.find(mode => mode.icon === selectedTransport)?.icon || '⬜'}
+            {transportModes.find(mode => mode.icon === segment.transport)?.icon || '⬜'}
           </Text>
           <Text style={styles.selectArrow}>▼</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Deuxième partie de la flèche (un autre segment retiré) */}
       <View style={styles.wavyPath}>
         <View style={[styles.arrowSegment, { transform: [{ rotate: '18deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-12deg' }] }]} />
@@ -101,22 +86,18 @@ const WavyArrow = () => {
         <View style={[styles.arrowSegment, { transform: [{ rotate: '14deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '-20deg' }] }]} />
         <View style={[styles.arrowSegment, { transform: [{ rotate: '10deg' }] }]} />
-        {/* Un autre segment retiré */}
       </View>
-
-      {/* Pointe de la flèche */}
       <View style={styles.arrowHead}>
         <Text style={styles.arrowHeadText}>▼</Text>
       </View>
-
-      {/* Modal pour sélection de l'unité de temps */}
+      {/* Modals */}
       <Modal
         visible={showTimeModal}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowTimeModal(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           onPress={() => setShowTimeModal(false)}
         >
@@ -127,9 +108,12 @@ const WavyArrow = () => {
                 key={unit.value}
                 style={[
                   styles.modalOption,
-                  timeUnit === unit.value && styles.modalOptionSelected
+                  segment.timeUnit === unit.value && styles.modalOptionSelected
                 ]}
-                onPress={() => selectTimeUnit(unit.value)}
+                onPress={() => {
+                  onChange({ ...segment, timeUnit: unit.value });
+                  setShowTimeModal(false);
+                }}
               >
                 <Text style={styles.modalOptionText}>{unit.label}</Text>
               </TouchableOpacity>
@@ -137,15 +121,13 @@ const WavyArrow = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      {/* Modal pour sélection du transport */}
       <Modal
         visible={showTransportModal}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowTransportModal(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           onPress={() => setShowTransportModal(false)}
         >
@@ -156,9 +138,12 @@ const WavyArrow = () => {
                 key={mode.value}
                 style={[
                   styles.modalOption,
-                  selectedTransport === mode.icon && styles.modalOptionSelected
+                  segment.transport === mode.icon && styles.modalOptionSelected
                 ]}
-                onPress={() => selectTransport(mode.icon)}
+                onPress={() => {
+                  onChange({ ...segment, transport: mode.icon });
+                  setShowTransportModal(false);
+                }}
               >
                 <Text style={styles.modalOptionText}>
                   {mode.icon} {mode.name}
@@ -171,6 +156,12 @@ const WavyArrow = () => {
     </View>
   );
 };
+
+interface SegmentInput {
+  duration: string;
+  timeUnit: string;
+  transport: string;
+}
 
 interface LocalTrip {
   id: string;
@@ -188,8 +179,90 @@ interface LocalTrip {
 }
 
 export default function CreateTripScreen() {
+  const [doneTripName, setDoneTripName] = useState('');
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [localTrips, setLocalTrips] = useState<LocalTrip[]>([]);
+  const [segments, setSegments] = useState<SegmentInput[]>([]);
+  // Save segments to AsyncStorage whenever they or localTrips change
+  React.useEffect(() => {
+    AsyncStorage.setItem('local_segments', JSON.stringify(segments));
+  }, [segments, localTrips]);
+
+  // Always keep segments in sync with localTrips.length - 1
+  React.useEffect(() => {
+    const needed = Math.max(0, localTrips.length - 1);
+    if (segments.length !== needed) {
+      // Fill with previous values or defaults
+      const fixed = Array.from({ length: needed }, (_, i) =>
+        segments[i] || { duration: '', timeUnit: 'minutes', transport: '⬜' }
+      );
+      setSegments(fixed);
+    }
+  }, [localTrips, segments]);
+  const prevTripCountRef = React.useRef<number>(0);
+  const [posting, setPosting] = useState(false);
+  // Log à chaque render pour debug
+  console.log('[render] segments:', segments, 'localTrips:', localTrips);
+
+  // Fonction pour poster le trip dans Firestore
+  const postTripToFirestore = async (trip: LocalTrip) => {
+    try {
+      setPosting(true);
+      const user = auth.currentUser;
+      if (!user) throw new Error('Utilisateur non connecté');
+      // Crée le trip principal
+      const tripDoc = await addDoc(collection(db, 'trips'), {
+        ...trip,
+        tripName: doneTripName,
+        userId: user.uid,
+        userEmail: user.email,
+        createdAt: Timestamp.now(),
+      });
+
+      // Ajoute les villes visitées (avec rating, inputs de trajet) dans une sous-collection 'cities'
+      if (localTrips.length > 0) {
+        for (let i = 0; i < localTrips.length; i++) {
+          const t = localTrips[i];
+          // Segment info: for segment i-1 (between city i-1 and i)
+          let duration = '';
+          let timeUnit = '';
+          let transport = '';
+          if (i > 0 && segments[i - 1]) {
+            duration = segments[i - 1].duration;
+            timeUnit = segments[i - 1].timeUnit;
+            transport = segments[i - 1].transport;
+          }
+          await addDoc(collection(db, 'trips', tripDoc.id, 'cities'), {
+            city: t.city,
+            country: t.country,
+            rating: t.rating,
+            coverImage: t.coverImage || '',
+            description: t.description || '',
+            createdAt: t.createdAt || Date.now(),
+            duration,
+            timeUnit,
+            transport,
+            order: i,
+          });
+        }
+      }
+
+      // Ajoute les posts liés au trip dans une sous-collection 'posts'
+      if (trip.activitiesItems && Array.isArray(trip.activitiesItems)) {
+        for (const post of trip.activitiesItems) {
+          await addDoc(collection(db, 'trips', tripDoc.id, 'posts'), {
+            ...post,
+            createdAt: Date.now(),
+          });
+        }
+      }
+
+      setPosting(false);
+    } catch (e) {
+      setPosting(false);
+      console.error('Erreur Firestore trip:', e);
+    }
+  };
   const [showDoneModal, setShowDoneModal] = useState(false);
   const [doneCoverImage, setDoneCoverImage] = useState<string | null>(null);
   const [doneDescription, setDoneDescription] = useState('');
@@ -206,7 +279,6 @@ export default function CreateTripScreen() {
     }
   }, [localTrips]);
 
-  // Scroll to last trip when localTrips changes
   React.useEffect(() => {
     if (localTrips.length > 0 && tripsScrollRef.current) {
       setTimeout(() => {
@@ -277,9 +349,25 @@ export default function CreateTripScreen() {
         }
       }
 
+
       setLocalTrips(trips);
 
-      // Scroll to end if a new trip was added
+        // Always ensure segments array matches trips.length - 1
+        const needed = Math.max(0, trips.length - 1);
+        let loadedSegments: SegmentInput[] = [];
+        try {
+          const storedSegments = await AsyncStorage.getItem('local_segments');
+          loadedSegments = storedSegments ? JSON.parse(storedSegments) : [];
+        } catch (e) {
+          loadedSegments = [];
+        }
+        // Fill missing segments with defaults
+        const segmentsFixed = Array.from({ length: needed }, (_, i) =>
+          loadedSegments[i] || { duration: '', timeUnit: 'minutes', transport: '⬜' }
+        );
+        setSegments(segmentsFixed);
+        prevTripCountRef.current = trips.length;
+
       if (added && tripsScrollRef.current) {
         setTimeout(() => {
           tripsScrollRef.current?.scrollToEnd({ animated: true });
@@ -288,22 +376,31 @@ export default function CreateTripScreen() {
     } catch (error) {
       console.error('❌ Erreur chargement trips:', error);
       setLocalTrips([]);
+      setSegments([]);
     }
   }, [params.cityName, params.countryName, params.rating, params.post]);
 
   // Supprimer un trip local
   const deleteTrip = useCallback(async (tripId: string) => {
     try {
+      const idx = localTrips.findIndex(trip => trip.id === tripId);
       const updatedTrips = localTrips.filter(trip => trip.id !== tripId);
       await AsyncStorage.setItem('local_trips', JSON.stringify(updatedTrips));
       setLocalTrips(updatedTrips);
+      // Recalculate segments to match new trips length
+      const needed = Math.max(0, updatedTrips.length - 1);
+      setSegments(prev => {
+        const fixed = Array.from({ length: needed }, (_, i) =>
+          prev[i] || { duration: '', timeUnit: 'minutes', transport: '⬜' }
+        );
+        return fixed;
+      });
       console.log('🗑️ Trip supprimé:', tripId);
     } catch (error) {
       console.error('❌ Erreur suppression trip:', error);
     }
   }, [localTrips]);
 
-  // Recharger les trips chaque fois qu'on revient sur cette page
   useFocusEffect(
     useCallback(() => {
       loadLocalTrips();
@@ -329,57 +426,76 @@ export default function CreateTripScreen() {
     }
   };
 
+  // Ajoute l'appel Firestore sur le bouton Post/Done
+  const handlePostTrip = async () => {
+    if (!doneTripName) return;
+    const trip: LocalTrip = {
+      id: `trip-${Date.now()}`,
+      city: '',
+      country: '',
+      coverImage: doneCoverImage || '',
+      rating: averageRating,
+      description: doneDescription,
+      stayingItems: [],
+      restaurantItems: [],
+      activitiesItems: [],
+      otherItems: [],
+      isPublic: doneIsPublic,
+      createdAt: Date.now(),
+    };
+    await postTripToFirestore(trip);
+  };
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: '#181C24' }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
             <Text style={[styles.backButtonText, { color: '#fff' }]}>←</Text>
           </TouchableOpacity>
-          
           <Text style={[styles.headerTitle, { color: '#fff' }]}>
             Nouveau Trip
           </Text>
-          
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={() => setShowHeaderMenu(true)} style={styles.headerMenuButton}>
               <Text style={styles.headerMenuDots}>⋯</Text>
             </TouchableOpacity>
           </View>
-      {/* Header menu modal */}
-      <Modal
-        visible={showHeaderMenu}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowHeaderMenu(false)}
-      >
-        <TouchableOpacity style={styles.menuOverlayCentered} activeOpacity={1} onPress={() => setShowHeaderMenu(false)}>
-          <View style={styles.menuContentCentered}>
-            <TouchableOpacity style={styles.menuItemCentered} onPress={() => { setShowHeaderMenu(false); router.back(); }}>
-              <Text style={styles.menuItemTextCentered}>Back</Text>
+          {/* Header menu modal */}
+          <Modal
+            visible={showHeaderMenu}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowHeaderMenu(false)}
+          >
+            <TouchableOpacity style={styles.menuOverlayCentered} activeOpacity={1} onPress={() => setShowHeaderMenu(false)}>
+              <View style={styles.menuContentCentered}>
+                <TouchableOpacity style={styles.menuItemCentered} onPress={() => { setShowHeaderMenu(false); router.back(); }}>
+                  <Text style={styles.menuItemTextCentered}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.menuItemCentered, { backgroundColor: '#ff4444' }]} onPress={async () => {
+                  setShowHeaderMenu(false);
+                  await AsyncStorage.removeItem('local_trips');
+                  setLocalTrips([]);
+                  setSegments([]);
+                }}>
+                  <Text style={[styles.menuItemTextCentered, { color: '#fff', fontWeight: 'bold' }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.menuItemCentered, { backgroundColor: '#ff4444' }]} onPress={async () => {
-              setShowHeaderMenu(false);
-              await AsyncStorage.removeItem('local_trips');
-              setLocalTrips([]);
-            }}>
-              <Text style={[styles.menuItemTextCentered, { color: '#fff', fontWeight: 'bold' }]}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+          </Modal>
         </View>
 
         {/* Liste des trips existants */}
         {localTrips.length > 0 && (
-          <ScrollView 
+          <ScrollView
             ref={tripsScrollRef}
-            style={[styles.tripsContainer, { marginBottom: 0 }]} 
+            style={[styles.tripsContainer, { marginBottom: 0 }]}
             contentContainerStyle={{ paddingBottom: 0 }}
             showsVerticalScrollIndicator={false}
           >
@@ -392,7 +508,6 @@ export default function CreateTripScreen() {
               if (trip.country && trip.country.length === 2) {
                 countryCode = trip.country.toLowerCase();
               } else {
-                // Try to map country name to code using ISO table
                 const countryNamesEn = {
                   AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AS: 'American Samoa', AD: 'Andorra', AO: 'Angola', AI: 'Anguilla', AQ: 'Antarctica', AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh', BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin', BM: 'Bermuda', BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia and Herzegovina', BW: 'Botswana', BV: 'Bouvet Island', BR: 'Brazil', IO: 'British Indian Ocean Territory', BN: 'Brunei Darussalam', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia', CM: 'Cameroon', CA: 'Canada', CV: 'Cape Verde', KY: 'Cayman Islands', CF: 'Central African Republic', TD: 'Chad', CL: 'Chile', CN: 'China', CX: 'Christmas Island', CC: 'Cocos (Keeling) Islands', CO: 'Colombia', KM: 'Comoros', CG: 'Congo', CD: 'Congo, the Democratic Republic of the', CK: 'Cook Islands', CR: 'Costa Rica', CI: "Cote d'Ivoire", HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus', CZ: 'Czech Republic', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic', EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea', EE: 'Estonia', ET: 'Ethiopia', FK: 'Falkland Islands (Malvinas)', FO: 'Faroe Islands', FJ: 'Fiji', FI: 'Finland', FR: 'France', GF: 'French Guiana', PF: 'French Polynesia', TF: 'French Southern Territories', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany', GH: 'Ghana', GI: 'Gibraltar', GR: 'Greece', GL: 'Greenland', GD: 'Grenada', GP: 'Guadeloupe', GU: 'Guam', GT: 'Guatemala', GG: 'Guernsey', GN: 'Guinea', GW: 'Guinea-Bissau', GY: 'Guyana', HT: 'Haiti', HM: 'Heard Island and McDonald Islands', VA: 'Holy See (Vatican City State)', HN: 'Honduras', HK: 'Hong Kong', HU: 'Hungary', IS: 'Iceland', IN: 'India', ID: 'Indonesia', IR: 'Iran, Islamic Republic of', IQ: 'Iraq', IE: 'Ireland', IM: 'Isle of Man', IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JE: 'Jersey', JO: 'Jordan', KZ: 'Kazakhstan', KE: 'Kenya', KI: 'Kiribati', KP: 'Korea, Democratic People\'s Republic of', KR: 'Korea, Republic of', KW: 'Kuwait', KG: 'Kyrgyzstan', LA: 'Lao People\'s Democratic Republic', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia', LY: 'Libyan Arab Jamahiriya', LI: 'Liechtenstein', LT: 'Lithuania', LU: 'Luxembourg', MO: 'Macao', MK: 'Macedonia, the Former Yugoslav Republic of', MG: 'Madagascar', MW: 'Malawi', MY: 'Malaysia', MV: 'Maldives', ML: 'Mali', MT: 'Malta', MH: 'Marshall Islands', MQ: 'Martinique', MR: 'Mauritania', MU: 'Mauritius', YT: 'Mayotte', MX: 'Mexico', FM: 'Micronesia, Federated States of', MD: 'Moldova, Republic of', MC: 'Monaco', MN: 'Mongolia', ME: 'Montenegro', MS: 'Montserrat', MA: 'Morocco', MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NR: 'Nauru', NP: 'Nepal', NL: 'Netherlands', AN: 'Netherlands Antilles', NC: 'New Caledonia', NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', NU: 'Niue', NF: 'Norfolk Island', MP: 'Northern Mariana Islands', NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PW: 'Palau', PS: 'Palestinian Territory, Occupied', PA: 'Panama', PG: 'Papua New Guinea', PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PN: 'Pitcairn', PL: 'Poland', PT: 'Portugal', PR: 'Puerto Rico', QA: 'Qatar', RE: 'Reunion', RO: 'Romania', RU: 'Russian Federation', RW: 'Rwanda', BL: 'Saint Barthelemy', SH: 'Saint Helena', KN: 'Saint Kitts and Nevis', LC: 'Saint Lucia', MF: 'Saint Martin', PM: 'Saint Pierre and Miquelon', VC: 'Saint Vincent and the Grenadines', WS: 'Samoa', SM: 'San Marino', ST: 'Sao Tome and Principe', SA: 'Saudi Arabia', SN: 'Senegal', RS: 'Serbia', SC: 'Seychelles', SL: 'Sierra Leone', SG: 'Singapore', SK: 'Slovakia', SI: 'Slovenia', SB: 'Solomon Islands', SO: 'Somalia', ZA: 'South Africa', GS: 'South Georgia and the South Sandwich Islands', ES: 'Spain', LK: 'Sri Lanka', SD: 'Sudan', SR: 'Suriname', SJ: 'Svalbard and Jan Mayen', SZ: 'Swaziland', SE: 'Sweden', CH: 'Switzerland', SY: 'Syrian Arab Republic', TW: 'Taiwan, Province of China', TJ: 'Tajikistan', TZ: 'Tanzania, United Republic of', TH: 'Thailand', TL: 'Timor-Leste', TG: 'Togo', TK: 'Tokelau', TO: 'Tonga', TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan', TC: 'Turks and Caicos Islands', TV: 'Tuvalu', UG: 'Uganda', UA: 'Ukraine', AE: 'United Arab Emirates', GB: 'United Kingdom', US: 'United States', UM: 'United States Minor Outlying Islands', UY: 'Uruguay', UZ: 'Uzbekistan', VU: 'Vanuatu', VE: 'Venezuela', VN: 'Viet Nam', VG: 'Virgin Islands, British', VI: 'Virgin Islands, U.S.', WF: 'Wallis and Futuna', EH: 'Western Sahara', YE: 'Yemen', ZM: 'Zambia', ZW: 'Zimbabwe', };
                 const nameToCode = Object.fromEntries(Object.entries(countryNamesEn).map(([code, name]) => [name, code]));
@@ -404,7 +519,6 @@ export default function CreateTripScreen() {
                 <View key={trip.id}>
                   {isSimpleVisited ? (
                     <View style={styles.cityCard}>
-                      {/* Flag */}
                       {countryCode ? (
                         <Image
                           source={{ uri: `https://flagcdn.com/w80/${countryCode}.png` }}
@@ -419,7 +533,7 @@ export default function CreateTripScreen() {
                     </View>
                   ) : (
                     <View style={styles.tripCard}>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={() => deleteTrip(trip.id)}
                       >
@@ -430,10 +544,10 @@ export default function CreateTripScreen() {
                         <Text style={[styles.tripCity, { color: '#fff' }]}>{trip.city}</Text>
                         <Text style={[styles.tripCountry, { color: '#888' }]}>{trip.country}</Text>
                         <View style={styles.tripRating}>
-                          <StarRating 
-                            rating={trip.rating} 
-                            readonly 
-                            size="small" 
+                          <StarRating
+                            rating={trip.rating}
+                            readonly
+                            size="small"
                             color="#f5c518"
                             showRating={true}
                           />
@@ -444,8 +558,19 @@ export default function CreateTripScreen() {
                       </View>
                     </View>
                   )}
-                  {/* Flèche ondulée après chaque trip */}
-                  <WavyArrow />
+                  {/* Flèche ondulée après chaque trip sauf le dernier */}
+                  {index < localTrips.length - 1 && Array.isArray(segments) && segments[index] && typeof segments[index].duration === 'string' && typeof segments[index].timeUnit === 'string' && typeof segments[index].transport === 'string' ? (
+                    <WavyArrow
+                      segment={segments[index]}
+                      onChange={seg => {
+                        setSegments(prev => {
+                          const newArr = [...prev];
+                          newArr[index] = seg;
+                          return newArr;
+                        });
+                      }}
+                    />
+                  ) : null}
                 </View>
               );
             })}
@@ -455,7 +580,7 @@ export default function CreateTripScreen() {
         {/* Bouton Add a city + Done button */}
         <View style={localTrips.length > 0 ? styles.addCityContainerWithTrips : styles.addCityContainer}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addCityButton}
               onPress={() => router.push('/trips/add-city' as any)}
             >
@@ -471,7 +596,7 @@ export default function CreateTripScreen() {
           </View>
         </View>
 
-        {/* Done Modal - styled like post_final.tsx, no city input, rating is average, public/private toggle, post button */}
+        {/* Done Modal */}
         <Modal
           visible={showDoneModal}
           animationType="slide"
@@ -487,6 +612,16 @@ export default function CreateTripScreen() {
               </View>
               <ScrollView style={styles.doneModalScroll} contentContainerStyle={{ paddingBottom: 40 }}>
                 <Text style={styles.doneModalTitle}>Trip Summary</Text>
+                {/* Trip Name Input */}
+                <View style={styles.tripNameSection}>
+                  <Text style={styles.tripNameLabel}>Name of the trip</Text>
+                  <TextInput
+                    style={styles.tripNameInput}
+                    placeholder="Enter trip name..."
+                    value={doneTripName}
+                    onChangeText={setDoneTripName}
+                  />
+                </View>
                 {/* Cover Image Section */}
                 <View style={styles.coverImageSection}>
                   <Text style={styles.coverImageLabel}>Cover Image</Text>
@@ -544,7 +679,17 @@ export default function CreateTripScreen() {
                 </View>
                 {/* Post Button */}
                 <View style={styles.modalButtonContainer}>
-                  <TouchableOpacity style={styles.modalPostButton} onPress={() => {}}>
+                  <TouchableOpacity
+                    style={styles.modalPostButton}
+                    onPress={async () => {
+                      await handlePostTrip();
+                      setShowDoneModal(false);
+                      setDoneTripName('');
+                      setDoneCoverImage(null);
+                      setDoneDescription('');
+                      setDoneIsPublic(true);
+                    }}
+                  >
                     <Text style={styles.modalPostButtonText}>Post trip</Text>
                   </TouchableOpacity>
                 </View>
@@ -557,7 +702,32 @@ export default function CreateTripScreen() {
   );
 }
 
+// ...styles unchanged...
+
 const styles = StyleSheet.create({
+  tripNameSection: {
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  tripNameLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+    color: '#fff',
+    fontWeight: '600',
+  },
+  tripNameInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    width: '100%',
+    maxWidth: 320,
+    textAlign: 'center',
+  },
   menuOverlayCentered: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.25)',
@@ -821,7 +991,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   doneModalContent: {
-    height: '75%',
+    height: '83.3333%', // 5/6 of the screen
     backgroundColor: '#181C24',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

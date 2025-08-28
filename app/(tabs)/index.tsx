@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { db } from '../../config/firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { TravelTripCard } from '../../components/TravelTripCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CityLogTitle } from '@/components/CityLogTitle';
@@ -11,6 +14,7 @@ import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function HomeScreen() {
+  const [trips, setTrips] = useState<any[]>([]);
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
@@ -21,6 +25,23 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'cities' | 'trips'>('cities');
   const router = useRouter();
+  const screenWidth = Dimensions.get('window').width;
+  const cardWidth = (screenWidth - 60) / 2;
+
+  useEffect(() => {
+    if (activeTab !== 'trips') return;
+    const fetchTrips = async () => {
+      try {
+        const q = query(collection(db, 'trips'), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        const tripsArr = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setTrips(tripsArr);
+      } catch (e) {
+        console.error('Erreur chargement trips Firestore:', e);
+      }
+    };
+    fetchTrips();
+  }, [activeTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -117,14 +138,23 @@ export default function HomeScreen() {
               </>
             )}
             {activeTab === 'trips' && (
-              <View style={styles.centerContent}>
-                <Text style={[styles.emptyText, { color: textColor }]}> 
-                  Gros trips à venir ! 🌍
-                </Text>
-                <Text style={[styles.emptySubtext, { color: textColor }]}> 
-                  Cette section affichera vos grands voyages créés depuis votre profil.
-                </Text>
-              </View>
+              trips.length === 0 ? (
+                <View style={styles.centerContent}>
+                  <Text style={[styles.emptyText, { color: textColor }]}>Aucun trip pour l'instant.</Text>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 10 }}>
+                  {trips.map((trip) => (
+                    <View key={trip.id} style={{ width: cardWidth, marginBottom: 18 }}>
+                      <TravelTripCard
+                        coverImage={trip.coverImage}
+                        tripName={trip.tripName || trip.city || ''}
+                        rating={trip.rating || 0}
+                      />
+                    </View>
+                  ))}
+                </View>
+              )
             )}
           </View>
         </ScrollView>
