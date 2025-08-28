@@ -1,17 +1,72 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
-import { db } from '../../config/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { TravelTripCard } from '../../components/TravelTripCard';
+import { ActivityIndicator, Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TravelTripCard } from '../../components/TravelTripCard';
+import { db } from '../../config/firebase';
 
 import { CityLogTitle } from '@/components/CityLogTitle';
 import { TravelPostCard } from '@/components/TravelPostCard';
 import { useFollowingPosts } from '@/hooks/useFollowingPosts';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import ReactMemo from 'react';
+import { Post } from '@/types/Post';
+
+// Onglet Cities
+interface CitiesTabProps {
+  followingPosts: Post[];
+  followingLoading: boolean;
+  textColor: string;
+}
+const CitiesTab: React.FC<CitiesTabProps> = React.memo(({ followingPosts, followingLoading, textColor }) => (
+  <>
+    {!followingLoading && followingPosts.length === 0 && (
+      <View style={styles.centerContent}>
+        <Text style={[styles.emptyText, { color: textColor }]}> 
+          Aucun voyage dans votre feed.
+        </Text>
+        <Text style={[styles.emptySubtext, { color: textColor }]}> 
+          Suivez des utilisateurs pour voir leurs voyages ! 👥
+        </Text>
+      </View>
+    )}
+    {followingPosts.map((post) => (
+      <TravelPostCard 
+        key={post.id} 
+        post={post}
+      />
+    ))}
+  </>
+));
+
+// Onglet Trips
+interface TripsTabProps {
+  trips: any[];
+  cardWidth: number;
+  textColor: string;
+}
+const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, cardWidth, textColor }) => (
+  trips.length === 0 ? (
+    <View style={styles.centerContent}>
+      <Text style={[styles.emptyText, { color: textColor }]}>Aucun trip pour l'instant.</Text>
+    </View>
+  ) : (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 10 }}>
+      {trips.map((trip) => (
+        <View key={trip.id} style={{ width: cardWidth, marginBottom: 18 }}>
+          <TravelTripCard
+            coverImage={trip.coverImage}
+            tripName={trip.tripName || trip.city || ''}
+            rating={trip.rating || 0}
+          />
+        </View>
+      ))}
+    </View>
+  )
+));
 
 export default function HomeScreen() {
   const [trips, setTrips] = useState<any[]>([]);
@@ -28,9 +83,31 @@ export default function HomeScreen() {
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = (screenWidth - 60) / 2;
 
+  // Précharge les trips dès le montage pour un switch instantané
   useEffect(() => {
-    if (activeTab !== 'trips') return;
+    let didCancel = false;
     const fetchTrips = async () => {
+      try {
+        const q = query(collection(db, 'trips'), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        const tripsArr = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (!didCancel) setTrips(tripsArr);
+      } catch (e) {
+        console.error('Erreur chargement trips Firestore:', e);
+      }
+    };
+    if (trips.length === 0) {
+      fetchTrips();
+    }
+    return () => { didCancel = true; };
+  }, [trips.length]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (activeTab === 'cities') {
+      await refreshFollowingPosts();
+    } else if (activeTab === 'trips') {
+      // Force reload trips from Firestore
       try {
         const q = query(collection(db, 'trips'), orderBy('createdAt', 'desc'));
         const snap = await getDocs(q);
@@ -39,16 +116,6 @@ export default function HomeScreen() {
       } catch (e) {
         console.error('Erreur chargement trips Firestore:', e);
       }
-    };
-    fetchTrips();
-  }, [activeTab]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    if (activeTab === 'cities') {
-      await refreshFollowingPosts();
-    } else {
-      await refreshPosts();
     }
     setRefreshing(false);
   };
@@ -117,44 +184,10 @@ export default function HomeScreen() {
           )}
           {/* Posts */}
           <View style={styles.postsContainer}>
-            {activeTab === 'cities' && (
-              <>
-                {!followingLoading && followingPosts.length === 0 && (
-                  <View style={styles.centerContent}>
-                    <Text style={[styles.emptyText, { color: textColor }]}> 
-                      Aucun voyage dans votre feed.
-                    </Text>
-                    <Text style={[styles.emptySubtext, { color: textColor }]}> 
-                      Suivez des utilisateurs pour voir leurs voyages ! 👥
-                    </Text>
-                  </View>
-                )}
-                {followingPosts.map((post) => (
-                  <TravelPostCard 
-                    key={post.id} 
-                    post={post}
-                  />
-                ))}
-              </>
-            )}
-            {activeTab === 'trips' && (
-              trips.length === 0 ? (
-                <View style={styles.centerContent}>
-                  <Text style={[styles.emptyText, { color: textColor }]}>Aucun trip pour l'instant.</Text>
-                </View>
-              ) : (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 10 }}>
-                  {trips.map((trip) => (
-                    <View key={trip.id} style={{ width: cardWidth, marginBottom: 18 }}>
-                      <TravelTripCard
-                        coverImage={trip.coverImage}
-                        tripName={trip.tripName || trip.city || ''}
-                        rating={trip.rating || 0}
-                      />
-                    </View>
-                  ))}
-                </View>
-              )
+            {activeTab === 'cities' ? (
+              <CitiesTab followingPosts={followingPosts} followingLoading={followingLoading} textColor={textColor} />
+            ) : (
+              <TripsTab trips={trips} cardWidth={cardWidth} textColor={textColor} />
             )}
           </View>
         </ScrollView>

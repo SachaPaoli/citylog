@@ -1,8 +1,7 @@
 import { StarRating } from '@/components/StarRating';
-import { db, auth } from '../../config/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack, useFocusEffect } from 'expo-router';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import React, { useCallback, useState } from 'react';
 import {
   Image, InteractionManager, Modal,
@@ -14,6 +13,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { auth, db } from '../../config/firebase';
 
 // WavyArrow refactor: controlled inputs via props
 const WavyArrow = ({
