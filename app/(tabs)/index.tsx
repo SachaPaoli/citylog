@@ -12,7 +12,6 @@ import { TravelPostCard } from '@/components/TravelPostCard';
 import { useFollowingPosts } from '@/hooks/useFollowingPosts';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import ReactMemo from 'react';
 import { Post } from '@/types/Post';
 
 // Onglet Cities
