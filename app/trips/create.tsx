@@ -2,6 +2,7 @@ import { StarRating } from '@/components/StarRating';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { InteractionManager } from 'react-native';
 import {
   Image,
   Modal,
@@ -187,8 +188,32 @@ interface LocalTrip {
 }
 
 export default function CreateTripScreen() {
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [localTrips, setLocalTrips] = useState<LocalTrip[]>([]);
+  const [showDoneModal, setShowDoneModal] = useState(false);
+  const [doneCoverImage, setDoneCoverImage] = useState<string | null>(null);
+  const [doneDescription, setDoneDescription] = useState('');
+  const [doneIsPublic, setDoneIsPublic] = useState(true);
   const beigeColor = '#E5C9A6';
+  const tripsScrollRef = React.useRef<ScrollView>(null);
+
+  // Scroll to last trip when localTrips changes
+  React.useEffect(() => {
+    if (localTrips.length > 0 && tripsScrollRef.current) {
+      InteractionManager.runAfterInteractions(() => {
+        tripsScrollRef.current?.scrollToEnd({ animated: true });
+      });
+    }
+  }, [localTrips]);
+
+  // Scroll to last trip when localTrips changes
+  React.useEffect(() => {
+    if (localTrips.length > 0 && tripsScrollRef.current) {
+      setTimeout(() => {
+        tripsScrollRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+    }
+  }, [localTrips]);
 
   // Get params from router
   const { useLocalSearchParams } = require('expo-router');
@@ -200,19 +225,45 @@ export default function CreateTripScreen() {
       const storedTrips = await AsyncStorage.getItem('local_trips');
       let trips = storedTrips ? JSON.parse(storedTrips) : [];
 
+      let added = false;
+
       // If params from visited city, add as new trip if not already present
       if (params.cityName && params.countryName && params.rating) {
-        const alreadyExists = trips.some(
-          (t: LocalTrip) => t.city === params.cityName && t.country === params.countryName
-        );
-        if (!alreadyExists) {
+        const newTrip: LocalTrip = {
+          id: `trip-${Date.now()}`,
+          city: params.cityName,
+          country: params.countryName,
+          coverImage: '',
+          rating: Number(params.rating),
+          description: `Voyage à ${params.cityName}, ${params.countryName}`,
+          stayingItems: [],
+          restaurantItems: [],
+          activitiesItems: [],
+          otherItems: [],
+          isPublic: true,
+          createdAt: Date.now(),
+        };
+        trips = [...trips, newTrip];
+        await AsyncStorage.setItem('local_trips', JSON.stringify(trips));
+        added = true;
+      }
+
+      // If params.post is present, add a trip from the TravelPostCard
+      if (params.post) {
+        let postObj = null;
+        try {
+          postObj = typeof params.post === 'string' ? JSON.parse(params.post) : params.post;
+        } catch (e) {
+          postObj = null;
+        }
+        if (postObj && postObj.city && postObj.country) {
           const newTrip: LocalTrip = {
             id: `trip-${Date.now()}`,
-            city: params.cityName,
-            country: params.countryName,
-            coverImage: '',
-            rating: Number(params.rating),
-            description: `Voyage à ${params.cityName}, ${params.countryName}`,
+            city: postObj.city,
+            country: postObj.country,
+            coverImage: postObj.photo || '',
+            rating: typeof postObj.rating === 'number' ? postObj.rating : 0,
+            description: postObj.description || `Voyage à ${postObj.city}, ${postObj.country}`,
             stayingItems: [],
             restaurantItems: [],
             activitiesItems: [],
@@ -222,14 +273,23 @@ export default function CreateTripScreen() {
           };
           trips = [...trips, newTrip];
           await AsyncStorage.setItem('local_trips', JSON.stringify(trips));
+          added = true;
         }
       }
+
       setLocalTrips(trips);
+
+      // Scroll to end if a new trip was added
+      if (added && tripsScrollRef.current) {
+        setTimeout(() => {
+          tripsScrollRef.current?.scrollToEnd({ animated: true });
+        }, 300);
+      }
     } catch (error) {
       console.error('❌ Erreur chargement trips:', error);
       setLocalTrips([]);
     }
-  }, [params.cityName, params.countryName, params.rating]);
+  }, [params.cityName, params.countryName, params.rating, params.post]);
 
   // Supprimer un trip local
   const deleteTrip = useCallback(async (tripId: string) => {
@@ -250,10 +310,29 @@ export default function CreateTripScreen() {
     }, [loadLocalTrips])
   );
 
+  // Calculate average rating of all trips
+  const averageRating = localTrips.length > 0
+    ? Math.round((localTrips.reduce((sum, trip) => sum + (typeof trip.rating === 'number' ? trip.rating : 0), 0) / localTrips.length) * 10) / 10
+    : 0;
+
+  // Pick cover image for Done modal
+  const pickDoneCoverImage = async () => {
+    const ImagePicker = require('expo-image-picker');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 1,
+    });
+    if (!result.canceled && result.assets && result.assets[0]) {
+      setDoneCoverImage(result.assets[0].uri);
+    }
+  };
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
         {/* Header */}
         <View style={[styles.header, { backgroundColor: '#181C24' }]}>
           <TouchableOpacity 
@@ -268,13 +347,38 @@ export default function CreateTripScreen() {
           </Text>
           
           <View style={styles.headerRight}>
-            {/* Espace pour équilibrer le header */}
+            <TouchableOpacity onPress={() => setShowHeaderMenu(true)} style={styles.headerMenuButton}>
+              <Text style={styles.headerMenuDots}>⋯</Text>
+            </TouchableOpacity>
           </View>
+      {/* Header menu modal */}
+      <Modal
+        visible={showHeaderMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowHeaderMenu(false)}
+      >
+        <TouchableOpacity style={styles.menuOverlayCentered} activeOpacity={1} onPress={() => setShowHeaderMenu(false)}>
+          <View style={styles.menuContentCentered}>
+            <TouchableOpacity style={styles.menuItemCentered} onPress={() => { setShowHeaderMenu(false); router.back(); }}>
+              <Text style={styles.menuItemTextCentered}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.menuItemCentered, { backgroundColor: '#ff4444' }]} onPress={async () => {
+              setShowHeaderMenu(false);
+              await AsyncStorage.removeItem('local_trips');
+              setLocalTrips([]);
+            }}>
+              <Text style={[styles.menuItemTextCentered, { color: '#fff', fontWeight: 'bold' }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
         </View>
 
         {/* Liste des trips existants */}
         {localTrips.length > 0 && (
           <ScrollView 
+            ref={tripsScrollRef}
             style={[styles.tripsContainer, { marginBottom: 0 }]} 
             contentContainerStyle={{ paddingBottom: 0 }}
             showsVerticalScrollIndicator={false}
@@ -348,22 +452,425 @@ export default function CreateTripScreen() {
           </ScrollView>
         )}
 
-        {/* Bouton Add a city (toujours affiché, mais sans flèche si aucun trip) */}
+        {/* Bouton Add a city + Done button */}
         <View style={localTrips.length > 0 ? styles.addCityContainerWithTrips : styles.addCityContainer}>
-          <TouchableOpacity 
-            style={styles.addCityButton}
-            onPress={() => router.push('/trips/add-city' as any)}
-          >
-            <Text style={styles.addCityIcon}>+</Text>
-            <Text style={styles.addCityText}>Add a city</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <TouchableOpacity 
+              style={styles.addCityButton}
+              onPress={() => router.push('/trips/add-city' as any)}
+            >
+              <Text style={styles.addCityIcon}>+</Text>
+              <Text style={styles.addCityText}>Add a city</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => setShowDoneModal(true)}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Done Modal - styled like post_final.tsx, no city input, rating is average, public/private toggle, post button */}
+        <Modal
+          visible={showDoneModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowDoneModal(false)}
+        >
+          <View style={styles.doneModalOverlay}>
+            <View style={styles.doneModalContent}>
+              <View style={styles.doneModalHeader}>
+                <TouchableOpacity onPress={() => setShowDoneModal(false)}>
+                  <Text style={styles.doneModalClose}>×</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.doneModalScroll} contentContainerStyle={{ paddingBottom: 40 }}>
+                <Text style={styles.doneModalTitle}>Trip Summary</Text>
+                {/* Cover Image Section */}
+                <View style={styles.coverImageSection}>
+                  <Text style={styles.coverImageLabel}>Cover Image</Text>
+                  {doneCoverImage ? (
+                    <View style={styles.coverImageContainer}>
+                      <Image source={{ uri: doneCoverImage }} style={styles.coverImage} />
+                      <TouchableOpacity
+                        style={styles.removeCoverImageButton}
+                        onPress={() => setDoneCoverImage(null)}
+                      >
+                        <Text style={styles.removeCoverImageText}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addCoverImageButton}
+                      onPress={pickDoneCoverImage}
+                    >
+                      <Text style={styles.addCoverImageText}>Add cover image</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {/* Description Section */}
+                <View style={styles.descriptionSection}>
+                  <Text style={styles.descriptionLabel}>Description</Text>
+                  <TextInput
+                    style={styles.descriptionTextArea}
+                    placeholder="Describe your trip..."
+                    value={doneDescription}
+                    onChangeText={setDoneDescription}
+                    multiline
+                  />
+                </View>
+                {/* Rating Section */}
+                <View style={styles.averageRatingContainer}>
+                  <Text style={styles.averageRatingLabel}>Average rating</Text>
+                  <Text style={styles.averageRating}>{averageRating} ★</Text>
+                </View>
+                {/* Public/Private Toggle */}
+                <View style={styles.privacySection}>
+                  <Text style={styles.privacyLabel}>Privacy</Text>
+                  <TouchableOpacity
+                    style={styles.privacyButton}
+                    onPress={() => setDoneIsPublic((prev) => !prev)}
+                  >
+                    <View style={styles.privacyButtonContainer}>
+                      <View style={[styles.privacyCurtainEffect, { width: doneIsPublic ? 0 : '100%' }]} />
+                      <View style={styles.privacyButtonContent}>
+                        <Text style={[styles.privacyButtonText, doneIsPublic && styles.privacyButtonTextActive]}>
+                          {doneIsPublic ? 'Public' : 'Private'}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {/* Post Button */}
+                <View style={styles.modalButtonContainer}>
+                  <TouchableOpacity style={styles.modalPostButton} onPress={() => {}}>
+                    <Text style={styles.modalPostButtonText}>Post trip</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  menuOverlayCentered: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContentCentered: {
+    backgroundColor: '#222',
+    borderRadius: 12,
+    padding: 18,
+    minWidth: 220,
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  menuItemCentered: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    alignItems: 'center',
+    minWidth: 160,
+  },
+  menuItemTextCentered: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#222',
+  },
+  headerMenuButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerMenuDots: {
+    fontSize: 28,
+    color: '#fff',
+    fontWeight: 'bold',
+    marginTop: -2,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  menuContent: {
+    backgroundColor: '#222',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 24,
+    width: 220,
+    marginRight: 12,
+    marginBottom: 24,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  menuButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  menuButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  doneModalScroll: {
+    flex: 1,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
+  privacySection: {
+    alignItems: 'center',
+    marginTop: -5,
+    marginBottom: 0,
+  },
+  privacyLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+    color: '#fff',
+  },
+  privacyButton: {
+    width: 140,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#5784BA',
+    overflow: 'hidden',
+    position: 'relative',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  privacyButtonContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  privacyCurtainEffect: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#333333',
+    zIndex: 1,
+  },
+  privacyButtonContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  privacyButtonText: {
+    color: '#333333',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  privacyButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  modalButtonContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 60,
+    paddingTop: 10,
+    backgroundColor: 'transparent',
+  },
+  modalPostButton: {
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    backgroundColor: '#2051A4',
+  },
+  modalPostButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  coverImageSection: {
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  coverImageLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+    color: '#fff',
+  },
+  coverImageContainer: {
+    position: 'relative',
+  },
+  coverImage: {
+    width: 160,
+    height: 90,
+    borderRadius: 12,
+  },
+  removeCoverImageButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: 'red',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeCoverImageText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  addCoverImageButton: {
+    width: 160,
+    height: 90,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  addCoverImageText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  descriptionSection: {
+    marginBottom: 12,
+  },
+  descriptionLabel: {
+    fontSize: 16,
+    marginBottom: 6,
+    textAlign: 'center',
+    color: '#fff',
+  },
+  descriptionTextArea: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    height: 60,
+    textAlignVertical: 'center',
+    maxHeight: 60,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  averageRatingContainer: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  averageRatingLabel: {
+    fontSize: 18,
+    marginBottom: 5,
+    color: '#fff',
+  },
+  averageRating: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
+  doneButton: {
+    backgroundColor: '#2ECC40',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  doneButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  doneModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  doneModalContent: {
+    height: '75%',
+    backgroundColor: '#181C24',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  doneModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  doneModalClose: {
+    fontSize: 28,
+    color: '#fff',
+    fontWeight: 'bold',
+    padding: 4,
+  },
+  doneModalBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  doneModalRatingContainer: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  doneModalRatingLabel: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 6,
+  },
+  doneModalRatingValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
   cityCard: {
     flexDirection: 'row',
     alignItems: 'center',

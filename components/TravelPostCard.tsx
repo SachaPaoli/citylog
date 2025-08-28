@@ -19,7 +19,7 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const ratingColor = useThemeColor({}, 'rating');
-  const backgroundColor = useThemeColor({}, 'background');
+    const backgroundColor = useThemeColor({}, 'background');  
   const { user } = useAuth();
 
   // Récupérer la photo de profil de l'utilisateur du post si elle n'est pas présente
@@ -48,7 +48,7 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor }]} 
-      onPress={() => router.push(`/trip-detail?postId=${post.id}`)}
+        onPress={onPress ? onPress : () => router.push(`/trip-detail?postId=${post.id}`)}
     >
       <View style={styles.content}>
         {/* Photo principale de la ville */}

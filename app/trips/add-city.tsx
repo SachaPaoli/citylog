@@ -780,7 +780,18 @@ export default function AddCityScreen() {
                 {/* TravelPostCards for each post */}
                 {getPostsForCity(modalCity).length > 0 && getPostsForCity(modalCity).map((post: any, i: number) => (
                   <View key={post.id || i} style={{ marginVertical: 12 }}>
-                    <TravelPostCard post={post as any} />
+                    <TravelPostCard 
+                      post={post as any}
+                      onPress={() => {
+                        setShowCityModal(false);
+                        require('expo-router').router.push({
+                          pathname: '/trips/create',
+                          params: {
+                            post: JSON.stringify(post)
+                          }
+                        });
+                      }}
+                    />
                   </View>
                 ))}
               </ScrollView>
