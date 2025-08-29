@@ -1,4 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
@@ -19,6 +21,8 @@ function getCountryName(code: string): string {
 }
 
 export default function CityDetailScreen() {
+  // État pour afficher la bottom sheet de rating
+  const [showRateModal, setShowRateModal] = useState(false);
   const { city, country, countryCode, flag, population } = useLocalSearchParams();
 
   // Nettoie le nom pour obtenir le nom de base (ex: "Marseille 01" -> "Marseille")
@@ -352,19 +356,32 @@ export default function CityDetailScreen() {
         : ''
   }.png`;
 
-  // Loader minimal
+  // Loader global pour toute la page
   const [showLoader, setShowLoader] = useState(true);
+  // On attend que l'image ET la note moyenne soient chargées
   useEffect(() => {
-    if (isLoadingImage) {
+    if (isLoadingImage || isLoadingAverage) {
       setShowLoader(true);
-      const timer = setTimeout(() => {
-        setShowLoader(false);
-      }, 300); // 300ms max
-      return () => clearTimeout(timer);
     } else {
       setShowLoader(false);
     }
-  }, [isLoadingImage]);
+  }, [isLoadingImage, isLoadingAverage]);
+
+  // Optimise le chargement : lance image et moyenne en parallèle
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAll() {
+      setShowLoader(true);
+      setIsLoadingImage(true);
+      setIsLoadingAverage(true);
+      const imgPromise = city && country ? fetchCityImage(city as string, country as string) : Promise.resolve();
+      const avgPromise = calculateGlobalAverageRating();
+      await Promise.all([imgPromise, avgPromise]);
+      if (!cancelled) setShowLoader(false);
+    }
+    loadAll();
+    return () => { cancelled = true; };
+  }, [city, country]);
 
   return (
     <>
@@ -381,18 +398,40 @@ export default function CityDetailScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Text style={[styles.backButtonText, { color: whiteColor }]}>← Retour</Text>
+              <Ionicons name="arrow-back" size={24} color={whiteColor} />
             </TouchableOpacity>
             <Image source={{ uri: flagUrl }} style={[styles.headerFlag, { width: 40, height: 28 }]} />
           </View>
 
           {/* Image de la ville ou drapeau */}
-          <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
+          <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 20 }}>
             {cityImageUrl && cityImageUrl !== require('../assets/images/placeholder.png') && (
-              <Image
-                source={{ uri: cityImageUrl }}
-                style={{ width: '90%', height: 180, borderRadius: 16, resizeMode: 'cover' }}
-              />
+              <>
+                <Image
+                  source={{ uri: cityImageUrl }}
+                  style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
+                  onLoadEnd={() => setIsLoadingImage(false)}
+                />
+                {/* Affiche le gradient seulement quand l'image est chargée */}
+                {!isLoadingImage && (
+                  <LinearGradient
+                    colors={
+                      cityImageUrl === flagUrl
+                        ? ["rgba(0,0,0,0)", "rgba(24,28,36,0.12)"]
+                        : ["rgba(0,0,0,0)", "#181C24"]
+                    }
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: cityImageUrl === flagUrl ? 22 : 50,
+                    }}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                  />
+                )}
+              </>
             )}
           </View>
 
@@ -405,18 +444,48 @@ export default function CityDetailScreen() {
                   ? getCountryName(country as string)
                   : country}
               </Text>
+              {/* Note moyenne sous le pays, design comme trip-detail */}
+              <TouchableOpacity
+                style={styles.rateButtonModal}
+                onPress={() => setShowRateModal(true)}
+              >
+                <Text style={styles.rateButtonModalText}>Rate</Text>
+              </TouchableOpacity>
+              {globalAverageRating !== null && (
+                <View style={[styles.averageRatingContainer, { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}> 
+                  <View style={styles.averageStarsWrapper}>
+                    <StarRating 
+                      rating={globalAverageRating} 
+                      readonly={true} 
+                      size="medium"
+                      showRating={false}
+                      color="#f5c518"
+                    />
+                  </View>
+                  <Text style={styles.averageRatingText}>
+                    {globalAverageRating.toFixed(1)}/5
+                  </Text>
+                </View>
+              )}
               {population && (
                 <Text style={[styles.population, { color: textColor }]}> 
                   Population: {population}
                 </Text>
               )}
             </View>
-
-            {/* Votre note */}
-            <View style={styles.userRatingSection}>
+            {/* ...existing code... */}
+      {/* Bottom sheet 3/4 pour le système de rating */}
+      {showRateModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowRateModal(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.postModalScroll}>
               <Text style={[styles.sectionTitle, { color: textColor }]}>Votre note</Text>
               <View style={styles.userRatingContainer}>
-                {/* Système de rating avec étoiles extra larges */}
                 <View style={styles.starsWrapper}>
                   <StarRating 
                     rating={userRating} 
@@ -430,34 +499,22 @@ export default function CityDetailScreen() {
                   {userRating > 0 ? `${userRating.toFixed(1)}/5` : 'Pas encore noté'}
                 </Text>
               </View>
-            </View>
-
-            {/* Boutons d'action */}
-            <View style={styles.actions}>
-              {/* Ligne des boutons de notation */}
               {userRating > 0 && (
                 <View style={styles.actionRow}>
                   <TouchableOpacity 
                     style={[styles.clearButton, { borderColor }]}
                     onPress={handleDelete}
                   >
-                    <Text style={[styles.clearButtonText, { color: textColor }]}> 
-                      Delete
-                    </Text>
+                    <Text style={[styles.clearButtonText, { color: textColor }]}>Delete</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity 
                     style={[styles.actionButton, { backgroundColor: mainBlue }]}
                     onPress={handleSubmitRating}
                   >
-                    <Text style={styles.rateButtonText}>
-                      Done
-                    </Text>
+                    <Text style={styles.rateButtonText}>Done</Text>
                   </TouchableOpacity>
                 </View>
               )}
-
-              {/* Bouton I have been there en dessous */}
               <TouchableOpacity 
                 style={[
                   styles.visitedButtonFullWidth,
@@ -490,33 +547,10 @@ export default function CityDetailScreen() {
                   </View>
                 </View>
               </TouchableOpacity>
-            </View>
-
-            {/* Section Average rating */}
-            {globalAverageRating && (
-              <View style={styles.averageRatingSection}>
-                <Text style={[styles.averageRatingTitle, { color: textColor }]}>Average rating</Text>
-                <View style={styles.averageRatingContainer}>
-                  <View style={styles.averageStarsWrapper}>
-                    <StarRating 
-                      rating={globalAverageRating} 
-                      onRatingChange={() => {}} // Read-only
-                      size="medium"
-                      color="#f5c518"
-                      showRating={false}
-                    />
-                  </View>
-                  <Text style={[styles.averageRatingText, { color: textColor }]}> 
-                    {globalAverageRating.toFixed(1)}/5
-                  </Text>
-                  {isLoadingAverage && (
-                    <Text style={[styles.loadingText, { color: textColor }]}> 
-                      Calculating...
-                    </Text>
-                  )}
-                </View>
-              </View>
-            )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
           </ScrollView>
         </View>
       )}
@@ -525,6 +559,85 @@ export default function CityDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Styles modal 3/4 inspirés de add-city.tsx
+  modalContent: {
+  height: '90%',
+  minHeight: '90%',
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+  paddingHorizontal: 20,
+  backgroundColor: '#181C24',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingVertical: 15,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  postModalScroll: {
+    flex: 1,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  rateModalContent: {
+    width: '100%',
+    height: '75%',
+    backgroundColor: '#181C24',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  closeModalButton: {
+    marginTop: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: '#333',
+  },
+  closeModalText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  rateButtonModal: {
+    marginTop: 18,
+    backgroundColor: '#2051A4',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    alignSelf: 'center',
+  },
+  rateButtonModalText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
   container: {
     flex: 1,
   },
@@ -536,7 +649,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingTop: 50, // Espace pour la status bar
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+    borderBottomColor: 'transparent',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -556,6 +669,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    marginTop: -10,
   },
   cityHeader: {
     alignItems: 'center',
@@ -694,9 +808,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }],
   },
   averageRatingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    opacity: 0.8,
+    fontSize: 18,
+    fontWeight: '400',
+    color: '#888',
+    marginLeft: 6,
   },
   loadingText: {
     fontSize: 14,
