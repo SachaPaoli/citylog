@@ -16,8 +16,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useWishlist } from '../contexts/WishlistContext';
 
 type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
@@ -248,241 +249,254 @@ export default function TripDetailScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
-      {/* Header avec bouton retour, profil utilisateur et menu */}
-      <View style={[styles.header, { backgroundColor: headerColor }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={whiteColor} />
-        </TouchableOpacity>
-        
-        {/* Profil utilisateur au centre du header */}
-        <TouchableOpacity 
-          style={styles.headerUserProfile}
-          onPress={() => {
-            if (post.userId && post.userId !== userProfile?.uid) {
-              router.push(`/user-profile?userId=${post.userId}`);
-            }
-          }}
-          activeOpacity={0.6}
-        >
-          {/* Photo de profil directement car les posts arrivent enrichis */}
-          <ProfileImage 
-            uri={userPhoto}
-            size={32}
-          />
-          <Text style={[styles.headerUserName, { color: whiteColor }]}>{post.userName}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.menuButton}
-          onPress={() => setShowMenu(true)}
-        >
-          <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Header avec bouton retour, profil utilisateur et menu */}
+        <View style={[styles.header, { backgroundColor: headerColor }]}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={whiteColor} />
+          </TouchableOpacity>
+          {/* Profil utilisateur au centre du header */}
+          <TouchableOpacity 
+            style={styles.headerUserProfile}
+            onPress={() => {
+              if (post.userId && post.userId !== userProfile?.uid) {
+                router.push(`/user-profile?userId=${post.userId}`);
+              }
+            }}
+            activeOpacity={0.6}
+          >
+            <ProfileImage 
+              uri={userPhoto}
+              size={32}
+            />
+            <Text style={[styles.headerUserName, { color: whiteColor }]}>{post.userName}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuButton}
+            onPress={() => setShowMenu(true)}
+          >
+            <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Menu popup */}
-      <Modal
-        visible={showMenu}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowMenu(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          onPress={() => setShowMenu(false)}
+        {/* Menu popup */}
+        <Modal
+          visible={showMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowMenu(false)}
         >
-          <View style={[styles.menuContainer, { backgroundColor }]}> 
-          
-            <TouchableOpacity 
-              style={[styles.menuItem, isInWishlist(post.id) && { opacity: 0.5 }]}
-              onPress={isInWishlist(post.id) ? undefined : handleAddToWishlist}
-              disabled={isInWishlist(post.id)}
-            >
-              <Text style={[styles.menuItemText, { color: textColor }]}> 
-                {isInWishlist(post.id) ? 'Déjà dans la wishlist' : 'Add to wishlist'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
-              <Text style={[styles.menuItemText, { color: textColor }]}>Share</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
-              <Text style={[styles.menuItemText, { color: textColor }]}>Back</Text>
-            </TouchableOpacity>
-            {isMyPost && (
-              <TouchableOpacity style={[styles.menuItem, { marginTop: 4 }]} onPress={handleDeletePost}>
-                <Text style={[styles.menuItemText, { color: '#ff4444', fontWeight: 'bold' }]}>Supprimer</Text>
+          <TouchableOpacity 
+            style={styles.modalOverlay}
+            onPress={() => setShowMenu(false)}
+          >
+            <View style={[styles.menuContainer, { backgroundColor }]}> 
+              <TouchableOpacity 
+                style={[styles.menuItem, isInWishlist(post.id) && { opacity: 0.5 }]}
+                onPress={isInWishlist(post.id) ? undefined : handleAddToWishlist}
+                disabled={isInWishlist(post.id)}
+              >
+                <Text style={[styles.menuItemText, { color: textColor }]}> 
+                  {isInWishlist(post.id) ? 'Déjà dans la wishlist' : 'Add to wishlist'}
+                </Text>
               </TouchableOpacity>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
+                <Text style={[styles.menuItemText, { color: textColor }]}>Share</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
+                <Text style={[styles.menuItemText, { color: textColor }]}>Back</Text>
+              </TouchableOpacity>
+              {isMyPost && (
+                <TouchableOpacity style={[styles.menuItem, { marginTop: 4 }]} onPress={handleDeletePost}>
+                  <Text style={[styles.menuItemText, { color: '#ff4444', fontWeight: 'bold' }]}>Supprimer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
-      {/* Scroll global de toute la page */}
-      <ScrollView 
-        style={[styles.mainScroll, { backgroundColor }]} 
-        showsVerticalScrollIndicator={false}
-        onScroll={(event) => {
-          const offsetY = event.nativeEvent.contentOffset.y;
-          setScrollY(offsetY);
-        }}
-        onContentSizeChange={(contentWidth, contentHeight) => {
-          setContentHeight(contentHeight);
-        }}
-        onLayout={(event) => {
-          const height = event.nativeEvent.layout.height;
-          setScrollViewHeight(height);
-        }}
-        scrollEventThrottle={16}
-      >
-        {/* Informations du voyage */}
-        <View style={[styles.postInfo, !post.description && styles.postInfoCompact]}>
-          <Image 
-            source={{ uri: post.photo }} 
-            style={styles.coverImage}
+        {/* Nouvelle image de la ville avec le style city-detail (full width, gradient fade) */}
+        <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 20 }}>
+          <Image
+            source={{ uri: post.photo }}
+            style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={200}
           />
-          <View style={styles.postDetails}>
-            <Text style={[styles.cityName, { color: textColor }]}> 
-              {post.city}, {post.country}
-            </Text>
-            <View style={styles.ratingContainer}>
-              <StarRating 
-                rating={post.rating} 
-                readonly={true} 
-                size="medium"
-                showRating={true}
-                color="#f5c518"
-              />
-            </View>
-            {post.description && (
-              <TouchableOpacity 
-                style={styles.descriptionContainer}
-                onPress={handleDescriptionPress}
-                activeOpacity={0.7}
-              >
-                <Text 
-                  style={[styles.description, { color: textColor, flex: 1 }]}
-                  numberOfLines={1}
-                  onTextLayout={checkDescriptionLines}
-                > 
-                  {getDisplayedDescription()}
-                </Text>
-                {isDescriptionMultiline && (
-                  <Ionicons name="chevron-forward" size={20} color={textColor} style={styles.descriptionIcon} />
-                )}
-              </TouchableOpacity>
-            )}
+          {/* Gradient fade at the bottom, like city-detail */}
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 50 }} pointerEvents="none">
+            <Image
+              source={require('../assets/images/partial-react-logo.png')}
+              style={{ display: 'none' }}
+            />
+            <LinearGradient
+              colors={["rgba(0,0,0,0)", "#181C24"]}
+              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 50 }}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+            />
           </View>
         </View>
 
-        {/* Onglets */}
-        <View style={styles.tabsContainer}>
-          {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[
-                styles.tab, 
-                activeTab === tab && { borderBottomColor: whiteColor, borderBottomWidth: 2 }
-              ]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[
-                styles.tabText, 
-                { color: activeTab === tab ? whiteColor : textColor }
-              ]}>
-                {getTabLabel(tab)}
+        {/* Scroll global de toute la page */}
+        <ScrollView 
+          style={[styles.mainScroll, { backgroundColor }]} 
+          showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            const offsetY = event.nativeEvent.contentOffset.y;
+            setScrollY(offsetY);
+          }}
+          onContentSizeChange={(contentWidth, contentHeight) => {
+            setContentHeight(contentHeight);
+          }}
+          onLayout={(event) => {
+            const height = event.nativeEvent.layout.height;
+            setScrollViewHeight(height);
+          }}
+          scrollEventThrottle={16}
+        >
+          {/* Informations du voyage */}
+          <View style={[styles.postInfo, !post.description && styles.postInfoCompact]}>
+            <View style={styles.postDetails}>
+              <Text style={[styles.cityName, { color: textColor }]}> 
+                {post.city}, {post.country}
               </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Contenu de l'onglet */}
-        <View style={styles.content}>
-          {currentItems.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: textColor }]}>
-                Aucun element dans cette categorie
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.tabContent}>
-              {/* Chaque item dans sa propre carte */}
-              {currentItems.map((item, index) => (
-                <View key={item.id}>
-                  {/* Photos de l'item en haut */}
-                  {item.images && item.images.length > 0 && (
-                    <ScrollView 
-                      horizontal 
-                      showsHorizontalScrollIndicator={false} 
-                      style={styles.itemPhotosScroll}
-                      contentContainerStyle={styles.itemPhotosContainer}
-                    >
-                      {item.images.map((image, imgIndex) => {
-                        return (
-                          <Image 
-                            key={`${item.id}-${image.id}`}
-                            source={{ uri: image.uri }} 
-                            style={styles.itemPhoto}
-                            contentFit="cover"
-                            cachePolicy="memory-disk"
-                            transition={200}
-                          />
-                        );
-                      })}
-                    </ScrollView>
+              <View style={styles.ratingContainer}>
+                <StarRating 
+                  rating={post.rating} 
+                  readonly={true} 
+                  size="medium"
+                  showRating={true}
+                  color="#f5c518"
+                />
+              </View>
+              {post.description && (
+                <TouchableOpacity 
+                  style={styles.descriptionContainer}
+                  onPress={handleDescriptionPress}
+                  activeOpacity={0.7}
+                >
+                  <Text 
+                    style={[styles.description, { color: textColor, flex: 1 }]}
+                    numberOfLines={1}
+                    onTextLayout={checkDescriptionLines}
+                  > 
+                    {getDisplayedDescription()}
+                  </Text>
+                  {isDescriptionMultiline && (
+                    <Ionicons name="chevron-forward" size={20} color={textColor} style={styles.descriptionIcon} />
                   )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
-                  {/* Carte avec infos de l'item */}
-                  <View style={[styles.itemCard, { borderColor: whiteColor }]}>
-                    <View style={styles.itemHeader}>
-                      <Text style={[styles.itemName, { color: textColor }]}>
-                        {item.name}
-                      </Text>
-                      <Text style={[styles.itemRating, { color: '#f5c518' }]}>
-                        {item.rating}/5 ⭐
-                      </Text>
+          {/* Onglets */}
+          <View style={styles.tabsContainer}>
+            {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
+              <TouchableOpacity
+                key={tab}
+                style={[
+                  styles.tab, 
+                  activeTab === tab && { borderBottomColor: whiteColor, borderBottomWidth: 2 }
+                ]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[
+                  styles.tabText, 
+                  { color: activeTab === tab ? whiteColor : textColor }
+                ]}>
+                  {getTabLabel(tab)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Contenu de l'onglet */}
+          <View style={styles.content}>
+            {currentItems.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
+                  Aucun element dans cette categorie
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.tabContent}>
+                {/* Chaque item dans sa propre carte */}
+                {currentItems.map((item, index) => (
+                  <View key={item.id}>
+                    {/* Photos de l'item en haut */}
+                    {item.images && item.images.length > 0 && (
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        style={styles.itemPhotosScroll}
+                        contentContainerStyle={styles.itemPhotosContainer}
+                      >
+                        {item.images.map((image, imgIndex) => {
+                          return (
+                            <Image 
+                              key={`${item.id}-${image.id}`}
+                              source={{ uri: image.uri }} 
+                              style={styles.itemPhoto}
+                              contentFit="cover"
+                              cachePolicy="memory-disk"
+                              transition={200}
+                            />
+                          );
+                        })}
+                      </ScrollView>
+                    )}
+
+                    {/* Carte avec infos de l'item */}
+                    <View style={[styles.itemCard, { borderColor: whiteColor }]}>
+                      <View style={styles.itemHeader}>
+                        <Text style={[styles.itemName, { color: textColor }]}>
+                          {item.name}
+                        </Text>
+                        <Text style={[styles.itemRating, { color: '#f5c518' }]}>
+                          {item.rating}/5 ⭐
+                        </Text>
+                      </View>
+                      {item.description && (
+                        <Text style={[styles.itemDescription, { color: textColor }]}>
+                          {item.description}
+                        </Text>
+                      )}
                     </View>
-                    {item.description && (
-                      <Text style={[styles.itemDescription, { color: textColor }]}>
-                        {item.description}
-                      </Text>
+
+                    {/* Ligne de séparation fine (sauf pour le dernier item) */}
+                    {index < currentItems.length - 1 && (
+                      <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginTop: 12, marginBottom: 20 }} />
                     )}
                   </View>
+                ))}
+              </View>
+            )}
+            
+            {/* Espacement en bas */}
+            <View style={styles.bottomSpacing} />
+          </View>
+        </ScrollView>
 
-                  {/* Ligne de séparation fine (sauf pour le dernier item) */}
-                  {index < currentItems.length - 1 && (
-                    <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginTop: 12, marginBottom: 20 }} />
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
-          
-          {/* Espacement en bas */}
-          <View style={styles.bottomSpacing} />
-        </View>
-      </ScrollView>
-
-      {/* Indicateur de scroll personnalisé */}
-      {contentHeight > scrollViewHeight && (
-        <View style={styles.scrollIndicatorContainer}>
-          <View 
-            style={[
-              styles.scrollIndicator,
-              {
-                height: Math.max(15, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.25)),
-                top: (scrollY / (contentHeight - scrollViewHeight)) * (scrollViewHeight * 0.25 - Math.max(15, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.25))),
-              }
-            ]}
-          />
-        </View>
-      )}
-    </SafeAreaView>
+        {/* Indicateur de scroll personnalisé */}
+        {contentHeight > scrollViewHeight && (
+          <View style={styles.scrollIndicatorContainer}>
+            <View 
+              style={[
+                styles.scrollIndicator,
+                {
+                  height: Math.max(15, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.25)),
+                  top: (scrollY / (contentHeight - scrollViewHeight)) * (scrollViewHeight * 0.25 - Math.max(15, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.25))),
+                }
+              ]}
+            />
+          </View>
+        )}
+      </SafeAreaView>
     </>
   );
 }
