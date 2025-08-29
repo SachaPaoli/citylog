@@ -6,6 +6,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post, TripItem } from '@/types/Post';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -17,14 +18,19 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useWishlist } from '../contexts/WishlistContext';
 
 type TabType = 'staying' | 'restaurant' | 'activities' | 'other';
 
 export default function TripDetailScreen() {
+  // Animated value for scroll position
+  const scrollYAnimated = React.useRef(new Animated.Value(0)).current;
   const { userProfile } = useAuth();
+  // Fullscreen image modal state
+  const [fullscreenImageVisible, setFullscreenImageVisible] = useState(false);
+  const [fullscreenImageUri, setFullscreenImageUri] = useState<string | null>(null);
   console.log('✨ NOUVELLE PAGE TRIP DETAIL CHARGEE !');
   const router = useRouter();
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -79,6 +85,17 @@ export default function TripDetailScreen() {
 
   const [post, setPost] = useState<Post | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('staying');
+
+  // Détermine dynamiquement les onglets à afficher selon le contenu du post
+  const availableTabs: TabType[] = React.useMemo(() => {
+    if (!post) return [];
+    const tabs: TabType[] = [];
+    if (post.stayingItems && post.stayingItems.length > 0) tabs.push('staying');
+    if (post.restaurantItems && post.restaurantItems.length > 0) tabs.push('restaurant');
+    if (post.activitiesItems && post.activitiesItems.length > 0) tabs.push('activities');
+    if (post.otherItems && post.otherItems.length > 0) tabs.push('other');
+    return tabs;
+  }, [post]);
   const [showMenu, setShowMenu] = useState(false);
   const { addToWishlist, isInWishlist } = useWishlist();
   const [scrollY, setScrollY] = useState(0);
@@ -86,6 +103,8 @@ export default function TripDetailScreen() {
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
   const [isDescriptionMultiline, setIsDescriptionMultiline] = useState(false);
   const [isTextTruncated, setIsTextTruncated] = useState(false);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+  const scrollIndicatorOpacity = React.useRef(new Animated.Value(0)).current;
 
   // Récupérer la photo de profil de l'utilisateur du post si elle n'est pas présente
   // Maintenant les posts arrivent déjà enrichis avec les photos, donc pas besoin de hook séparé
@@ -170,26 +189,9 @@ export default function TripDetailScreen() {
 
   if (!post) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}>
-        <View style={[styles.header, { backgroundColor: headerColor }]}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={whiteColor} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.menuButton}
-            onPress={() => setShowMenu(true)}
-          >
-            <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.errorContainer, { backgroundColor }]}>
-          <Text style={[styles.errorText, { color: textColor }]}>
-            Voyage introuvable
-          </Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: headerColor }}>
+          <Ionicons name="reload" size={48} color="#888" />
         </View>
       </SafeAreaView>
     );
@@ -224,13 +226,13 @@ export default function TripDetailScreen() {
 
   // Fonction pour tronquer la description à 40 caractères avec "..."
   const getDisplayedDescription = () => {
-    if (!post?.description) return '';
+    if (!post?.description || post.description.trim() === '' || post.description.toLowerCase().startsWith('voyage à')) {
+      return `Travelled to ${post?.city}, ${post?.country}`;
+    }
     if (post.description.length <= 40) return post.description;
-    
     // Trouver le dernier espace avant la limite pour ne pas couper un mot
     const truncated = post.description.substring(0, 40);
     const lastSpaceIndex = truncated.lastIndexOf(' ');
-    
     if (lastSpaceIndex > 0) {
       return truncated.substring(0, lastSpaceIndex) + '...';
     }
@@ -317,34 +319,46 @@ export default function TripDetailScreen() {
           </TouchableOpacity>
         </Modal>
 
-        {/* Nouvelle image de la ville avec le style city-detail (full width, gradient fade) */}
-        <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 20 }}>
-          <Image
-            source={{ uri: post.photo }}
-            style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={200}
-          />
-          {/* Gradient fade at the bottom, like city-detail */}
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 50 }} pointerEvents="none">
-            <Image
-              source={require('../assets/images/partial-react-logo.png')}
-              style={{ display: 'none' }}
-            />
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "#181C24"]}
-              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 50 }}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-          </View>
-        </View>
-
-        {/* Scroll global de toute la page */}
+        {/* Scroll global de toute la page, inclut la photo en haut */}
         <ScrollView 
           style={[styles.mainScroll, { backgroundColor }]} 
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={() => {
+            setShowScrollIndicator(true);
+            Animated.timing(scrollIndicatorOpacity, {
+              toValue: 0.8,
+              duration: 150,
+              useNativeDriver: true,
+            }).start();
+          }}
+          onScrollEndDrag={() => {
+            setTimeout(() => {
+              setShowScrollIndicator(false);
+              Animated.timing(scrollIndicatorOpacity, {
+                toValue: 0,
+                duration: 600,
+                useNativeDriver: true,
+              }).start();
+            }, 600);
+          }}
+          onMomentumScrollBegin={() => {
+            setShowScrollIndicator(true);
+            Animated.timing(scrollIndicatorOpacity, {
+              toValue: 0.8,
+              duration: 150,
+              useNativeDriver: true,
+            }).start();
+          }}
+          onMomentumScrollEnd={() => {
+            setTimeout(() => {
+              setShowScrollIndicator(false);
+              Animated.timing(scrollIndicatorOpacity, {
+                toValue: 0,
+                duration: 600,
+                useNativeDriver: true,
+              }).start();
+            }, 600);
+          }}
           onScroll={(event) => {
             const offsetY = event.nativeEvent.contentOffset.y;
             setScrollY(offsetY);
@@ -358,20 +372,93 @@ export default function TripDetailScreen() {
           }}
           scrollEventThrottle={16}
         >
+          {/* Nouvelle image de la ville avec le style city-detail (full width, gradient fade) */}
+          <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 20 }}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                setFullscreenImageUri(post.photo);
+                setFullscreenImageVisible(true);
+              }}
+            >
+              <Image
+                source={{ uri: post.photo }}
+                style={{ width: '100%', height: 260, borderRadius: 0, resizeMode: 'cover' }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
+              />
+            </TouchableOpacity>
+            {/* Gradient fade at the bottom, like city-detail */}
+            <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 55 }} pointerEvents="none">
+              <Image
+                source={require('../assets/images/partial-react-logo.png')}
+                style={{ display: 'none' }}
+              />
+              <LinearGradient
+                colors={["rgba(0,0,0,0)", "#181C24"]}
+                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 55 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+            </View>
+          </View>
+
+          {/* Fullscreen Image Modal */}
+          <Modal
+            visible={fullscreenImageVisible && !!fullscreenImageUri}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setFullscreenImageVisible(false)}
+          >
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+              {fullscreenImageUri && (
+                <View style={{ width: '90%', alignItems: 'center', marginTop: 80 }}>
+                  <View style={{ width: '100%', height: '70%', borderRadius: 16, overflow: 'hidden', position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                      source={{ uri: fullscreenImageUri }}
+                      style={{ width: '100%', height: '100%', borderRadius: 16, resizeMode: 'contain' }}
+                      contentFit="contain"
+                      cachePolicy="memory-disk"
+                      transition={200}
+                    />
+                  </View>
+                  {/* Back button below image */}
+                  <TouchableOpacity
+                    style={{ marginTop: 24, backgroundColor: 'transparent', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 24 }}
+                    onPress={() => setFullscreenImageVisible(false)}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Back</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </Modal>
+
           {/* Informations du voyage */}
           <View style={[styles.postInfo, !post.description && styles.postInfoCompact]}>
             <View style={styles.postDetails}>
-              <Text style={[styles.cityName, { color: textColor }]}> 
-                {post.city}, {post.country}
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <Text style={[styles.cityName, { color: textColor }]}> 
+                  {post.city},
+                </Text>
+                <Text style={{ fontSize: 18, fontWeight: '400', color: '#888', marginLeft: 4, alignSelf: 'center' }}>
+                  {post.country}
+                </Text>
+              </View>
               <View style={styles.ratingContainer}>
-                <StarRating 
-                  rating={post.rating} 
-                  readonly={true} 
-                  size="medium"
-                  showRating={true}
-                  color="#f5c518"
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <StarRating 
+                    rating={post.rating} 
+                    readonly={true} 
+                    size="medium" // étoiles un peu plus grandes
+                    showRating={false}
+                    color="#f5c518"
+                  />
+                  <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#f5c518', marginLeft: 6 }}>
+                    {post.rating}
+                  </Text>
+                </View>
               </View>
               {post.description && (
                 <TouchableOpacity 
@@ -395,107 +482,125 @@ export default function TripDetailScreen() {
           </View>
 
           {/* Onglets */}
-          <View style={styles.tabsContainer}>
-            {(['staying', 'restaurant', 'activities', 'other'] as TabType[]).map(tab => (
-              <TouchableOpacity
-                key={tab}
-                style={[
-                  styles.tab, 
-                  activeTab === tab && { borderBottomColor: whiteColor, borderBottomWidth: 2 }
-                ]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text style={[
-                  styles.tabText, 
-                  { color: activeTab === tab ? whiteColor : textColor }
-                ]}>
-                  {getTabLabel(tab)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Contenu de l'onglet */}
-          <View style={styles.content}>
-            {currentItems.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: textColor }]}>
-                  Aucun element dans cette categorie
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.tabContent}>
-                {/* Chaque item dans sa propre carte */}
-                {currentItems.map((item, index) => (
-                  <View key={item.id}>
-                    {/* Photos de l'item en haut */}
-                    {item.images && item.images.length > 0 && (
-                      <ScrollView 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false} 
-                        style={styles.itemPhotosScroll}
-                        contentContainerStyle={styles.itemPhotosContainer}
-                      >
-                        {item.images.map((image, imgIndex) => {
-                          return (
-                            <Image 
-                              key={`${item.id}-${image.id}`}
-                              source={{ uri: image.uri }} 
-                              style={styles.itemPhoto}
-                              contentFit="cover"
-                              cachePolicy="memory-disk"
-                              transition={200}
-                            />
-                          );
-                        })}
-                      </ScrollView>
-                    )}
-
-                    {/* Carte avec infos de l'item */}
-                    <View style={[styles.itemCard, { borderColor: whiteColor }]}>
-                      <View style={styles.itemHeader}>
-                        <Text style={[styles.itemName, { color: textColor }]}>
-                          {item.name}
-                        </Text>
-                        <Text style={[styles.itemRating, { color: '#f5c518' }]}>
-                          {item.rating}/5 ⭐
-                        </Text>
-                      </View>
-                      {item.description && (
-                        <Text style={[styles.itemDescription, { color: textColor }]}>
-                          {item.description}
-                        </Text>
-                      )}
-                    </View>
-
-                    {/* Ligne de séparation fine (sauf pour le dernier item) */}
-                    {index < currentItems.length - 1 && (
-                      <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginTop: 12, marginBottom: 20 }} />
+          {availableTabs.length > 0 && (
+            <View style={styles.tabsContainer}>
+              {availableTabs.map(tab => (
+                <TouchableOpacity
+                  key={tab}
+                  style={styles.tab}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={[styles.tabText, { color: activeTab === tab ? whiteColor : textColor }]}> 
+                      {getTabLabel(tab)}
+                    </Text>
+                    {activeTab === tab && (
+                      <View style={{
+                        marginTop: 4,
+                        height: 2,
+                        width: 96, // Further increased pixel width for underline, always visible
+                        backgroundColor: whiteColor,
+                        borderRadius: 1,
+                      }} />
                     )}
                   </View>
-                ))}
-              </View>
-            )}
-            
-            {/* Espacement en bas */}
-            <View style={styles.bottomSpacing} />
-          </View>
-        </ScrollView>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-        {/* Indicateur de scroll personnalisé */}
-        {contentHeight > scrollViewHeight && (
-          <View style={styles.scrollIndicatorContainer}>
-            <View 
-              style={[
-                styles.scrollIndicator,
-                {
-                  height: Math.max(15, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.25)),
-                  top: (scrollY / (contentHeight - scrollViewHeight)) * (scrollViewHeight * 0.25 - Math.max(15, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.25))),
-                }
-              ]}
-            />
-          </View>
-        )}
+          {/* Contenu de l'onglet */}
+          {availableTabs.length > 0 && (
+            <View style={styles.content}>
+              {currentItems.length > 0 && (
+                <View style={styles.tabContent}>
+                  {/* Chaque item dans sa propre carte */}
+                  {currentItems.map((item, index) => (
+                    <View key={item.id}>
+                      {/* Photos de l'item en haut */}
+                      {item.images && item.images.length > 0 && (
+                        <ScrollView 
+                          horizontal 
+                          showsHorizontalScrollIndicator={false} 
+                          style={styles.itemPhotosScroll}
+                          contentContainerStyle={styles.itemPhotosContainer}
+                        >
+                          {item.images.map((image, imgIndex) => {
+                            return (
+                              <TouchableOpacity
+                                key={`${item.id}-${image.id}`}
+                                activeOpacity={0.9}
+                                onPress={() => {
+                                  setFullscreenImageUri(image.uri);
+                                  setFullscreenImageVisible(true);
+                                }}
+                              >
+                                <Image 
+                                  source={{ uri: image.uri }} 
+                                  style={styles.itemPhoto}
+                                  contentFit="cover"
+                                  cachePolicy="memory-disk"
+                                  transition={200}
+                                />
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      )}
+
+                      {/* Carte avec infos de l'item */}
+                      <View style={[styles.itemCard, { borderColor: whiteColor }]}>
+                        <View style={styles.itemHeader}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={[styles.itemName, { color: textColor }]}>
+                              {item.name}
+                            </Text>
+                            <Text style={[styles.itemRating, { color: '#f5c518', marginLeft: 4, fontWeight: 'bold' }]}>
+                              {item.rating}
+                            </Text>
+                            <Ionicons name="star" size={20} color="#f5c518" style={{ marginLeft: 0 }} />
+                          </View>
+                        </View>
+                        {item.description && (
+                          <Text style={[styles.itemDescription, { color: textColor }]}>
+                            {item.description}
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* Ligne de séparation fine (sauf pour le dernier item) */}
+                      {index < currentItems.length - 1 && (
+                        <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginTop: 12, marginBottom: 20 }} />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+              {/* Espacement en bas */}
+              <View style={styles.bottomSpacing} />
+            </View>
+          )}
+
+          {/* Indicateur de scroll personnalisé */}
+          {contentHeight > scrollViewHeight && (
+            <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, justifyContent: 'center', pointerEvents: 'none' }}>
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  right: 1,
+                  width: 2,
+                  borderRadius: 1,
+                  backgroundColor: '#fff',
+                  opacity: scrollIndicatorOpacity,
+                  height: Math.max(12, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.15)),
+                  top:
+                    (scrollViewHeight / 2) +
+                    (scrollY / (contentHeight - scrollViewHeight)) * ((scrollViewHeight / 2) - Math.max(12, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.15))),
+                }}
+              />
+            </View>
+          )}
+        </ScrollView>
       </SafeAreaView>
     </>
   );
@@ -512,7 +617,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+    borderBottomColor: 'transparent',
   },
   headerUserProfile: {
     flexDirection: 'row',
@@ -653,8 +758,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   ratingText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  fontSize: 28,
+  fontWeight: 'bold',
   },
   description: {
     fontSize: 16,
