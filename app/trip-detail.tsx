@@ -11,6 +11,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Animated,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -18,7 +19,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Animated,
 } from 'react-native';
 import { useWishlist } from '../contexts/WishlistContext';
 
