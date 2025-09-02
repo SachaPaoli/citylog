@@ -1,12 +1,19 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TravelPostCard } from '../components/TravelPostCard';
+import { StarRating } from '../components/StarRating';
+import { useAuth } from '../contexts/AuthContext';
 import { useVisitedCities } from '../contexts/VisitedCitiesContext';
+import { usePosts } from '../hooks/usePosts';
 import { useThemeColor } from '../hooks/useThemeColor';
-// Mapping from country name to ISO code for flag display
+
+// Mapping from country code to country name
 const countryCodeToName: Record<string, string> = {
   AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AS: 'American Samoa', AD: 'Andorra', AO: 'Angola', AI: 'Anguilla', AQ: 'Antarctica', AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh', BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin', BM: 'Bermuda', BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia and Herzegovina', BW: 'Botswana', BV: 'Bouvet Island', BR: 'Brazil', IO: 'British Indian Ocean Territory', BN: 'Brunei Darussalam', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia', CM: 'Cameroon', CA: 'Canada', CV: 'Cape Verde', KY: 'Cayman Islands', CF: 'Central African Republic', TD: 'Chad', CL: 'Chile', CN: 'China', CX: 'Christmas Island', CC: 'Cocos (Keeling) Islands', CO: 'Colombia', KM: 'Comoros', CG: 'Congo', CD: 'Congo, the Democratic Republic of the', CK: 'Cook Islands', CR: 'Costa Rica', CI: 'Cote d\'Ivoire', HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus', CZ: 'Czech Republic', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic', EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea', EE: 'Estonia', ET: 'Ethiopia', FK: 'Falkland Islands (Malvinas)', FO: 'Faroe Islands', FJ: 'Fiji', FI: 'Finland', FR: 'France', GF: 'French Guiana', PF: 'French Polynesia', TF: 'French Southern Territories', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany', GH: 'Ghana', GI: 'Gibraltar', GR: 'Greece', GL: 'Greenland', GD: 'Grenada', GP: 'Guadeloupe', GU: 'Guam', GT: 'Guatemala', GG: 'Guernsey', GN: 'Guinea', GW: 'Guinea-Bissau', GY: 'Guyana', HT: 'Haiti', HM: 'Heard Island and McDonald Islands', VA: 'Holy See (Vatican City State)', HN: 'Honduras', HK: 'Hong Kong', HU: 'Hungary', IS: 'Iceland', IN: 'India', ID: 'Indonesia', IR: 'Iran, Islamic Republic of', IQ: 'Iraq', IE: 'Ireland', IM: 'Isle of Man', IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JE: 'Jersey', JO: 'Jordan', KZ: 'Kazakhstan', KE: 'Kenya', KI: 'Kiribati', KP: 'Korea, Democratic People\'s Republic of', KR: 'Korea, Republic of', KW: 'Kuwait', KG: 'Kyrgyzstan', LA: 'Lao People\'s Democratic Republic', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia', LY: 'Libyan Arab Jamahiriya', LI: 'Liechtenstein', LT: 'Lithuania', LU: 'Luxembourg', MO: 'Macao', MK: 'Macedonia, the Former Yugoslav Republic of', MG: 'Madagascar', MW: 'Malawi', MY: 'Malaysia', MV: 'Maldives', ML: 'Mali', MT: 'Malta', MH: 'Marshall Islands', MQ: 'Martinique', MR: 'Mauritania', MU: 'Mauritius', YT: 'Mayotte', MX: 'Mexico', FM: 'Micronesia, Federated States of', MD: 'Moldova, Republic of', MC: 'Monaco', MN: 'Mongolia', ME: 'Montenegro', MS: 'Montserrat', MA: 'Morocco', MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NR: 'Nauru', NP: 'Nepal', NL: 'Netherlands', AN: 'Netherlands Antilles', NC: 'New Caledonia', NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', NU: 'Niue', NF: 'Norfolk Island', MP: 'Northern Mariana Islands', NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PW: 'Palau', PS: 'Palestinian Territory, Occupied', PA: 'Panama', PG: 'Papua New Guinea', PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PN: 'Pitcairn', PL: 'Poland', PT: 'Portugal', PR: 'Puerto Rico', QA: 'Qatar', RE: 'Reunion', RO: 'Romania', RU: 'Russian Federation', RW: 'Rwanda', BL: 'Saint Barthelemy', SH: 'Saint Helena', KN: 'Saint Kitts and Nevis', LC: 'Saint Lucia', MF: 'Saint Martin', PM: 'Saint Pierre and Miquelon', VC: 'Saint Vincent and the Grenadines', WS: 'Samoa', SM: 'San Marino', ST: 'Sao Tome and Principe', SA: 'Saudi Arabia', SN: 'Senegal', RS: 'Serbia', SC: 'Seychelles', SL: 'Sierra Leone', SG: 'Singapore', SK: 'Slovakia', SI: 'Slovenia', SB: 'Solomon Islands', SO: 'Somalia', ZA: 'South Africa', GS: 'South Georgia and the South Sandwich Islands', ES: 'Spain', LK: 'Sri Lanka', SD: 'Sudan', SR: 'Suriname', SJ: 'Svalbard and Jan Mayen', SZ: 'Swaziland', SE: 'Sweden', CH: 'Switzerland', SY: 'Syrian Arab Republic', TW: 'Taiwan, Province of China', TJ: 'Tajikistan', TZ: 'Tanzania, United Republic of', TH: 'Thailand', TL: 'Timor-Leste', TG: 'Togo', TK: 'Tokelau', TO: 'Tonga', TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan', TC: 'Turks and Caicos Islands', TV: 'Tuvalu', UG: 'Uganda', UA: 'Ukraine', AE: 'United Arab Emirates', GB: 'United Kingdom', US: 'United States', UM: 'United States Minor Outlying Islands', UY: 'Uruguay', UZ: 'Uzbekistan', VU: 'Vanuatu', VE: 'Venezuela', VN: 'Viet Nam', VG: 'Virgin Islands, British', VI: 'Virgin Islands, U.S.', WF: 'Wallis and Futuna', EH: 'Western Sahara', YE: 'Yemen', ZM: 'Zambia', ZW: 'Zimbabwe'
 };
+
 // Mapping from country name to ISO code for flag display
 const countryNameToCode: Record<string, string> = {
   Afghanistan: 'AF', Albania: 'AL', Algeria: 'DZ', 'American Samoa': 'AS', Andorra: 'AD', Angola: 'AO', Anguilla: 'AI', Antarctica: 'AQ', 'Antigua and Barbuda': 'AG', Argentina: 'AR', Armenia: 'AM', Aruba: 'AW', Australia: 'AU', Austria: 'AT', Azerbaijan: 'AZ', Bahamas: 'BS', Bahrain: 'BH', Bangladesh: 'BD', Barbados: 'BB', Belarus: 'BY', Belgium: 'BE', Belize: 'BZ', Benin: 'BJ', Bermuda: 'BM', Bhutan: 'BT', Bolivia: 'BO', 'Bosnia and Herzegovina': 'BA', Botswana: 'BW', 'Bouvet Island': 'BV', Brazil: 'BR', 'British Indian Ocean Territory': 'IO', 'Brunei Darussalam': 'BN', Bulgaria: 'BG', 'Burkina Faso': 'BF', Burundi: 'BI', Cambodia: 'KH', Cameroon: 'CM', Canada: 'CA', 'Cape Verde': 'CV', 'Cayman Islands': 'KY', 'Central African Republic': 'CF', Chad: 'TD', Chile: 'CL', China: 'CN', 'Christmas Island': 'CX', 'Cocos (Keeling) Islands': 'CC', Colombia: 'CO', Comoros: 'KM', Congo: 'CG', 'Congo, the Democratic Republic of the': 'CD', 'Cook Islands': 'CK', 'Costa Rica': 'CR', 
@@ -21,18 +28,112 @@ export default function MyCitiesScreen() {
   }, [navigation]);
   
   const { cities: visitedCities } = useVisitedCities();
+  const { posts } = usePosts();
+  const { user } = useAuth();
+  
+  // États pour le modal des posts
+  const [showPostsModal, setShowPostsModal] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<{name: string, countryCode: string} | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  
+  // Écouter les changements de navigation pour fermer le modal
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      setShowPostsModal(false);
+      setShowReviewModal(false);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
   
   React.useEffect(() => {
-    console.log('[MyCities] visitedCities state:', visitedCities);
-  }, [visitedCities]);
+    console.log('[DEBUG] showReviewModal changed:', showReviewModal);
+  }, [showReviewModal]);
   
   const textColor = useThemeColor({}, 'text');
-  // Calcul instantané des villes à afficher à chaque render
+  const backgroundColor = useThemeColor({}, 'background');
+
+  // Fonction pour gérer le clic sur une ville
+  const handleCityPress = (cityName: string, countryCode: string) => {
+    console.log('[DEBUG] Clicking on city:', cityName, countryCode);
+    
+    const cityPosts = posts.filter(post => 
+      post.city.toLowerCase() === cityName.toLowerCase() && 
+      post.country.toLowerCase() === (countryCodeToName[countryCode] || countryCode).toLowerCase() &&
+      post.userId === user?.uid // Filtrer seulement mes posts
+    );
+    
+    console.log('[DEBUG] Found posts for city:', cityPosts.length);
+    
+    // Vérifier s'il y a un rating manuel ET une review pour cette ville
+    const hasManualRatingAndReview = visitedCities.some(c => {
+      const cityMatch = c.name?.toLowerCase() === cityName.toLowerCase();
+      const countryFullName = countryCodeToName[countryCode];
+      const countryMatch = 
+        c.country === countryCode || // Code ISO direct
+        c.country === countryFullName || // Nom complet
+        c.country?.toLowerCase() === countryFullName?.toLowerCase() || // Nom complet en minuscules
+        c.country?.toLowerCase() === countryCode.toLowerCase(); // Code ISO en minuscules
+      const isManualNote = c.source === 'note';
+      const hasRating = c.rating !== undefined && c.rating > 0;
+      const hasReview = c.hasReview === true || c.reviewText;
+      
+      console.log('[DEBUG] Checking city entry:', {
+        name: c.name,
+        country: c.country,
+        source: c.source,
+        rating: c.rating,
+        hasReviewFlag: c.hasReview,
+        reviewText: c.reviewText,
+        cityMatch,
+        countryMatch,
+        isManualNote,
+        hasRating,
+        hasReview
+      });
+      
+      return cityMatch && countryMatch && isManualNote && hasRating && hasReview;
+    });
+    
+    // Vérifier s'il y a une review pour cette ville (peu importe le rating)
+    const hasAnyReview = visitedCities.some(c => {
+      const cityMatch = c.name?.toLowerCase() === cityName.toLowerCase();
+      const countryFullName = countryCodeToName[countryCode];
+      const countryMatch = 
+        c.country === countryCode || // Code ISO direct
+        c.country === countryFullName || // Nom complet
+        c.country?.toLowerCase() === countryFullName?.toLowerCase() || // Nom complet en minuscules
+        c.country?.toLowerCase() === countryCode.toLowerCase(); // Code ISO en minuscules
+      const hasReview = c.hasReview === true || c.reviewText;
+      
+      return cityMatch && countryMatch && hasReview;
+    });
+    
+    console.log('[DEBUG] Has manual rating and review:', hasManualRatingAndReview);
+    console.log('[DEBUG] Has any review:', hasAnyReview);
+    
+    // Ouvrir le modal s'il y a des posts OU (rating manuel + review) OU juste une review
+    if (cityPosts.length > 0 || hasManualRatingAndReview || hasAnyReview) {
+      console.log('[DEBUG] Opening modal');
+      setSelectedCity({ name: cityName, countryCode });
+      setShowPostsModal(true);
+    } else {
+      console.log('[DEBUG] Not opening modal - no posts and no review');
+    }
+  };
+
+  // Filtrer les posts pour la ville sélectionnée
+  const selectedCityPosts = React.useMemo(() => {
+    if (!selectedCity) return [];
+    return posts.filter(post => 
+      post.city.toLowerCase() === selectedCity.name.toLowerCase() && 
+      post.country.toLowerCase() === (countryCodeToName[selectedCity.countryCode] || selectedCity.countryCode).toLowerCase() &&
+      post.userId === user?.uid // Filtrer seulement mes posts
+    );
+  }, [posts, selectedCity, user?.uid]);
   const displayCities = React.useMemo(() => {
     // Always group and lookup by ISO code
     const validCities = visitedCities.filter(city => typeof city.name === 'string' && city.name.length > 0 && city.country);
-    
-    console.log('[MyCities] All visitedCities:', visitedCities);
     
     type GroupedCity = {
       name: string;
@@ -85,7 +186,21 @@ export default function MyCitiesScreen() {
       // Calculer la moyenne de TOUTES les notes (manuelles + posts)
       const averageRating = city.ratings.length > 0 ? (city.ratings.reduce((a, b) => a + b, 0) / city.ratings.length) : null;
       
-      let sourceText = '';
+        // Vérifier si cette ville a une review
+        const hasReview = visitedCities.some(c => {
+          const cityMatch = c.name.toLowerCase() === city.name.toLowerCase();
+          // Essayer plusieurs variantes de correspondance de pays
+          const countryFullName = countryCodeToName[city.countryCode];
+          const countryMatch = 
+            c.country === city.countryCode || // Code ISO direct
+            c.country === countryFullName || // Nom complet
+            c.country?.toLowerCase() === countryFullName?.toLowerCase() || // Nom complet en minuscules
+            c.country?.toLowerCase() === city.countryCode.toLowerCase(); // Code ISO en minuscules
+          
+          const hasReviewData = c.source === 'review' || c.hasReview === true || c.reviewText;
+          
+          return cityMatch && countryMatch && hasReviewData;
+        });      let sourceText = '';
       if (city.manualCount > 0 && city.postCount > 0) {
         // Tu as à la fois une note manuelle ET des posts
         const postText = city.postCount === 1 ? '1 post' : `${city.postCount} posts`;
@@ -113,6 +228,7 @@ export default function MyCitiesScreen() {
         ...city,
         averageRating,
         sourceText,
+        hasReview,
       };
     });
   }, [visitedCities]);
@@ -137,8 +253,55 @@ export default function MyCitiesScreen() {
           data={[...displayCities].reverse()}
           key={visitedCities.length}
           keyExtractor={(item, idx) => `${item.name || 'city'}-${item.countryCode || 'country'}-${idx}`}
-          renderItem={({ item: city }) => (
-            <View style={styles.cityCard}>
+          renderItem={({ item: city }) => {
+            // Vérifier s'il y a des posts pour cette ville
+            const cityPosts = posts.filter(post => 
+              post.city.toLowerCase() === city.name.toLowerCase() && 
+              post.country.toLowerCase() === (countryCodeToName[city.countryCode] || city.countryCode).toLowerCase() &&
+              post.userId === user?.uid
+            );
+            
+            // Vérifier s'il y a un rating manuel ET une review pour cette ville
+            const hasManualRatingAndReview = visitedCities.some(c => {
+              const cityMatch = c.name?.toLowerCase() === city.name.toLowerCase();
+              const countryFullName = countryCodeToName[city.countryCode];
+              const countryMatch = 
+                c.country === city.countryCode || // Code ISO direct
+                c.country === countryFullName || // Nom complet
+                c.country?.toLowerCase() === countryFullName?.toLowerCase() || // Nom complet en minuscules
+                c.country?.toLowerCase() === city.countryCode.toLowerCase(); // Code ISO en minuscules
+              const isManualNote = c.source === 'note';
+              const hasRating = c.rating !== undefined && c.rating > 0;
+              const hasReview = c.hasReview === true || c.reviewText;
+              
+              return cityMatch && countryMatch && isManualNote && hasRating && hasReview;
+            });
+
+            // Vérifier s'il y a juste "been there" + review (sans rating)
+            const hasBeenThereAndReview = visitedCities.some(c => {
+              const cityMatch = c.name?.toLowerCase() === city.name.toLowerCase();
+              const countryFullName = countryCodeToName[city.countryCode];
+              const countryMatch = 
+                c.country === city.countryCode || // Code ISO direct
+                c.country === countryFullName || // Nom complet
+                c.country?.toLowerCase() === countryFullName?.toLowerCase() || // Nom complet en minuscules
+                c.country?.toLowerCase() === city.countryCode.toLowerCase(); // Code ISO en minuscules
+              const isManualNote = c.source === 'note';
+              const hasBeenThere = c.beenThere === true;
+              const noRating = !c.rating || c.rating === 0;
+              
+              return cityMatch && countryMatch && isManualNote && hasBeenThere && noRating;
+            });
+            
+            // Une ville est cliquable si elle a des posts OU si elle a une review OU si elle a rating+review OU si elle a beenThere+review
+            const isClickable = cityPosts.length > 0 || city.hasReview || hasManualRatingAndReview || (hasBeenThereAndReview && city.hasReview);
+            
+            return (
+              <TouchableOpacity 
+                style={styles.cityCard}
+                onPress={() => isClickable && handleCityPress(city.name, city.countryCode)}
+                disabled={!isClickable}
+              >
               <Image
                 source={{
                   uri: city.countryCode && countryCodeToName[city.countryCode]
@@ -149,9 +312,19 @@ export default function MyCitiesScreen() {
                 resizeMode="cover"
               />
               <View style={{ flex: 1 }}>
-                <Text style={styles.cityName}>
-                  {city.name}, {countryCodeToName[city.countryCode] || city.countryCode}
-                </Text>
+                <View style={styles.cityNameRow}>
+                  <Text style={styles.cityName}>
+                    {city.name}, {countryCodeToName[city.countryCode] || city.countryCode}
+                  </Text>
+                  {city.hasReview && (
+                    <Ionicons 
+                      name="chatbubble-outline" 
+                      size={16} 
+                      color="#fff" 
+                      style={styles.reviewIcon}
+                    />
+                  )}
+                </View>
                 {city.averageRating !== null ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={styles.cityRating}>
@@ -167,13 +340,365 @@ export default function MyCitiesScreen() {
                   <Text style={styles.cityBeenThere}>I have been there</Text>
                 )}
               </View>
-            </View>
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+            </TouchableOpacity>
+          );
+        }}
+        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Modal pour afficher les posts de la ville sélectionnée */}
+      <Modal
+        visible={showPostsModal}
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        transparent={true}
+        onRequestClose={() => setShowPostsModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowPostsModal(false)} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: textColor }]}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {selectedCity && (
+              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>
+                  {selectedCity.name}, {countryCodeToName[selectedCity.countryCode] || selectedCity.countryCode}
+                </Text>
+                
+                {/* Afficher la carte avec l'icône review si la ville a des posts ET une review */}
+                {(() => {
+                  const hasPosts = selectedCityPosts.length > 0;
+                  
+                  if (hasPosts) {
+                    // Vérifier s'il y a une review pour cette ville
+                    const hasReviewForCity = visitedCities.some(c => {
+                      const cityMatch = c.name.toLowerCase() === selectedCity.name.toLowerCase();
+                      const countryFullName = countryCodeToName[selectedCity.countryCode];
+                      const countryMatch = 
+                        c.country === selectedCity.countryCode || 
+                        c.country === countryFullName || 
+                        c.country?.toLowerCase() === countryFullName?.toLowerCase() || 
+                        c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                      const hasReviewData = c.source === 'review' || c.hasReview === true || c.reviewText;
+                      return cityMatch && countryMatch && hasReviewData;
+                    });
+
+                    // Trouver le rating manuel s'il existe
+                    const manualRatingEntry = visitedCities.find(c => {
+                      const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                      const countryFullName = countryCodeToName[selectedCity.countryCode];
+                      const countryMatch = 
+                        c.country?.toLowerCase() === countryFullName?.toLowerCase() ||
+                        c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                      const isManualNote = c.source === 'note';
+                      const hasRating = c.rating !== undefined && c.rating > 0;
+                      return cityMatch && countryMatch && isManualNote && hasRating;
+                    });
+
+                    if (hasReviewForCity || manualRatingEntry?.rating) {
+                      return (
+                        <TouchableOpacity 
+                          style={styles.ratingCard}
+                          onPress={() => {
+                            console.log('[DEBUG] Clicking on rating card');
+                            setShowPostsModal(false); // Fermer la modal principale
+                            setShowReviewModal(true);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Image
+                            source={{
+                              uri: `https://flagcdn.com/w80/${selectedCity.countryCode.toLowerCase()}.png`
+                            }}
+                            style={styles.ratingCardFlag}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.ratingCardContent}>
+                            <View style={styles.ratingCardNameRow}>
+                              <Text style={styles.ratingCardCityName}>
+                                {selectedCity.name}, {countryCodeToName[selectedCity.countryCode] || selectedCity.countryCode}
+                              </Text>
+                              {hasReviewForCity && (
+                                <Ionicons 
+                                  name="chatbubble-outline" 
+                                  size={16} 
+                                  color="#fff" 
+                                  style={styles.reviewIcon}
+                                />
+                              )}
+                            </View>
+                            <View style={styles.ratingCardRatingRow}>
+                              {manualRatingEntry?.rating ? (
+                                <>
+                                  <Text style={styles.ratingCardRating}>
+                                    {manualRatingEntry.rating.toFixed(1).replace('.', ',')} <Text style={{ color: '#FFD700' }}>★</Text>
+                                  </Text>
+                                  <Text style={styles.ratingCardSource}>based on your rating</Text>
+                                </>
+                              ) : hasReviewForCity ? (
+                                <Text style={styles.ratingCardSource}>You have reviewed this city</Text>
+                              ) : null}
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
+                
+                {/* Cas spécial : ville avec rating manuel + review mais sans posts */}
+                {(() => {
+                  const hasNoPosts = selectedCityPosts.length === 0;
+                  
+                  if (hasNoPosts) {
+                    // Trouver le rating manuel et la review
+                    const manualRatingEntry = visitedCities.find(c => {
+                      const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                      const countryFullName = countryCodeToName[selectedCity.countryCode];
+                      const countryMatch = 
+                        c.country?.toLowerCase() === countryFullName?.toLowerCase() ||
+                        c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                      const isManualNote = c.source === 'note';
+                      const hasRating = c.rating !== undefined && c.rating > 0;
+                      return cityMatch && countryMatch && isManualNote && hasRating;
+                    });
+
+                    const reviewEntry = visitedCities.find(c => {
+                      const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                      const countryFullName = countryCodeToName[selectedCity.countryCode];
+                      const countryMatch = 
+                        c.country === selectedCity.countryCode || 
+                        c.country === countryFullName || 
+                        c.country?.toLowerCase() === countryFullName?.toLowerCase() || 
+                        c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                      return cityMatch && countryMatch && (c.source === 'review' || c.reviewText);
+                    });
+
+                    // Vérifier s'il y a juste "been there" sans rating
+                    const beenThereEntry = visitedCities.find(c => {
+                      const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                      const countryFullName = countryCodeToName[selectedCity.countryCode];
+                      const countryMatch = 
+                        c.country?.toLowerCase() === countryFullName?.toLowerCase() ||
+                        c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                      const isManualNote = c.source === 'note';
+                      const hasBeenThere = c.beenThere === true;
+                      const noRating = !c.rating || c.rating === 0;
+                      return cityMatch && countryMatch && isManualNote && hasBeenThere && noRating;
+                    });
+
+                    if (manualRatingEntry?.rating && reviewEntry?.reviewText) {
+                      // Cas: Rating manuel + Review
+                      return (
+                        <View style={styles.ratingReviewContainer}>
+                          {/* Section Your Rating */}
+                          <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>Your Rating</Text>
+                            <StarRating 
+                              rating={manualRatingEntry.rating || 0}
+                              readonly={true}
+                              size="medium"
+                              showRating={true}
+                              color="#FFD700"
+                            />
+                          </View>
+
+                          {/* Section Your Review */}
+                          <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>Your Review</Text>
+                            <Text style={styles.reviewText}>{reviewEntry?.reviewText || ''}</Text>
+                          </View>
+                        </View>
+                      );
+                    } else if (beenThereEntry && reviewEntry?.reviewText) {
+                      // Cas: Juste "I have been there" + Review
+                      return (
+                        <View style={styles.ratingReviewContainer}>
+                          {/* Section I have been there */}
+                          <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>I have been there</Text>
+                          </View>
+
+                          {/* Section Your Review */}
+                          <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>Your Review</Text>
+                            <Text style={styles.reviewText}>{reviewEntry?.reviewText || ''}</Text>
+                          </View>
+                        </View>
+                      );
+                    } else if (reviewEntry?.reviewText) {
+                      // Cas: Seulement Review (sans rating manuel ni been there)
+                      return (
+                        <View style={styles.ratingReviewContainer}>
+                          <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>Your Review</Text>
+                            <Text style={styles.reviewText}>{reviewEntry?.reviewText || ''}</Text>
+                          </View>
+                        </View>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
+                
+                {selectedCityPosts.length > 0 && (
+                  <View style={styles.postsContainer}>
+                    {selectedCityPosts.map((post, index) => (
+                      <View key={post.id || index} style={styles.postWrapper}>
+                        <TravelPostCard post={post} />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal pour afficher la review */}
+      <Modal
+        visible={showReviewModal}
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        transparent={true}
+        onRequestClose={() => setShowReviewModal(false)}
+      >
+        <View style={styles.reviewModalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowReviewModal(false)} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: textColor }]}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {selectedCity && (
+              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>
+                  {selectedCity.name}, {countryCodeToName[selectedCity.countryCode] || selectedCity.countryCode}
+                </Text>
+                
+                {(() => {
+                  // Trouver le rating manuel et la review pour cette ville
+                  const manualRatingEntry = visitedCities.find(c => {
+                    const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                    const countryFullName = countryCodeToName[selectedCity.countryCode];
+                    const countryMatch = 
+                      c.country?.toLowerCase() === countryFullName?.toLowerCase() ||
+                      c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                    const isManualNote = c.source === 'note';
+                    const hasRating = c.rating !== undefined && c.rating > 0;
+                    return cityMatch && countryMatch && isManualNote && hasRating;
+                  });
+
+                  const reviewEntry = visitedCities.find(c => {
+                    const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                    const countryFullName = countryCodeToName[selectedCity.countryCode];
+                    const countryMatch = 
+                      c.country === selectedCity.countryCode || 
+                      c.country === countryFullName || 
+                      c.country?.toLowerCase() === countryFullName?.toLowerCase() || 
+                      c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                    return cityMatch && countryMatch && (c.source === 'review' || c.reviewText);
+                  });
+
+                  // Vérifier s'il y a juste "been there" sans rating
+                  const beenThereEntry = visitedCities.find(c => {
+                    const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                    const countryFullName = countryCodeToName[selectedCity.countryCode];
+                    const countryMatch = 
+                      c.country?.toLowerCase() === countryFullName?.toLowerCase() ||
+                      c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                    const isManualNote = c.source === 'note';
+                    const hasBeenThere = c.beenThere === true;
+                    const noRating = !c.rating || c.rating === 0;
+                    return cityMatch && countryMatch && isManualNote && hasBeenThere && noRating;
+                  });
+
+                  console.log('[DEBUG] Review entry found:', reviewEntry);
+                  console.log('[DEBUG] All matching entries for', selectedCity.name, ':', 
+                    visitedCities.filter(c => c.name?.toLowerCase() === selectedCity.name.toLowerCase())
+                  );
+
+                  return (
+                    <View style={styles.ratingReviewContainer}>
+                      {/* Section Your Rating si elle existe */}
+                      {manualRatingEntry?.rating && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>Your Rating</Text>
+                          <StarRating 
+                            rating={manualRatingEntry.rating || 0}
+                            readonly={true}
+                            size="medium"
+                            showRating={true}
+                            color="#FFD700"
+                          />
+                        </View>
+                      )}
+
+                      {/* Section I have been there si pas de rating mais beenThere = true */}
+                      {!manualRatingEntry?.rating && beenThereEntry && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>I have been there</Text>
+                        </View>
+                      )}
+
+                      {/* Section Your Review si elle existe */}
+                      {reviewEntry?.reviewText && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>Your Review</Text>
+                          <Text style={styles.reviewText}>{reviewEntry.reviewText}</Text>
+                        </View>
+                      )}
+
+                      {/* Afficher section review même sans reviewText si hasReview est true */}
+                      {!reviewEntry?.reviewText && visitedCities.some(c => {
+                        const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                        const countryFullName = countryCodeToName[selectedCity.countryCode];
+                        const countryMatch = 
+                          c.country === selectedCity.countryCode || 
+                          c.country === countryFullName || 
+                          c.country?.toLowerCase() === countryFullName?.toLowerCase() || 
+                          c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                        return cityMatch && countryMatch && c.hasReview === true;
+                      }) && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>Your Review</Text>
+                          <Text style={styles.reviewText}>You have reviewed this city</Text>
+                        </View>
+                      )}
+
+                      {/* Fallback si pas de contenu spécifique */}
+                      {!manualRatingEntry?.rating && !beenThereEntry && !reviewEntry?.reviewText && !visitedCities.some(c => {
+                        const cityMatch = c.name?.toLowerCase() === selectedCity.name.toLowerCase();
+                        const countryFullName = countryCodeToName[selectedCity.countryCode];
+                        const countryMatch = 
+                          c.country === selectedCity.countryCode || 
+                          c.country === countryFullName || 
+                          c.country?.toLowerCase() === countryFullName?.toLowerCase() || 
+                          c.country?.toLowerCase() === selectedCity.countryCode.toLowerCase();
+                        return cityMatch && countryMatch && c.hasReview === true;
+                      }) && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>Your Experience</Text>
+                          <Text style={styles.reviewText}>You have visited this city!</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })()}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -229,6 +754,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 2,
+    flex: 1,
+  },
+  cityNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  reviewIcon: {
+    marginLeft: 8,
   },
   cityRating: {
     color: '#FFD700',
@@ -256,4 +791,142 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Styles pour le modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0)',
+    justifyContent: 'flex-end',
+  },
+  reviewModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    height: '75%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingVertical: 15,
+    paddingTop: 20,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  modalScroll: {
+    flex: 1,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  postsContainer: {
+    paddingBottom: 20,
+  },
+  postWrapper: {
+    marginBottom: 16,
+  },
+  noPostsContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  noPostsText: {
+    fontSize: 16,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  // Styles pour la carte de rating manuel
+  ratingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
+    marginBottom: 20,
+  },
+  ratingCardFlag: {
+    width: 32,
+    height: 22,
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  ratingCardContent: {
+    flex: 1,
+  },
+  ratingCardCityName: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 2,
+    flex: 1,
+  },
+  ratingCardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  ratingCardRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ratingCardRating: {
+    color: '#FFD700',
+    fontSize: 13,
+  },
+  ratingCardSource: {
+    color: '#bbb',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginLeft: 4,
+  },
+  // Styles pour la page rating + review
+  ratingReviewContainer: {
+    paddingBottom: 20,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  reviewText: {
+    color: '#fff',
+    fontSize: 16,
+    lineHeight: 24,
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  // Styles pour "I have been there" dans la modal
 });

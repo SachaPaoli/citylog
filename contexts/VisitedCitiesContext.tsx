@@ -10,16 +10,18 @@ export type VisitedCity = {
   flag: string;
   rating?: number;
   beenThere: boolean;
-  source?: 'post' | 'note';
+  source?: 'post' | 'note' | 'review';
   postId?: string; // Ajouté pour lier à un post précis
   timestamp?: Date; // Ajouté pour les notifications
+  hasReview?: boolean; // Ajouté pour marquer les villes avec reviews
+  reviewText?: string; // Ajouté pour stocker le texte de la review
 };
 
 type VisitedCitiesContextType = {
   cities: VisitedCity[];
   addOrUpdateCity: (city: Omit<VisitedCity, 'id'>) => Promise<void>;
   removeCity: (name: string, country: string) => Promise<void>;
-  removeCitySource: (name: string, country: string, source: 'post' | 'note', postId?: string) => Promise<void>;
+  removeCitySource: (name: string, country: string, source: 'post' | 'note' | 'review', postId?: string) => Promise<void>;
   cleanupDuplicates: () => Promise<void>;
 };
 
@@ -38,7 +40,7 @@ export function VisitedCitiesProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  const removeCitySource = async (name: string, country: string, source: 'post' | 'note', postId?: string) => {
+  const removeCitySource = async (name: string, country: string, source: 'post' | 'note' | 'review', postId?: string) => {
     if (!userId) return;
     const ref = doc(db, 'users', userId);
     const snap = await getDoc(ref);

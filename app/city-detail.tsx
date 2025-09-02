@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { addDoc, collection, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { StarRating } from '../components/StarRating';
 import { db } from '../config/firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { useVisitedCities } from '../contexts/VisitedCitiesContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 // Mapping code -> nom complet
@@ -23,6 +24,44 @@ function getCountryName(code: string): string {
 export default function CityDetailScreen() {
   // État pour afficher la bottom sheet de rating
   const [showRateModal, setShowRateModal] = useState(false);
+  // État pour afficher le modal de commentaire
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Fonction pour charger la review existante quand on ouvre le modal
+  const loadExistingReview = () => {
+    if (!city || !country) return;
+    
+    // Chercher la review existante dans visitedCities
+    const existingReview = visitedCities.find(c => 
+      c.name === city && 
+      c.country === country && 
+      (c.source === 'review' || c.reviewText)
+    );
+    
+    console.log('[CityDetail] Loading existing review:', existingReview);
+    
+    if (existingReview && existingReview.reviewText) {
+      setCommentText(existingReview.reviewText);
+      return true; // Indique qu'on a trouvé une review existante
+    } else {
+      setCommentText('');
+      return false; // Nouvelle review
+    }
+  };
+
+  // État pour savoir si on édite une review existante
+  const [isEditingReview, setIsEditingReview] = useState(false);
+
+  // Ouvrir le modal et charger la review existante
+  const openCommentModal = () => {
+    const hasExistingReview = loadExistingReview();
+    setIsEditingReview(hasExistingReview || false);
+    setShowCommentModal(true);
+  };
+  
+  const { user } = useAuth();
   const { city, country, countryCode, flag, population } = useLocalSearchParams();
 
   // Nettoie le nom pour obtenir le nom de base (ex: "Marseille 01" -> "Marseille")
@@ -347,6 +386,52 @@ export default function CityDetailScreen() {
     setPrevHasBeenThere(false); // Évite l'animation
   };
 
+  // Fonction pour soumettre un commentaire/review
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !user?.uid || !city || !country) return;
+    
+    try {
+      setIsSubmittingComment(true);
+      
+      console.log('[CityDetail] Submitting review for:', city, country);
+      
+      // Créer l'objet review
+      const reviewData = {
+        userId: user.uid,
+        city: city as string,
+        country: country as string,
+        comment: commentText.trim(),
+        createdAt: new Date(),
+        userDisplayName: user.displayName || user.email || 'Anonymous'
+      };
+      
+      // Sauvegarder dans Firestore
+      await addDoc(collection(db, 'cityReviews'), reviewData);
+      
+      // Ajouter à visitedCities avec la review
+      await addOrUpdateCity({
+        name: city as string,
+        country: country as string,
+        flag: (flag as string) || '',
+        beenThere: true,
+        source: 'review',
+        hasReview: true,
+        reviewText: commentText.trim()
+      });
+      
+      // Fermer le modal et reset
+      setShowCommentModal(false);
+      setCommentText('');
+      
+      console.log('[CityDetail] Review submitted successfully');
+      
+    } catch (error) {
+      console.error('[CityDetail] Error submitting review:', error);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
   // Flag haute résolution (320px)
   const flagUrl = `https://flagcdn.com/w320/${
     countryCode
@@ -444,13 +529,7 @@ export default function CityDetailScreen() {
                   ? getCountryName(country as string)
                   : country}
               </Text>
-              {/* Note moyenne sous le pays, design comme trip-detail */}
-              <TouchableOpacity
-                style={styles.rateButtonModal}
-                onPress={() => setShowRateModal(true)}
-              >
-                <Text style={styles.rateButtonModalText}>Rate</Text>
-              </TouchableOpacity>
+              {/* Note moyenne sous le pays */}
               {globalAverageRating !== null && (
                 <View style={[styles.averageRatingContainer, { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}> 
                   <View style={styles.averageStarsWrapper}>
@@ -463,10 +542,25 @@ export default function CityDetailScreen() {
                     />
                   </View>
                   <Text style={styles.averageRatingText}>
-                    {globalAverageRating.toFixed(1)}/5
+                    {globalAverageRating.toFixed(1)}
                   </Text>
                 </View>
               )}
+              {/* Boutons Comment et Rate */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.commentButton}
+                  onPress={openCommentModal}
+                >
+                  <Text style={styles.commentButtonText}>Comment</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.rateButtonModal}
+                  onPress={() => setShowRateModal(true)}
+                >
+                  <Text style={styles.rateButtonModalText}>Rate</Text>
+                </TouchableOpacity>
+              </View>
               {population && (
                 <Text style={[styles.population, { color: textColor }]}> 
                   Population: {population}
@@ -474,83 +568,141 @@ export default function CityDetailScreen() {
               )}
             </View>
             {/* ...existing code... */}
-      {/* Bottom sheet 3/4 pour le système de rating */}
-      {showRateModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+      
+      {/* Modal 40% pour le système de rating avec animation slide */}
+      <Modal
+        visible={showRateModal}
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        transparent={true}
+        onRequestClose={() => setShowRateModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setShowRateModal(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>×</Text>
+                <Text style={[styles.closeButtonText, { color: textColor }]}>×</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.postModalScroll}>
-              <Text style={[styles.sectionTitle, { color: textColor }]}>Votre note</Text>
-              <View style={styles.userRatingContainer}>
-                <View style={styles.starsWrapper}>
-                  <StarRating 
-                    rating={userRating} 
-                    onRatingChange={handleRatingChange}
-                    size="large"
-                    color="#f5c518"
-                    showRating={false}
-                  />
-                </View>
-                <Text style={[styles.currentRating, { color: textColor }]}> 
-                  {userRating > 0 ? `${userRating.toFixed(1)}/5` : 'Pas encore noté'}
-                </Text>
+          <ScrollView style={styles.postModalScroll} showsVerticalScrollIndicator={false}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Your rating</Text>
+            <View style={styles.userRatingContainer}>
+              <View style={styles.starsWrapper}>
+                <StarRating 
+                  rating={userRating} 
+                  onRatingChange={handleRatingChange}
+                  size="large"
+                  color="#f5c518"
+                  showRating={false}
+                />
               </View>
-              {userRating > 0 && (
-                <View style={styles.actionRow}>
-                  <TouchableOpacity 
-                    style={[styles.clearButton, { borderColor }]}
-                    onPress={handleDelete}
-                  >
-                    <Text style={[styles.clearButtonText, { color: textColor }]}>Delete</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: mainBlue }]}
-                    onPress={handleSubmitRating}
-                  >
-                    <Text style={styles.rateButtonText}>Done</Text>
-                  </TouchableOpacity>
+            </View>
+            <View style={styles.spacingAfterStars} />
+            {userRating > 0 && (
+              <View style={styles.actionRow}>
+                <TouchableOpacity 
+                  style={[styles.clearButton, { borderColor }]}
+                  onPress={handleDelete}
+                >
+                  <Text style={[styles.clearButtonText, { color: textColor }]}>Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.actionButton, { backgroundColor: mainBlue }]}
+                  onPress={handleSubmitRating}
+                >
+                  <Text style={styles.rateButtonText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <TouchableOpacity 
+              style={[
+                styles.visitedButtonFullWidth,
+                { borderColor: mainBlue },
+                hasBeenThere && { backgroundColor: mainBlue }
+              ]}
+              onPress={toggleHasBeenThere}
+            >
+              <View style={styles.visitedButtonContainer}>
+                <Animated.View style={[
+                  styles.curtainEffect,
+                  {
+                    backgroundColor: mainBlue,
+                    width: curtainAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }
+                ]} />
+                <View style={styles.visitedButtonContent}>
+                  <Text style={[
+                    styles.visitedButtonTextNew, 
+                    hasBeenThere && styles.visitedButtonTextNewActive
+                  ]}>
+                    I have been there
+                  </Text>
+                  {hasBeenThere && (
+                    <Text style={styles.checkMarkNew}>✓</Text>
+                  )}
                 </View>
-              )}
-              <TouchableOpacity 
-                style={[
-                  styles.visitedButtonFullWidth,
-                  { borderColor: mainBlue },
-                  hasBeenThere && { backgroundColor: mainBlue }
-                ]}
-                onPress={toggleHasBeenThere}
-              >
-                <View style={styles.visitedButtonContainer}>
-                  <Animated.View style={[
-                    styles.curtainEffect,
-                    {
-                      backgroundColor: mainBlue,
-                      width: curtainAnimation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0%', '100%'],
-                      }),
-                    }
-                  ]} />
-                  <View style={styles.visitedButtonContent}>
-                    <Text style={[
-                      styles.visitedButtonTextNew, 
-                      hasBeenThere && styles.visitedButtonTextNewActive
-                    ]}>
-                      I have been there
-                    </Text>
-                    {hasBeenThere && (
-                      <Text style={styles.checkMarkNew}>✓</Text>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
           </View>
         </View>
-      )}
+      </Modal>
+
+      {/* Modal 80% pour les commentaires/reviews */}
+      <Modal
+        visible={showCommentModal}
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        transparent={true}
+        onRequestClose={() => setShowCommentModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.commentModalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={[styles.commentModalContent, { backgroundColor }]}>
+            <View style={styles.commentModalHeader}>
+              <TouchableOpacity onPress={() => setShowCommentModal(false)} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: textColor }]}>×</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleSubmitComment}
+                style={[styles.postReviewButton, { opacity: commentText.trim() ? 1 : 0.5 }]}
+                disabled={!commentText.trim() || isSubmittingComment}
+              >
+                {isSubmittingComment ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.postReviewButtonText}>Post Review</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.commentInputContainer}>
+              <Text style={[styles.commentTitle, { color: textColor }]}>
+                Share your experience in {city}
+              </Text>
+              <TextInput
+                style={[styles.commentInput, { 
+                  color: textColor, 
+                  borderColor: textColor + '30'
+                }]}
+                placeholder="Write your review here..."
+                placeholderTextColor={textColor + '70'}
+                value={commentText}
+                onChangeText={setCommentText}
+                multiline={true}
+                autoFocus={true}
+                textAlignVertical="top"
+                scrollEnabled={true}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
           </ScrollView>
         </View>
       )}
@@ -559,19 +711,23 @@ export default function CityDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Styles modal 3/4 inspirés de add-city.tsx
+  // Styles modal 50% 
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0)', // Supprime l'ombre noire
+    justifyContent: 'flex-end',
+  },
   modalContent: {
-  height: '90%',
-  minHeight: '90%',
-  borderTopLeftRadius: 20,
-  borderTopRightRadius: 20,
-  paddingHorizontal: 20,
-  backgroundColor: '#181C24',
+    height: '50%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingVertical: 15,
+    paddingTop: 20, // Réduit l'espace pour la status bar
   },
   closeButton: {
     width: 30,
@@ -582,21 +738,11 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
   },
   postModalScroll: {
     flex: 1,
     paddingTop: 20,
     paddingHorizontal: 20,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
   rateModalContent: {
     width: '100%',
@@ -625,12 +771,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   rateButtonModal: {
-    marginTop: 18,
     backgroundColor: '#2051A4',
     borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 32,
-    alignSelf: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentButton: {
+    backgroundColor: '#666',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+  },
+  commentButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 1,
   },
   rateButtonModalText: {
     color: '#fff',
@@ -701,6 +864,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 15,
+    textAlign: 'center',
   },
   userRatingContainer: {
     alignItems: 'center',
@@ -708,6 +872,9 @@ const styles = StyleSheet.create({
   },
   starsWrapper: {
     transform: [{ scale: 1.3 }], // Agrandit les étoiles de 30%
+  },
+  spacingAfterStars: {
+    height: 15, // Même espace qu'au dessus (gap: 15)
   },
   currentRating: {
     fontSize: 16,
@@ -749,9 +916,9 @@ const styles = StyleSheet.create({
   visitedButtonFullWidth: {
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#2051A4',
+    backgroundColor: 'transparent',
     overflow: 'hidden',
     position: 'relative',
   },
@@ -817,5 +984,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
     fontStyle: 'italic',
+  },
+  // Styles pour le modal de commentaire
+  commentModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0)',
+    justifyContent: 'flex-end',
+  },
+  commentModalContent: {
+    height: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+  },
+  commentModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingTop: 20,
+  },
+  postReviewButton: {
+    backgroundColor: '#2051A4',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  postReviewButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  commentInputContainer: {
+    flex: 1,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
+  commentTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    lineHeight: 22,
+    textAlignVertical: 'top',
+    minHeight: 200,
   },
 });
