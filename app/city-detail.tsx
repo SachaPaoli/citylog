@@ -78,23 +78,218 @@ export default function CityDetailScreen() {
   // État pour l'URL de l'image de la ville
   const [cityImageUrl, setCityImageUrl] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
+  
+  // État pour la description de la ville
+  const [cityDescription, setCityDescription] = useState<string | null>(null);
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false);
+
+  // Cache pour les descriptions
+  const cityDescriptionCache = React.useRef<{ [key: string]: string | null }>({});
 
 
-  // Récupère une image de la ville via Wikimedia, avec cache et gestion des doublons
-  // Nouvelle logique : Wikidata P18
+  // Liste des capitales par pays qui méritent une vraie image
+  const capitalsByCountry: Record<string, string> = {
+    'France': 'Paris',
+    'FR': 'Paris',
+    'Germany': 'Berlin',
+    'DE': 'Berlin',
+    'Italy': 'Rome',
+    'IT': 'Rome',
+    'Spain': 'Madrid',
+    'ES': 'Madrid',
+    'United Kingdom': 'London',
+    'GB': 'London',
+    'United States': 'Washington',
+    'US': 'Washington',
+    'Canada': 'Ottawa',
+    'CA': 'Ottawa',
+    'Japan': 'Tokyo',
+    'JP': 'Tokyo',
+    'Australia': 'Canberra',
+    'AU': 'Canberra',
+    'Netherlands': 'Amsterdam',
+    'NL': 'Amsterdam',
+    'Switzerland': 'Bern',
+    'CH': 'Bern',
+    'Austria': 'Vienna',
+    'AT': 'Vienna',
+    'Belgium': 'Brussels',
+    'BE': 'Brussels',
+    'Portugal': 'Lisbon',
+    'PT': 'Lisbon',
+    'Greece': 'Athens',
+    'GR': 'Athens',
+    'Turkey': 'Ankara',
+    'TR': 'Ankara',
+    'Russia': 'Moscow',
+    'RU': 'Moscow',
+    'China': 'Beijing',
+    'CN': 'Beijing',
+    'India': 'New Delhi',
+    'IN': 'New Delhi',
+    'Brazil': 'Brasília',
+    'BR': 'Brasília',
+    'Argentina': 'Buenos Aires',
+    'AR': 'Buenos Aires',
+    'Mexico': 'Mexico City',
+    'MX': 'Mexico City',
+    'Egypt': 'Cairo',
+    'EG': 'Cairo',
+    'Thailand': 'Bangkok',
+    'TH': 'Bangkok',
+    'South Korea': 'Seoul',
+    'KR': 'Seoul',
+    'Morocco': 'Rabat',
+    'MA': 'Rabat',
+    'Czech Republic': 'Prague',
+    'CZ': 'Prague',
+    'Poland': 'Warsaw',
+    'PL': 'Warsaw',
+    'Hungary': 'Budapest',
+    'HU': 'Budapest',
+    'Denmark': 'Copenhagen',
+    'DK': 'Copenhagen',
+    'Sweden': 'Stockholm',
+    'SE': 'Stockholm',
+    'Norway': 'Oslo',
+    'NO': 'Oslo',
+    'Finland': 'Helsinki',
+    'FI': 'Helsinki',
+    'Ireland': 'Dublin',
+    'IE': 'Dublin',
+    'Croatia': 'Zagreb',
+    'HR': 'Zagreb',
+    'Slovenia': 'Ljubljana',
+    'SI': 'Ljubljana',
+    'Slovakia': 'Bratislava',
+    'SK': 'Bratislava',
+    'Romania': 'Bucharest',
+    'RO': 'Bucharest',
+    'Bulgaria': 'Sofia',
+    'BG': 'Sofia',
+    'Serbia': 'Belgrade',
+    'RS': 'Belgrade',
+    'Israel': 'Jerusalem',
+    'IL': 'Jerusalem',
+    'Jordan': 'Amman',
+    'JO': 'Amman',
+    'Lebanon': 'Beirut',
+    'LB': 'Beirut',
+    'UAE': 'Abu Dhabi',
+    'AE': 'Abu Dhabi',
+    'Qatar': 'Doha',
+    'QA': 'Doha',
+    'Singapore': 'Singapore',
+    'SG': 'Singapore',
+    'Malaysia': 'Kuala Lumpur',
+    'MY': 'Kuala Lumpur',
+    'Indonesia': 'Jakarta',
+    'ID': 'Jakarta',
+    'Philippines': 'Manila',
+    'PH': 'Manila',
+    'Vietnam': 'Hanoi',
+    'VN': 'Hanoi',
+    'South Africa': 'Cape Town',
+    'ZA': 'Cape Town',
+    'Kenya': 'Nairobi',
+    'KE': 'Nairobi',
+    'Nigeria': 'Abuja',
+    'NG': 'Abuja',
+    'Chile': 'Santiago',
+    'CL': 'Santiago',
+    'Peru': 'Lima',
+    'PE': 'Lima',
+    'Colombia': 'Bogotá',
+    'CO': 'Bogotá',
+    'Venezuela': 'Caracas',
+    'VE': 'Caracas',
+    'Uruguay': 'Montevideo',
+    'UY': 'Montevideo',
+    'New Zealand': 'Wellington',
+    'NZ': 'Wellington'
+  };
+
+  // Normalise un nom en retirant les accents pour la comparaison
+  function normalizeString(str: string): string {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Retire les accents
+      .toLowerCase()
+      .trim();
+  }
+
+  // Vérifie si une ville est une capitale dans son pays
+  function isCapital(cityName: string, countryName: string): boolean {
+    const baseName = getBaseCityName(cityName);
+    const capital = capitalsByCountry[countryName];
+    
+    console.log(`[Capital] Checking: "${cityName}" (base: "${baseName}") in ${countryName}`);
+    console.log(`[Capital] Capital of ${countryName}:`, capital);
+    
+    // Si pas de capitale définie pour ce pays
+    if (!capital) {
+      console.log(`[Capital] REJECTED: No capital defined for ${countryName}`);
+      return false;
+    }
+    
+    // Si le nom original contient des chiffres/suffixes, ce n'est pas la ville principale
+    if (cityName !== baseName) {
+      console.log(`[Capital] REJECTED: "${cityName}" is not the main city (base would be "${baseName}")`);
+      return false;
+    }
+    
+    const normalizedBaseName = normalizeString(baseName);
+    const normalizedCapital = normalizeString(capital);
+    
+    // SEULEMENT match exact avec la capitale
+    const exactMatch = normalizedCapital === normalizedBaseName;
+    
+    if (exactMatch) {
+      console.log(`[Capital] EXACT MATCH found: ${capital} (${normalizedCapital}) === ${baseName} (${normalizedBaseName})`);
+    } else {
+      console.log(`[Capital] NO MATCH: ${capital} (${normalizedCapital}) !== ${baseName} (${normalizedBaseName})`);
+    }
+    
+    console.log(`[Capital] Result for ${baseName}: ${exactMatch}`);
+    return exactMatch;
+  }
+
+  // Récupère une image de la ville via Wikimedia pour les capitales uniquement
   async function fetchCityImage(cityName: string, countryName: string) {
     setIsLoadingImage(true);
     const baseName = getBaseCityName(cityName);
     const cacheKey = `${baseName.toLowerCase()}_${countryName.toLowerCase()}`;
+    
+    console.log(`[FetchImage] Starting fetch for: ${baseName}, ${countryName}`);
+    
+    // Vérification du cache
     if (cityImageCache.current[cacheKey] !== undefined) {
+      console.log(`[FetchImage] Found in cache: ${cityImageCache.current[cacheKey]}`);
       setCityImageUrl(cityImageCache.current[cacheKey]);
       setIsLoadingImage(false);
       return;
     }
+
+    // Vérifier si la ville est une capitale
+    const isFamous = isCapital(cityName, countryName);
+    console.log(`[FetchImage] Is ${baseName} a capital? ${isFamous}`);
+
+    // Si la ville n'est pas une capitale, affiche directement le drapeau
+    if (!isFamous) {
+      console.log(`[FetchImage] Not a capital, using flag for: ${baseName}`);
+      cityImageCache.current[cacheKey] = flagUrl;
+      setCityImageUrl(flagUrl);
+      setIsLoadingImage(false);
+      return;
+    }
+
+    console.log(`[FetchImage] Fetching real image for capital city: ${baseName}`);
     let imgUrl: string | null = null;
     let wikidataId: string | null = null;
-    // 1. Cherche la page Wikipedia pour la ville
+
+    // 1. Cherche la page Wikipedia pour la ville célèbre
     try {
+      console.log(`[FetchImage] Searching Wikipedia for: ${baseName}, ${countryName}`);
       const searchRes = await axios.get('https://en.wikipedia.org/w/api.php', {
         params: {
           action: 'query',
@@ -103,8 +298,11 @@ export default function CityDetailScreen() {
           format: 'json',
           origin: '*',
         },
+        timeout: 10000
       });
       const page = searchRes.data?.query?.search?.[0];
+      console.log(`[FetchImage] Wikipedia search result:`, page?.title);
+      
       if (page) {
         // 2. Récupère l'ID Wikidata via la page Wikipedia
         const pageInfoRes = await axios.get('https://en.wikipedia.org/w/api.php', {
@@ -115,16 +313,20 @@ export default function CityDetailScreen() {
             format: 'json',
             origin: '*',
           },
+          timeout: 10000
         });
         const pageData = pageInfoRes.data?.query?.pages?.[page.pageid];
         wikidataId = pageData?.pageprops?.wikibase_item || null;
+        console.log(`[FetchImage] Wikidata ID found: ${wikidataId}`);
       }
     } catch (e) {
-      // ignore
+      console.log('[FetchImage] Wikipedia search failed for famous city:', baseName, e);
     }
+
     // 3. Si Wikidata trouvé, récupère l'image officielle (P18)
     if (wikidataId) {
       try {
+        console.log(`[FetchImage] Fetching Wikidata image for: ${wikidataId}`);
         const wikidataRes = await axios.get(`https://www.wikidata.org/w/api.php`, {
           params: {
             action: 'wbgetclaims',
@@ -133,25 +335,32 @@ export default function CityDetailScreen() {
             format: 'json',
             origin: '*',
           },
+          timeout: 10000
         });
         const claims = wikidataRes.data?.claims?.P18;
         if (claims && claims.length > 0) {
           // P18 = nom du fichier image sur Wikimedia Commons
           const fileName = claims[0].mainsnak.datavalue.value;
           // Transforme le nom en URL
-          // https://commons.wikimedia.org/wiki/Special:FilePath/{fileName}
           imgUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
+          console.log(`[FetchImage] Image URL found: ${imgUrl}`);
         }
       } catch (e) {
-        // ignore
+        console.log('[FetchImage] Wikidata image fetch failed for famous city:', baseName, e);
       }
     }
-    // 4. Fallback : drapeau si aucune image
-    if (!imgUrl) {
-      imgUrl = flagUrl;
+
+    // 4. Résultat final
+    if (imgUrl) {
+      console.log(`[FetchImage] SUCCESS: Real image found for ${baseName}`);
+      cityImageCache.current[cacheKey] = imgUrl;
+      setCityImageUrl(imgUrl);
+    } else {
+      console.log(`[FetchImage] FALLBACK: Using flag for famous city ${baseName} (no image found)`);
+      cityImageCache.current[cacheKey] = flagUrl;
+      setCityImageUrl(flagUrl);
     }
-    cityImageCache.current[cacheKey] = imgUrl;
-    setCityImageUrl(imgUrl);
+    
     setIsLoadingImage(false);
   }
 
@@ -159,8 +368,125 @@ export default function CityDetailScreen() {
   useEffect(() => {
     if (city && country) {
       fetchCityImage(city as string, country as string);
+      fetchCityDescription(city as string, country as string);
     }
   }, [city, country]);
+
+  // Récupère une description courte de la ville via Wikipedia
+  async function fetchCityDescription(cityName: string, countryName: string) {
+    setIsLoadingDescription(true);
+    const baseName = getBaseCityName(cityName);
+    const cacheKey = `${baseName.toLowerCase()}_${countryName.toLowerCase()}_desc`;
+    
+    console.log(`[FetchDescription] Starting fetch for: ${baseName}, ${countryName}`);
+    
+    // Vérification du cache
+    if (cityDescriptionCache.current[cacheKey] !== undefined) {
+      console.log(`[FetchDescription] Found in cache: ${cityDescriptionCache.current[cacheKey]}`);
+      setCityDescription(cityDescriptionCache.current[cacheKey]);
+      setIsLoadingDescription(false);
+      return;
+    }
+
+    try {
+      let description: string | null = null;
+      
+      // Construire différentes variantes de recherche pour être plus précis
+      const countryLong = getCountryName(countryName);
+      const searchQueries = [
+        `${baseName}, ${countryLong}`,  // Ex: "Paris, France"
+        `${baseName}, ${countryName}`,  // Ex: "Paris, FR" 
+        `${baseName} ${countryLong}`,   // Ex: "Paris France"
+        `${baseName} ${countryName}`    // Ex: "Paris FR"
+      ];
+      
+      console.log(`[FetchDescription] Trying search queries for ${baseName}:`, searchQueries);
+      
+      // Essayer chaque variante de recherche jusqu'à trouver une description
+      for (const searchQuery of searchQueries) {
+        try {
+          const searchApiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=0&gsrlimit=3&gsrsearch=${encodeURIComponent(searchQuery)}&prop=extracts&exintro=true&explaintext=true&exsentences=3&origin=*`;
+          
+          console.log(`[FetchDescription] Trying search: "${searchQuery}"`);
+          const searchResponse = await axios.get(searchApiUrl, { timeout: 8000 });
+          
+          if (searchResponse.data?.query?.pages) {
+            const pages = Object.values(searchResponse.data.query.pages) as any[];
+            
+            // Chercher la page qui correspond le mieux (contient le nom du pays)
+            for (const page of pages) {
+              if (page.extract && page.title) {
+                console.log(`[FetchDescription] Found page: "${page.title}"`);
+                
+                // Vérifier que la page correspond bien à notre ville/pays
+                const pageTitle = page.title.toLowerCase();
+                const cityLower = baseName.toLowerCase();
+                const countryLower = countryLong.toLowerCase();
+                const countryCodeLower = countryName.toLowerCase();
+                
+                if (pageTitle.includes(cityLower) && 
+                    (pageTitle.includes(countryLower) || pageTitle.includes(countryCodeLower))) {
+                  description = page.extract;
+                  console.log(`[FetchDescription] Perfect match found: "${page.title}"`);
+                  break;
+                } else if (pageTitle.includes(cityLower) && !description) {
+                  // Si pas de match parfait, garder comme fallback
+                  description = page.extract;
+                  console.log(`[FetchDescription] Partial match as fallback: "${page.title}"`);
+                }
+              }
+            }
+            
+            if (description) break; // Si on a trouvé une description, arrêter
+          }
+        } catch (queryError) {
+          console.log(`[FetchDescription] Search query failed: "${searchQuery}"`, queryError);
+          continue;
+        }
+      }
+      
+      // Si aucune recherche spécifique n'a fonctionné, essayer juste le nom de la ville
+      if (!description) {
+        try {
+          const directUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(baseName)}`;
+          console.log(`[FetchDescription] Trying direct summary for: ${baseName}`);
+          
+          const summaryResponse = await axios.get(directUrl, { timeout: 8000 });
+          if (summaryResponse.data && summaryResponse.data.extract) {
+            description = summaryResponse.data.extract;
+            console.log(`[FetchDescription] Got direct summary as last resort`);
+          }
+        } catch (directError) {
+          console.log(`[FetchDescription] Direct summary also failed`);
+        }
+      }
+      
+      // Limiter à 3 phrases maximum
+      if (description) {
+        const sentences = description.split('. ');
+        if (sentences.length > 3) {
+          description = sentences.slice(0, 3).join('. ') + '.';
+        }
+      }
+      
+      // Sauvegarder dans le cache
+      cityDescriptionCache.current[cacheKey] = description;
+      setCityDescription(description);
+      
+      if (description) {
+        console.log(`[FetchDescription] SUCCESS: Description found for ${baseName}, ${countryName}`);
+      } else {
+        console.log(`[FetchDescription] NO DESCRIPTION: No summary found for ${baseName}, ${countryName}`);
+      }
+      
+    } catch (error) {
+      console.log(`[FetchDescription] ERROR: Failed to fetch description for ${baseName}, ${countryName}:`, error);
+      cityDescriptionCache.current[cacheKey] = null;
+      setCityDescription(null);
+    }
+    
+    setIsLoadingDescription(false);
+  }
   const router = useRouter();
   
   const { addOrUpdateCity, removeCity, removeCitySource, cities: visitedCities } = useVisitedCities();
@@ -488,86 +814,149 @@ export default function CityDetailScreen() {
             <Image source={{ uri: flagUrl }} style={[styles.headerFlag, { width: 40, height: 28 }]} />
           </View>
 
-          {/* Image de la ville ou drapeau */}
+          {/* Image de la ville ou drapeau avec layout adaptatif */}
           <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 20 }}>
             {cityImageUrl && cityImageUrl !== require('../assets/images/placeholder.png') && (
               <>
-                <Image
-                  source={{ uri: cityImageUrl }}
-                  style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
-                  onLoadEnd={() => setIsLoadingImage(false)}
-                />
-                {/* Affiche le gradient seulement quand l'image est chargée */}
-                {!isLoadingImage && (
-                  <LinearGradient
-                    colors={
-                      cityImageUrl === flagUrl
-                        ? ["rgba(0,0,0,0)", "rgba(24,28,36,0.12)"]
-                        : ["rgba(0,0,0,0)", "#181C24"]
-                    }
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: cityImageUrl === flagUrl ? 22 : 50,
-                    }}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                  />
+                {cityImageUrl === flagUrl ? (
+                  // Layout spécial pour les drapeaux : drapeau à gauche + infos à droite
+                  <View style={styles.flagLayout}>
+                    <Image
+                      source={{ uri: cityImageUrl }}
+                      style={styles.smallFlag}
+                      onLoadEnd={() => setIsLoadingImage(false)}
+                    />
+                    <View style={styles.cityInfoContainer}>
+                      <Text style={[styles.cityNameInFlag, { color: textColor }]}>{city}</Text>
+                      <Text style={[styles.countryNameInFlag, { color: textColor }]}>
+                        {country && (country as string).length <= 3
+                          ? getCountryName(country as string)
+                          : country}
+                      </Text>
+                      {/* Description de la ville */}
+                      {cityDescription && (
+                        <Text style={[styles.cityDescriptionInFlag, { color: textColor }]}>
+                          {cityDescription}
+                        </Text>
+                      )}
+                      {/* Note moyenne */}
+                      {globalAverageRating !== null && (
+                        <View style={styles.averageRatingInFlag}>
+                          <View style={styles.averageStarsWrapper}>
+                            <StarRating 
+                              rating={globalAverageRating} 
+                              readonly={true} 
+                              size="small"
+                              showRating={false}
+                              color="#f5c518"
+                            />
+                          </View>
+                          <Text style={styles.averageRatingTextInFlag}>
+                            {globalAverageRating.toFixed(1)}
+                          </Text>
+                        </View>
+                      )}
+                      {/* Boutons Comment et Rate */}
+                      <View style={styles.buttonRowInFlag}>
+                        <TouchableOpacity
+                          style={styles.commentButtonInFlag}
+                          onPress={openCommentModal}
+                        >
+                          <Text style={styles.commentButtonTextInFlag}>Comment</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.rateButtonInFlag}
+                          onPress={() => setShowRateModal(true)}
+                        >
+                          <Text style={styles.rateButtonTextInFlag}>Rate</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  // Layout normal pour les vraies images de capitales
+                  <>
+                    <Image
+                      source={{ uri: cityImageUrl }}
+                      style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
+                      onLoadEnd={() => setIsLoadingImage(false)}
+                    />
+                    {/* Affiche le gradient seulement quand l'image est chargée */}
+                    {!isLoadingImage && (
+                      <LinearGradient
+                        colors={["rgba(0,0,0,0)", "#181C24"]}
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 50,
+                        }}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
           </View>
 
           <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
-            {/* Nom de la ville */}
-            <View style={styles.cityHeader}>
-              <Text style={[styles.cityName, { color: textColor }]}>{city}</Text>
-              <Text style={[styles.countryName, { color: textColor }]}> 
-                {country && (country as string).length <= 3
-                  ? getCountryName(country as string)
-                  : country}
-              </Text>
-              {/* Note moyenne sous le pays */}
-              {globalAverageRating !== null && (
-                <View style={[styles.averageRatingContainer, { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}> 
-                  <View style={styles.averageStarsWrapper}>
-                    <StarRating 
-                      rating={globalAverageRating} 
-                      readonly={true} 
-                      size="medium"
-                      showRating={false}
-                      color="#f5c518"
-                    />
-                  </View>
-                  <Text style={styles.averageRatingText}>
-                    {globalAverageRating.toFixed(1)}
-                  </Text>
-                </View>
-              )}
-              {/* Boutons Comment et Rate */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.commentButton}
-                  onPress={openCommentModal}
-                >
-                  <Text style={styles.commentButtonText}>Comment</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.rateButtonModal}
-                  onPress={() => setShowRateModal(true)}
-                >
-                  <Text style={styles.rateButtonModalText}>Rate</Text>
-                </TouchableOpacity>
-              </View>
-              {population && (
-                <Text style={[styles.population, { color: textColor }]}> 
-                  Population: {population}
+            {/* Nom de la ville - affiché seulement pour les vraies images de capitales */}
+            {cityImageUrl && cityImageUrl !== flagUrl && (
+              <View style={styles.cityHeader}>
+                <Text style={[styles.cityName, { color: textColor }]}>{city}</Text>
+                <Text style={[styles.countryName, { color: textColor }]}> 
+                  {country && (country as string).length <= 3
+                    ? getCountryName(country as string)
+                    : country}
                 </Text>
-              )}
-            </View>
-            {/* ...existing code... */}
+                {/* Description de la ville */}
+                {cityDescription && (
+                  <Text style={[styles.cityDescription, { color: textColor }]}>
+                    {cityDescription}
+                  </Text>
+                )}
+                {/* Note moyenne sous le pays */}
+                {globalAverageRating !== null && (
+                  <View style={[styles.averageRatingContainer, { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}> 
+                    <View style={styles.averageStarsWrapper}>
+                      <StarRating 
+                        rating={globalAverageRating} 
+                        readonly={true} 
+                        size="medium"
+                        showRating={false}
+                        color="#f5c518"
+                      />
+                    </View>
+                    <Text style={styles.averageRatingText}>
+                      {globalAverageRating.toFixed(1)}
+                    </Text>
+                  </View>
+                )}
+                {/* Boutons Comment et Rate */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.commentButton}
+                    onPress={openCommentModal}
+                  >
+                    <Text style={styles.commentButtonText}>Comment</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.rateButtonModal}
+                    onPress={() => setShowRateModal(true)}
+                  >
+                    <Text style={styles.rateButtonModalText}>Rate</Text>
+                  </TouchableOpacity>
+                </View>
+                {population && (
+                  <Text style={[styles.population, { color: textColor }]}> 
+                    Population: {population}
+                  </Text>
+                )}
+              </View>
+            )}
       
       {/* Modal 40% pour le système de rating avec animation slide */}
       <Modal
@@ -1037,5 +1426,81 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlignVertical: 'top',
     minHeight: 200,
+  },
+  // Styles pour le layout drapeau
+  flagLayout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 20,
+    gap: 20,
+  },
+  smallFlag: {
+    width: 80,
+    height: 54,
+    borderRadius: 8,
+  },
+  cityInfoContainer: {
+    flex: 1,
+    gap: 8,
+  },
+  cityNameInFlag: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  countryNameInFlag: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  cityDescriptionInFlag: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    opacity: 0.8,
+  },
+  cityDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginTop: 12,
+    marginHorizontal: 20,
+    opacity: 0.8,
+  },
+  averageRatingInFlag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  averageRatingTextInFlag: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f5c518',
+  },
+  buttonRowInFlag: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  commentButtonInFlag: {
+    backgroundColor: '#666',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+  commentButtonTextInFlag: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rateButtonInFlag: {
+    backgroundColor: '#2051A4',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+  rateButtonTextInFlag: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
