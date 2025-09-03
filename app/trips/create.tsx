@@ -13,6 +13,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../../config/firebase';
 
 // WavyArrow refactor: controlled inputs via props
@@ -33,13 +34,13 @@ const WavyArrow = ({
   ];
 
   const transportModes = [
-    { label: '🚗', value: 'car', name: 'Voiture', icon: '⬜' },
-    { label: '🚲', value: 'bike', name: 'Vélo', icon: '○' },
-    { label: '🚂', value: 'train', name: 'Train', icon: '▬' },
-    { label: '🚌', value: 'bus', name: 'Bus', icon: '▭' },
-    { label: '🚇', value: 'metro', name: 'Métro', icon: 'Ⓜ' },
-    { label: '🏍️', value: 'moto', name: 'Moto', icon: '◦' },
-    { label: '✈️', value: 'plane', name: 'Avion', icon: '✈' }
+    { label: '🚗', value: 'car', name: 'car', icon: 'car-outline' },
+    { label: '🚲', value: 'bike', name: 'Bycicle', icon: 'bicycle-outline' },
+    { label: '🚂', value: 'train', name: 'Train', icon: 'train-outline' },
+    { label: '🚌', value: 'bus', name: 'Bus', icon: 'bus-outline' },
+    { label: '🚇', value: 'metro', name: 'Metro', icon: 'subway-outline' },
+    { label: '🏍️', value: 'moto', name: 'Bike', icon: 'speedometer-outline' },
+    { label: '✈️', value: 'plane', name: 'Plane', icon: 'airplane-outline' }
   ];
 
   return (
@@ -72,9 +73,11 @@ const WavyArrow = ({
           style={styles.selectButton}
           onPress={() => setShowTransportModal(true)}
         >
-          <Text style={styles.selectText}>
-            {transportModes.find(mode => mode.icon === segment.transport)?.icon || '⬜'}
-          </Text>
+          <Ionicons 
+            name={transportModes.find(mode => mode.icon === segment.transport)?.icon as any || 'car-outline'} 
+            size={20} 
+            color="#fff" 
+          />
           <Text style={styles.selectArrow}>▼</Text>
         </TouchableOpacity>
       </View>
@@ -102,7 +105,6 @@ const WavyArrow = ({
           onPress={() => setShowTimeModal(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Unité de temps</Text>
             {timeUnits.map((unit) => (
               <TouchableOpacity
                 key={unit.value}
@@ -132,7 +134,6 @@ const WavyArrow = ({
           onPress={() => setShowTransportModal(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Moyen de transport</Text>
             {transportModes.map((mode) => (
               <TouchableOpacity
                 key={mode.value}
@@ -145,9 +146,10 @@ const WavyArrow = ({
                   setShowTransportModal(false);
                 }}
               >
-                <Text style={styles.modalOptionText}>
-                  {mode.icon} {mode.name}
-                </Text>
+                <View style={styles.modalOptionContent}>
+                  <Ionicons name={mode.icon as any} size={20} color="#fff" />
+                  <Text style={styles.modalOptionText}>{mode.name}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -194,7 +196,7 @@ export default function CreateTripScreen() {
     if (segments.length !== needed) {
       // Fill with previous values or defaults
       const fixed = Array.from({ length: needed }, (_, i) =>
-        segments[i] || { duration: '', timeUnit: 'minutes', transport: '⬜' }
+        segments[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' }
       );
       setSegments(fixed);
     }
@@ -363,7 +365,7 @@ export default function CreateTripScreen() {
         }
         // Fill missing segments with defaults
         const segmentsFixed = Array.from({ length: needed }, (_, i) =>
-          loadedSegments[i] || { duration: '', timeUnit: 'minutes', transport: '⬜' }
+          loadedSegments[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' }
         );
         setSegments(segmentsFixed);
         prevTripCountRef.current = trips.length;
@@ -391,7 +393,7 @@ export default function CreateTripScreen() {
       const needed = Math.max(0, updatedTrips.length - 1);
       setSegments(prev => {
         const fixed = Array.from({ length: needed }, (_, i) =>
-          prev[i] || { duration: '', timeUnit: 'minutes', transport: '⬜' }
+          prev[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' }
         );
         return fixed;
       });
@@ -499,7 +501,6 @@ export default function CreateTripScreen() {
             contentContainerStyle={{ paddingBottom: 0 }}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={[styles.tripsTitle, { color: '#fff' }]}>Mes trips :</Text>
             {localTrips.map((trip, index) => {
               // If trip has no coverImage and no items, display as a simple visited city card
               const isSimpleVisited = !trip.coverImage && trip.stayingItems.length === 0 && trip.restaurantItems.length === 0 && trip.activitiesItems.length === 0 && trip.otherItems.length === 0;
@@ -1261,6 +1262,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  transportIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
   selectArrow: {
     color: '#fff',
     fontSize: 12,
@@ -1273,7 +1288,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#181C24',
     borderRadius: 12,
     padding: 20,
     minWidth: 200,
@@ -1284,20 +1299,37 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
-    color: '#333',
+    color: '#fff',
   },
   modalOption: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   modalOptionSelected: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   modalOptionText: {
     fontSize: 16,
+    color: '#fff',
+    textAlign: 'left',
+    marginLeft: 8,
+  },
+  modalOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  modalTransportIcon: {
     color: '#333',
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    borderWidth: 1,
+    borderColor: 'rgba(51, 51, 51, 0.6)',
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    marginRight: 8,
   },
   arrowHead: {
     alignItems: 'center',
