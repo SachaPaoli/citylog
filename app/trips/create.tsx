@@ -1,4 +1,5 @@
 import { StarRating } from '@/components/StarRating';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
@@ -13,7 +14,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../../config/firebase';
 
 // WavyArrow refactor: controlled inputs via props
