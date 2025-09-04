@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { TripService, Trip, TripStats } from '@/services/TripService';
+import { Trip, TripService, TripStats } from '@/services/TripService';
+import { useEffect, useState } from 'react';
 
 export function useUserTrips() {
   const [trips, setTrips] = useState<Trip[]>([]);

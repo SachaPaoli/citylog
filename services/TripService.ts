@@ -1,5 +1,5 @@
-import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
+import { collection, doc, getDoc, getDocs, orderBy, query, where } from 'firebase/firestore';
 
 export interface TripCity {
   id: string;

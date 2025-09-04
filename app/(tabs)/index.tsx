@@ -13,7 +13,6 @@ import { useFollowingPosts } from '@/hooks/useFollowingPosts';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post } from '@/types/Post';
-import { TripService } from '@/services/TripService';
 
 // Onglet Cities
 interface CitiesTabProps {

@@ -1,20 +1,20 @@
+import { TravelTripCard } from '@/components/TravelTripCard';
+import { auth, db } from '@/config/firebase';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { router, Stack } from 'expo-router';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  ActivityIndicator
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TravelTripCard } from '@/components/TravelTripCard';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db, auth } from '@/config/firebase';
 
 export default function TripsScreen() {
   const backgroundColor = useThemeColor({}, 'background');
