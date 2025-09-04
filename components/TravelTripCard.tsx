@@ -4,10 +4,18 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 interface TravelTripCardProps {
   coverImage: string;
   tripName: string;
-  rating: number;
+  averageRating: number;
+  countriesCount: number;
+  citiesCount: number;
 }
 
-export function TravelTripCard({ coverImage, tripName, rating }: TravelTripCardProps) {
+export function TravelTripCard({ 
+  coverImage, 
+  tripName, 
+  averageRating, 
+  countriesCount, 
+  citiesCount 
+}: TravelTripCardProps) {
   return (
     <View style={styles.container}>
       {/* Cover image at the top */}
@@ -18,11 +26,25 @@ export function TravelTripCard({ coverImage, tripName, rating }: TravelTripCardP
           resizeMode="cover"
         />
       </View>
-      {/* Trip name below */}
-      <Text style={styles.tripName}>{tripName}</Text>
-      {/* General rating below */}
-      <View style={styles.ratingContainer}>
-        <Text style={styles.ratingText}>★ {rating}</Text>
+      
+      {/* Trip info */}
+      <View style={styles.tripInfo}>
+        {/* Trip name */}
+        <Text style={styles.tripName} numberOfLines={2}>
+          {tripName}
+        </Text>
+        
+        {/* Average rating */}
+        <View style={styles.ratingContainer}>
+          <Text style={styles.ratingText}>★ {averageRating.toFixed(1)}</Text>
+        </View>
+        
+        {/* Countries and cities count */}
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsText}>
+            {countriesCount} pays • {citiesCount} villes
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -30,24 +52,23 @@ export function TravelTripCard({ coverImage, tripName, rating }: TravelTripCardP
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'white',
+    borderRadius: 15,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-    alignItems: 'center',
-    paddingBottom: 18,
-    overflow: 'hidden',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   coverImageContainer: {
     width: '100%',
-    height: 180,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    height: 120,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
     overflow: 'hidden',
     backgroundColor: '#222',
   },
@@ -55,21 +76,30 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  tripInfo: {
+    padding: 12,
+  },
   tripName: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
+    color: '#333',
+    marginBottom: 4,
   },
   ratingContainer: {
-    alignItems: 'center',
-    marginTop: 4,
+    alignItems: 'flex-start',
+    marginBottom: 6,
   },
   ratingText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#FFD700',
+  },
+  statsContainer: {
+    alignItems: 'flex-start',
+  },
+  statsText: {
+    fontSize: 12,
+    color: '#E5C9A6',
+    fontWeight: '600',
   },
 });

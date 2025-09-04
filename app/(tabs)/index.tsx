@@ -13,6 +13,7 @@ import { useFollowingPosts } from '@/hooks/useFollowingPosts';
 import { usePosts } from '@/hooks/usePosts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Post } from '@/types/Post';
+import { TripService } from '@/services/TripService';
 
 // Onglet Cities
 interface CitiesTabProps {
@@ -47,25 +48,40 @@ interface TripsTabProps {
   cardWidth: number;
   textColor: string;
 }
-const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, cardWidth, textColor }) => (
-  trips.length === 0 ? (
-    <View style={styles.centerContent}>
-      <Text style={[styles.emptyText, { color: textColor }]}>Aucun trip pour l'instant.</Text>
-    </View>
-  ) : (
+const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, cardWidth, textColor }) => {
+  if (trips.length === 0) {
+    return (
+      <View style={styles.centerContent}>
+        <Text style={[styles.emptyText, { color: textColor }]}>Aucun trip pour l'instant.</Text>
+      </View>
+    );
+  }
+
+  return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 10 }}>
-      {trips.map((trip) => (
-        <View key={trip.id} style={{ width: cardWidth, marginBottom: 18 }}>
-          <TravelTripCard
-            coverImage={trip.coverImage}
-            tripName={trip.tripName || trip.city || ''}
-            rating={trip.rating || 0}
-          />
-        </View>
-      ))}
+      {trips.map((trip) => {
+        // Calculer les statistiques du trip à partir des villes
+        const cities = trip.cities || [];
+        const uniqueCountries = cities.length > 0 ? [...new Set(cities.map((city: any) => city.country))] : [];
+        const averageRating = cities.length > 0 
+          ? Math.round((cities.reduce((sum: number, city: any) => sum + (city.rating || 0), 0) / cities.length) * 10) / 10
+          : trip.rating || 0;
+
+        return (
+          <View key={trip.id} style={{ width: cardWidth, marginBottom: 18 }}>
+            <TravelTripCard
+              coverImage={trip.coverImage || 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400'}
+              tripName={trip.tripName || trip.city || 'Voyage sans nom'}
+              averageRating={averageRating}
+              countriesCount={uniqueCountries.length}
+              citiesCount={cities.length}
+            />
+          </View>
+        );
+      })}
     </View>
-  )
-));
+  );
+});
 
 export default function HomeScreen() {
   const [trips, setTrips] = useState<any[]>([]);
@@ -89,7 +105,31 @@ export default function HomeScreen() {
       try {
         const q = query(collection(db, 'trips'), orderBy('createdAt', 'desc'));
         const snap = await getDocs(q);
-        const tripsArr = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tripsArr: any[] = [];
+        
+        // Pour chaque trip, récupérer aussi ses villes
+        for (const tripDoc of snap.docs) {
+          const tripData: any = { id: tripDoc.id, ...tripDoc.data() };
+          
+          // Récupérer les villes du trip
+          try {
+            const citiesQuery = query(
+              collection(db, 'trips', tripDoc.id, 'cities'),
+              orderBy('order', 'asc')
+            );
+            const citiesSnap = await getDocs(citiesQuery);
+            tripData.cities = citiesSnap.docs.map(cityDoc => ({
+              id: cityDoc.id,
+              ...cityDoc.data()
+            }));
+          } catch (error) {
+            console.log('Pas de villes pour le trip:', tripDoc.id);
+            tripData.cities = [];
+          }
+          
+          tripsArr.push(tripData);
+        }
+        
         if (!didCancel) setTrips(tripsArr);
       } catch (e) {
         console.error('Erreur chargement trips Firestore:', e);
@@ -106,11 +146,35 @@ export default function HomeScreen() {
     if (activeTab === 'cities') {
       await refreshFollowingPosts();
     } else if (activeTab === 'trips') {
-      // Force reload trips from Firestore
+      // Force reload trips from Firestore avec leurs villes
       try {
         const q = query(collection(db, 'trips'), orderBy('createdAt', 'desc'));
         const snap = await getDocs(q);
-        const tripsArr = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tripsArr: any[] = [];
+        
+        // Pour chaque trip, récupérer aussi ses villes
+        for (const tripDoc of snap.docs) {
+          const tripData: any = { id: tripDoc.id, ...tripDoc.data() };
+          
+          // Récupérer les villes du trip
+          try {
+            const citiesQuery = query(
+              collection(db, 'trips', tripDoc.id, 'cities'),
+              orderBy('order', 'asc')
+            );
+            const citiesSnap = await getDocs(citiesQuery);
+            tripData.cities = citiesSnap.docs.map(cityDoc => ({
+              id: cityDoc.id,
+              ...cityDoc.data()
+            }));
+          } catch (error) {
+            console.log('Pas de villes pour le trip:', tripDoc.id);
+            tripData.cities = [];
+          }
+          
+          tripsArr.push(tripData);
+        }
+        
         setTrips(tripsArr);
       } catch (e) {
         console.error('Erreur chargement trips Firestore:', e);
