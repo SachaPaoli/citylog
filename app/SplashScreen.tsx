@@ -44,7 +44,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     // Démarrer le pré-chargement immédiatement
     preloadUserPhotos();
     
-    // Animation qui dure minimum 1.5 secondes (style Letterboxd)
+    // Animation qui dure minimum 0.5 secondes (style Letterboxd)
     const startAnimation = () => {
       const animationSequence = Animated.sequence([
         // 1. Attendre un peu pour montrer le titre
@@ -79,17 +79,17 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       });
     };
 
-    // Attendre minimum 1.5 secondes ET que le pré-chargement soit fini
+    // Attendre minimum 0.5 secondes ET que le pré-chargement soit fini
     const minimumDelay = setTimeout(() => {
       if (isPreloadingComplete) {
         startAnimation();
       }
-    }, 1500);
+    }, 500);
 
-    // Si pré-chargement fini avant 1.5s, attendre quand même
+    // Si pré-chargement fini avant 0.5s, attendre quand même
     if (isPreloadingComplete) {
       clearTimeout(minimumDelay);
-      const remainingTime = 1500;
+      const remainingTime = 500;
       setTimeout(startAnimation, Math.max(0, remainingTime));
     }
 
