@@ -1,5 +1,7 @@
+import { useThemeColor } from '@/hooks/useThemeColor';
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { StarRating } from './StarRating';
 
 interface TravelTripCardProps {
   coverImage: string;
@@ -16,8 +18,11 @@ export function TravelTripCard({
   countriesCount, 
   citiesCount 
 }: TravelTripCardProps) {
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor }]}>
       {/* Cover image at the top */}
       <View style={styles.coverImageContainer}>
         <Image
@@ -30,19 +35,32 @@ export function TravelTripCard({
       {/* Trip info */}
       <View style={styles.tripInfo}>
         {/* Trip name */}
-        <Text style={styles.tripName} numberOfLines={2}>
+        <Text style={[styles.tripName, { color: textColor }]} numberOfLines={2}>
           {tripName}
         </Text>
         
-        {/* Average rating */}
+        {/* Average rating with stars like TravelPostCard */}
         <View style={styles.ratingContainer}>
-          <Text style={styles.ratingText}>★ {averageRating.toFixed(1)}</Text>
+          <StarRating 
+            rating={averageRating}
+            readonly
+            size="small"
+            showRating={true}
+            color="#f5c518"
+          />
         </View>
         
-        {/* Countries and cities count */}
+        {/* Countries count */}
         <View style={styles.statsContainer}>
           <Text style={styles.statsText}>
-            {countriesCount} pays • {citiesCount} villes
+            {countriesCount} pays
+          </Text>
+        </View>
+        
+        {/* Cities count */}
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsText}>
+            {citiesCount} villes
           </Text>
         </View>
       </View>
@@ -52,25 +70,24 @@ export function TravelTripCard({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    borderRadius: 15,
+    borderRadius: 12,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
   },
   coverImageContainer: {
     width: '100%',
     height: 120,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#222',
+    backgroundColor: '#333',
   },
   coverImage: {
     width: '100%',
@@ -82,24 +99,20 @@ const styles = StyleSheet.create({
   tripName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   ratingContainer: {
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFD700',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   statsContainer: {
     alignItems: 'flex-start',
+    marginBottom: 2,
   },
   statsText: {
     fontSize: 12,
-    color: '#E5C9A6',
-    fontWeight: '600',
+    color: '#888',
+    fontWeight: '500',
   },
 });
