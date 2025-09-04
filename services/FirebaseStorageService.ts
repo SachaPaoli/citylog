@@ -1,5 +1,5 @@
 import { storage } from '@/config/firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 export class FirebaseStorageService {
   /**

@@ -1,18 +1,18 @@
 import {
-    addDoc,
-    arrayRemove,
-    arrayUnion,
-    collection,
-    deleteDoc,
-    doc,
-    getDoc,
-    getDocs,
-    limit,
-    orderBy,
-    query,
-    Timestamp,
-    updateDoc,
-    where
+  addDoc,
+  arrayRemove,
+  arrayUnion,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  Timestamp,
+  updateDoc,
+  where
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { CreatePostData, Post } from '../types/Post';

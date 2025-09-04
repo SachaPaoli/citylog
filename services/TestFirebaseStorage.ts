@@ -1,5 +1,5 @@
 import { storage } from '@/config/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 // Test simple Firebase Storage
 export const testFirebaseStorage = async () => {

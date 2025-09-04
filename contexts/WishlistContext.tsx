@@ -1,9 +1,9 @@
 import { Post } from '@/types/Post';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { arrayRemove, arrayUnion, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
-import { arrayRemove, arrayUnion, doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useAuth } from './AuthContext';
 
 interface WishlistContextType {
   wishlist: Post[];
