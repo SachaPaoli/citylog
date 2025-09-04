@@ -1,4 +1,4 @@
-import { CloudinaryService } from '@/services/CloudinaryService';
+import { FirebaseStorageService } from '@/services/FirebaseStorageService';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ImageStyle, StyleSheet, Text, View } from 'react-native';
 
@@ -37,9 +37,14 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   // Optimise l'URL selon la variante demandée
   const optimizedUri = React.useMemo(() => {
-    // Vérifie si c'est une URL Cloudinary
+    // Vérifie si c'est une URL Firebase Storage pour les variants
+    if (source.uri.includes('firebasestorage.googleapis.com')) {
+      const variants = FirebaseStorageService.getImageVariants(source.uri);
+      return variants[variant];
+    }
+    // Compatibilité legacy avec Cloudinary (pour les anciennes images)
     if (source.uri.includes('cloudinary.com') || source.uri.includes('res.cloudinary.com')) {
-      const variants = CloudinaryService.getImageVariants(source.uri);
+      const variants = FirebaseStorageService.getImageVariants(source.uri);
       return variants[variant];
     }
     // Pour les URLs externes, retourne l'URL originale

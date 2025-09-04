@@ -30,13 +30,6 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
     ? user.photoURL 
     : post.userPhoto || fetchedUserPhoto;
 
-  // Debug temporaire pour Tristan
-  if (post.userName === 'Tristan') {
-    console.log('TravelPostCard TRISTAN - post.userPhoto:', post.userPhoto);
-    console.log('TravelPostCard TRISTAN - fetchedUserPhoto:', fetchedUserPhoto);
-    console.log('TravelPostCard TRISTAN - userPhoto FINAL:', userPhoto);
-  }
-
   // Précharger les images pour l'affichage instantané avec expo-image
   React.useEffect(() => {
     Image.prefetch(post.photo);

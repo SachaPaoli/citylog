@@ -36,26 +36,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  console.log('🔐 AuthProvider: Component mounted');
+
   // Écouter les changements d'état d'authentification
   useEffect(() => {
+    console.log('🔐 AuthProvider: Setting up auth state listener');
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('🔐 AuthProvider: Auth state changed, user:', user ? 'LOGGED IN' : 'LOGGED OUT');
       setUser(user);
       
       if (user) {
+        console.log('🔐 AuthProvider: User logged in, loading profile...');
         // Récupérer le profil utilisateur depuis Firestore
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
+          console.log('🔐 AuthProvider: User profile loaded from Firestore');
           setUserProfile(userDoc.data() as UserProfile);
+        } else {
+          console.log('🔐 AuthProvider: No user profile found in Firestore');
         }
         
         // Rediriger vers l'app principale si l'utilisateur est connecté
+        console.log('🔐 AuthProvider: Redirecting to main app');
         router.replace('/(tabs)/' as any);
       } else {
+        console.log('🔐 AuthProvider: No user, clearing profile');
         setUserProfile(null);
         // Rediriger vers la connexion si pas d'utilisateur
+        console.log('🔐 AuthProvider: Redirecting to login');
         router.replace('/auth/login' as any);
       }
       
+      console.log('🔐 AuthProvider: Setting loading to false');
       setLoading(false);
     });
 
@@ -102,6 +115,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+      // Si on change la photo de profil, supprimer l'ancienne de Firebase Storage
+      if (updates.photoURL && userProfile.photoURL && updates.photoURL !== userProfile.photoURL) {
+        try {
+          console.log('🗑️ Suppression de l\'ancienne photo de profil...');
+          const { FirebaseStorageService } = await import('../services/FirebaseStorageService');
+          await FirebaseStorageService.deleteImage(userProfile.photoURL);
+          console.log('✅ Ancienne photo de profil supprimée');
+        } catch (error) {
+          console.warn('⚠️ Erreur suppression ancienne photo de profil:', error);
+          // On continue même si la suppression échoue
+        }
+      }
+
       // Mettre à jour le profil Firebase Auth si nécessaire
       if (updates.displayName) {
         await updateProfile(user, { 

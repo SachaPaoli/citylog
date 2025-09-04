@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { CloudinaryService } from '@/services/CloudinaryService';
+import { FirebaseStorageService } from '@/services/FirebaseStorageService';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -51,16 +51,16 @@ export default function EditProfileScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        // Upload vers Cloudinary au lieu de stocker localement
+        // Upload vers Firebase Storage au lieu de stocker localement
         setIsLoading(true);
         try {
-          console.log('📸 Upload de la photo de profil vers Cloudinary...');
-          const cloudinaryUrl = await CloudinaryService.uploadImage(
+          console.log('📸 Upload de la photo de profil vers Firebase Storage...');
+          const firebaseUrl = await FirebaseStorageService.uploadProfilePhoto(
             result.assets[0].uri, 
-            'citylog/profiles'
+            userProfile?.uid || 'unknown'
           );
-          setProfilePhoto(cloudinaryUrl);
-          console.log('✅ Photo de profil uploadée:', cloudinaryUrl);
+          setProfilePhoto(firebaseUrl);
+          console.log('✅ Photo de profil uploadée:', firebaseUrl);
         } catch (error) {
           console.error('❌ Erreur upload photo profil:', error);
           Alert.alert('Erreur', 'Impossible d\'uploader la photo. Vérifiez votre connexion.');

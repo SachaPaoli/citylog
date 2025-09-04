@@ -16,14 +16,14 @@ const firebaseConfig = {
 // Initialisation Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialisation Auth
+// Initialisation Auth (par défaut avec AsyncStorage en React Native)
 const auth = getAuth(app);
 
 // Initialisation Firestore
 const db = getFirestore(app);
 
-// Initialisation Storage
-const storage = getStorage(app);
+// Initialisation Storage avec bucket explicite
+const storage = getStorage(app, "gs://citylog-7e98e.firebasestorage.app");
 
 export { auth, db, storage };
 export default app;

@@ -202,11 +202,6 @@ export default function TripDetailScreen() {
   // Photo de profil : utiliser celle enrichie du post directement
   const userPhoto = post?.userPhoto || '';
 
-  // Fonction pour déterminer si on doit utiliser OptimizedImage ou Image standard
-  const isCloudinaryUrl = (url: string) => {
-    return url && (url.includes('cloudinary.com') || url.includes('res.cloudinary.com'));
-  };
-
   const handleAddToWishlist = () => {
     if (post) {
       addToWishlist(post);

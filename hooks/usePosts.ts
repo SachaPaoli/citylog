@@ -34,17 +34,28 @@ export const usePosts = () => {
 
   // Créer un nouveau post
   const createPost = async (postData: CreatePostData) => {
+    console.log('🔐 Vérification authentification...');
+    console.log('🔐 user:', user ? 'CONNECTÉ' : 'NON CONNECTÉ');
+    console.log('🔐 user.uid:', user?.uid);
+    console.log('🔐 userProfile:', userProfile ? 'PRÉSENT' : 'ABSENT');
+    console.log('🔐 userProfile.displayName:', userProfile?.displayName);
+    console.log('🔐 userProfile.photoURL:', userProfile?.photoURL);
+    
     if (!user || !userProfile) {
+      console.error('❌ Utilisateur non connecté ou profil manquant');
       throw new Error('Utilisateur non connecté');
     }
 
     try {
+      console.log('📤 Appel PostService.createPost...');
       const postId = await PostService.createPost(
         postData,
         user.uid,
         userProfile.displayName,
         userProfile.photoURL
       );
+      
+      console.log('✅ PostService.createPost réussi, ID:', postId);
       
       // Recharger les posts pour inclure le nouveau
       await loadPosts();

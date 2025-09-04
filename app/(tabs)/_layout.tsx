@@ -3,7 +3,6 @@ import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Platform } from 'react-native';
 
-import AuthGuard from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
 import PostActionModal from '@/components/PostActionModal';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -17,7 +16,7 @@ export default function TabLayout() {
   const [showPostModal, setShowPostModal] = useState(false);
 
   return (
-    <AuthGuard>
+    <>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: '#ffffffff',
@@ -96,6 +95,6 @@ export default function TabLayout() {
           router.push('/trips/create');
         }}
       />
-    </AuthGuard>
+    </>
   );
 }
