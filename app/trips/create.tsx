@@ -5,6 +5,7 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import React, { useCallback, useState } from 'react';
 import {
+  Alert,
   Image, InteractionManager, Modal,
   ScrollView,
   StyleSheet,
@@ -218,6 +219,8 @@ export default function CreateTripScreen() {
         tripName: doneTripName,
         userId: user.uid,
         userEmail: user.email,
+        userName: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
+        userPhoto: user.photoURL || '',
         createdAt: Timestamp.now(),
       });
 
@@ -421,31 +424,101 @@ export default function CreateTripScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [16, 9],
-      quality: 1,
+      quality: 0.8, // Optimisation pour le stockage
     });
     if (!result.canceled && result.assets && result.assets[0]) {
       setDoneCoverImage(result.assets[0].uri);
     }
   };
 
+  // Upload image to Firebase Storage
+  const uploadCoverImageToFirebase = async (localUri: string): Promise<string> => {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Utilisateur non connecté');
+
+      // Import Firebase Storage
+      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const { storage } = await import('@/config/firebase');
+
+      // Créer un nom unique pour l'image
+      const imageName = `trips/${user.uid}/${Date.now()}_cover.jpg`;
+      const imageRef = ref(storage, imageName);
+
+      // Convertir l'URI locale en blob
+      const response = await fetch(localUri);
+      const blob = await response.blob();
+
+      // Upload vers Firebase Storage
+      console.log('📤 Upload de l\'image de couverture...');
+      await uploadBytes(imageRef, blob);
+      
+      // Récupérer l'URL de téléchargement
+      const downloadURL = await getDownloadURL(imageRef);
+      console.log('✅ Image uploadée avec succès:', downloadURL);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('❌ Erreur upload image:', error);
+      throw error;
+    }
+  };
+
   // Ajoute l'appel Firestore sur le bouton Post/Done
   const handlePostTrip = async () => {
-    if (!doneTripName) return;
-    const trip: LocalTrip = {
-      id: `trip-${Date.now()}`,
-      city: '',
-      country: '',
-      coverImage: doneCoverImage || '',
-      rating: averageRating,
-      description: doneDescription,
-      stayingItems: [],
-      restaurantItems: [],
-      activitiesItems: [],
-      otherItems: [],
-      isPublic: doneIsPublic,
-      createdAt: Date.now(),
-    };
-    await postTripToFirestore(trip);
+    if (!doneTripName) {
+      Alert.alert('Erreur', 'Veuillez entrer un nom pour votre voyage');
+      return;
+    }
+    
+    if (!doneCoverImage) {
+      Alert.alert('Image requise', 'Veuillez sélectionner une image de couverture pour votre voyage');
+      return;
+    }
+
+    try {
+      setPosting(true);
+      
+      // Upload de l'image de couverture vers Firebase Storage
+      const firebaseImageURL = await uploadCoverImageToFirebase(doneCoverImage);
+      
+      const trip: LocalTrip = {
+        id: `trip-${Date.now()}`,
+        city: '',
+        country: '',
+        coverImage: firebaseImageURL, // URL Firebase au lieu de l'URI locale
+        rating: averageRating,
+        description: doneDescription,
+        stayingItems: [],
+        restaurantItems: [],
+        activitiesItems: [],
+        otherItems: [],
+        isPublic: doneIsPublic,
+        createdAt: Date.now(),
+      };
+      
+      await postTripToFirestore(trip);
+      
+      // Nettoyer le state et fermer le modal
+      setDoneTripName('');
+      setDoneCoverImage(null);
+      setDoneDescription('');
+      setShowDoneModal(false);
+      
+      // Nettoyer les trips locaux
+      await AsyncStorage.removeItem('local_trips');
+      await AsyncStorage.removeItem('local_segments');
+      setLocalTrips([]);
+      setSegments([]);
+      
+      Alert.alert('Succès', 'Votre voyage a été publié avec succès !');
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la publication:', error);
+      Alert.alert('Erreur', 'Impossible de publier le voyage. Vérifiez votre connexion.');
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (
@@ -625,7 +698,7 @@ export default function CreateTripScreen() {
                 </View>
                 {/* Cover Image Section */}
                 <View style={styles.coverImageSection}>
-                  <Text style={styles.coverImageLabel}>Cover Image</Text>
+                  <Text style={styles.coverImageLabel}>Image de couverture *</Text>
                   {doneCoverImage ? (
                     <View style={styles.coverImageContainer}>
                       <Image source={{ uri: doneCoverImage }} style={styles.coverImage} />

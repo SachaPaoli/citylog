@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelTripCard } from '../../components/TravelTripCard';
 import { db } from '../../config/firebase';
@@ -44,10 +44,9 @@ const CitiesTab: React.FC<CitiesTabProps> = React.memo(({ followingPosts, follow
 // Onglet Trips
 interface TripsTabProps {
   trips: any[];
-  cardWidth: number;
   textColor: string;
 }
-const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, cardWidth, textColor }) => {
+const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, textColor }) => {
   if (trips.length === 0) {
     return (
       <View style={styles.centerContent}>
@@ -57,7 +56,7 @@ const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, cardWidth, textCo
   }
 
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 10 }}>
+    <View style={{ paddingTop: 10 }}>
       {trips.map((trip) => {
         // Calculer les statistiques du trip à partir des villes
         const cities = trip.cities || [];
@@ -67,15 +66,19 @@ const TripsTab: React.FC<TripsTabProps> = React.memo(({ trips, cardWidth, textCo
           : trip.rating || 0;
 
         return (
-          <View key={trip.id} style={{ width: cardWidth, marginBottom: 18 }}>
-            <TravelTripCard
-              coverImage={trip.coverImage || 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400'}
-              tripName={trip.tripName || trip.city || 'Voyage sans nom'}
-              averageRating={averageRating}
-              countriesCount={uniqueCountries.length}
-              citiesCount={cities.length}
-            />
-          </View>
+          <TravelTripCard
+            key={trip.id}
+            tripId={trip.id}
+            coverImage={trip.coverImage || 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400'}
+            tripName={trip.tripName || trip.city || 'Voyage sans nom'}
+            averageRating={averageRating}
+            countriesCount={uniqueCountries.length}
+            citiesCount={cities.length}
+            userId={trip.userId}
+            userName={trip.userName || 'Utilisateur'}
+            userPhoto={trip.userPhoto}
+            createdAt={trip.createdAt}
+          />
         );
       })}
     </View>
@@ -99,7 +102,6 @@ export default function HomeScreen() {
 
   // Précharge les trips dès le montage pour un switch instantané
   useEffect(() => {
-    let didCancel = false;
     const fetchTrips = async () => {
       try {
         const q = query(collection(db, 'trips'), orderBy('createdAt', 'desc'));
@@ -129,16 +131,14 @@ export default function HomeScreen() {
           tripsArr.push(tripData);
         }
         
-        if (!didCancel) setTrips(tripsArr);
+        setTrips(tripsArr);
       } catch (e) {
         console.error('Erreur chargement trips Firestore:', e);
       }
     };
-    if (trips.length === 0) {
-      fetchTrips();
-    }
-    return () => { didCancel = true; };
-  }, [trips.length]);
+    
+    fetchTrips();
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -197,8 +197,12 @@ export default function HomeScreen() {
         {/* Onglets */}
         <View style={[styles.tabsContainer, { backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 12 }]}> 
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'cities' && { borderBottomColor: '#FFFFFF' }]}
+            style={[
+              styles.tab, 
+              { borderBottomColor: activeTab === 'cities' ? '#FFFFFF' : 'transparent' }
+            ]}
             onPress={() => setActiveTab('cities')}
+            activeOpacity={0.7}
           >
             <Text style={[
               styles.tabText, 
@@ -208,8 +212,12 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'trips' && { borderBottomColor: '#FFFFFF' }]}
+            style={[
+              styles.tab, 
+              { borderBottomColor: activeTab === 'trips' ? '#FFFFFF' : 'transparent' }
+            ]}
             onPress={() => setActiveTab('trips')}
+            activeOpacity={0.7}
           >
             <Text style={[
               styles.tabText,
@@ -228,15 +236,7 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Messages d'état */}
-          {((activeTab === 'cities' && followingLoading) || (activeTab === 'trips' && loading)) && !refreshing && (
-            <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={textActiveColor} />
-              <Text style={[styles.loadingText, { color: textColor }]}> 
-                Chargement des voyages...
-              </Text>
-            </View>
-          )}
+          {/* Messages d'état - Simplifié */}
           {error && (
             <View style={styles.centerContent}>
               <Text style={[styles.errorText, { color: 'red' }]}>
@@ -246,11 +246,20 @@ export default function HomeScreen() {
           )}
           {/* Posts */}
           <View style={styles.postsContainer}>
-            {activeTab === 'cities' ? (
-              <CitiesTab followingPosts={followingPosts} followingLoading={followingLoading} textColor={textColor} />
-            ) : (
-              <TripsTab trips={trips} cardWidth={cardWidth} textColor={textColor} />
-            )}
+            {/* Rendu des deux onglets en permanence, switch instantané avec display */}
+            <View style={{ display: activeTab === 'cities' ? 'flex' : 'none' }}>
+              <CitiesTab 
+                followingPosts={followingPosts} 
+                followingLoading={followingLoading} 
+                textColor={textColor} 
+              />
+            </View>
+            <View style={{ display: activeTab === 'trips' ? 'flex' : 'none' }}>
+              <TripsTab 
+                trips={trips} 
+                textColor={textColor}
+              />
+            </View>
           </View>
         </ScrollView>
       </View>

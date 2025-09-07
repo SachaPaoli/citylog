@@ -49,6 +49,7 @@ export default function TripsScreen() {
         const tripData: any = { id: tripDoc.id, ...tripDoc.data() };
         
         console.log('🏠 Trip:', tripData.tripName, 'UserId:', tripData.userId);
+        console.log('📸 CoverImage:', tripData.coverImage || 'AUCUNE IMAGE');
         
         // Récupérer les villes du trip
         try {
@@ -63,6 +64,9 @@ export default function TripsScreen() {
           }));
           
           console.log(`🏙️ Trip ${tripData.tripName} a ${tripData.cities.length} villes`);
+          if (tripData.cities.length > 0) {
+            console.log('🎯 Première ville:', tripData.cities[0]);
+          }
         } catch (error) {
           console.log('⚠️ Pas de villes pour le trip:', tripDoc.id);
           tripData.cities = [];
@@ -163,7 +167,7 @@ export default function TripsScreen() {
             </Text>
           </View>
         ) : (
-          <View style={styles.tripsGrid}>
+          <ScrollView style={styles.content}>
             {trips.map((trip) => {
               // Calculer les statistiques du trip à partir des villes
               const cities = trip.cities || [];
@@ -172,10 +176,17 @@ export default function TripsScreen() {
                 ? Math.round((cities.reduce((sum: number, city: any) => sum + (city.rating || 0), 0) / cities.length) * 10) / 10
                 : trip.rating || 0;
               
+              console.log(`🖼️ Image de couverture pour ${trip.tripName}:`, trip.coverImage);
+              
+              // Ne pas afficher le trip s'il n'a pas d'image de couverture
+              if (!trip.coverImage) {
+                console.log(`⚠️ Trip ${trip.tripName} ignoré: pas d'image de couverture`);
+                return null;
+              }
+              
               return (
                 <TouchableOpacity
                   key={trip.id}
-                  style={[styles.tripCard, { width: cardWidth }]}
                   onPress={() => {
                     // Navigation vers le détail du voyage
                     console.log('Voir trip:', trip.tripName);
@@ -183,16 +194,21 @@ export default function TripsScreen() {
                   onLongPress={() => handleDeleteTrip(trip.id)}
                 >
                   <TravelTripCard
-                    coverImage={trip.coverImage || 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400'}
+                    tripId={trip.id}
+                    coverImage={trip.coverImage}
                     tripName={trip.tripName || 'Voyage sans nom'}
                     averageRating={averageRating}
                     countriesCount={uniqueCountries.length}
                     citiesCount={cities.length}
+                    userId={trip.userId}
+                    userName={trip.userName || 'Utilisateur'}
+                    userPhoto={trip.userPhoto}
+                    createdAt={trip.createdAt}
                   />
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         )}
         </ScrollView>
       </SafeAreaView>
