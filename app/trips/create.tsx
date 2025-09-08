@@ -269,6 +269,7 @@ export default function CreateTripScreen() {
     }
   };
   const [showDoneModal, setShowDoneModal] = useState(false);
+  const [showAddCityModal, setShowAddCityModal] = useState(false);
   const [doneCoverImage, setDoneCoverImage] = useState<string | null>(null);
   const [doneDescription, setDoneDescription] = useState('');
   const [doneIsPublic, setDoneIsPublic] = useState(true);
@@ -656,7 +657,7 @@ export default function CreateTripScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
             <TouchableOpacity
               style={styles.addCityButton}
-              onPress={() => router.push('/trips/add-city' as any)}
+              onPress={() => setShowAddCityModal(true)}
             >
               <Text style={styles.addCityIcon}>+</Text>
               <Text style={styles.addCityText}>Add a city</Text>
@@ -669,6 +670,66 @@ export default function CreateTripScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Add City Selection Modal */}
+        <Modal
+          visible={showAddCityModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowAddCityModal(false)}
+        >
+          <View style={styles.addCityModalOverlay}>
+            <TouchableOpacity 
+              style={styles.addCityModalBackground} 
+              activeOpacity={1} 
+              onPress={() => setShowAddCityModal(false)}
+            />
+            <View style={styles.addCityModalContent}>
+              <View style={styles.addCityModalHeader}>
+                <View style={styles.addCityModalIndicator} />
+                <Text style={styles.addCityModalTitle}>Add a City</Text>
+              </View>
+              
+              <View style={styles.addCityOptionsContainer}>
+                <TouchableOpacity
+                  style={styles.addCityOption}
+                  onPress={() => {
+                    setShowAddCityModal(false);
+                    router.push('/trips/new-city' as any);
+                  }}
+                >
+                  <View style={styles.addCityOptionIcon}>
+                    <Text style={styles.addCityOptionIconText}>✨</Text>
+                  </View>
+                  <View style={styles.addCityOptionContent}>
+                    <Text style={styles.addCityOptionTitle}>New City</Text>
+                    <Text style={styles.addCityOptionDescription}>
+                      Add a completely new city with photos and details
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.addCityOption}
+                  onPress={() => {
+                    setShowAddCityModal(false);
+                    router.push('/trips/visited-city' as any);
+                  }}
+                >
+                  <View style={styles.addCityOptionIcon}>
+                    <Text style={styles.addCityOptionIconText}>📍</Text>
+                  </View>
+                  <View style={styles.addCityOptionContent}>
+                    <Text style={styles.addCityOptionTitle}>Visited City</Text>
+                    <Text style={styles.addCityOptionDescription}>
+                      Select from cities you've already visited
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Done Modal */}
         <Modal
@@ -1413,5 +1474,81 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     fontWeight: 'bold',
+  },
+  // Add City Modal Styles
+  addCityModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  addCityModalBackground: {
+    flex: 1,
+  },
+  addCityModalContent: {
+    height: '40%',
+    backgroundColor: '#181C24',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 34,
+  },
+  addCityModalHeader: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 20,
+  },
+  addCityModalIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    marginBottom: 16,
+  },
+  addCityModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  addCityOptionsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 16,
+  },
+  addCityOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  addCityOptionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  addCityOptionIconText: {
+    fontSize: 24,
+  },
+  addCityOptionContent: {
+    flex: 1,
+  },
+  addCityOptionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  addCityOptionDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 20,
   },
 });
