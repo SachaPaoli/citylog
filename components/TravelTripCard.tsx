@@ -60,7 +60,10 @@ export function TravelTripCard({
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor }]} 
-      onPress={onPress ? onPress : () => router.push(`/trip-detail?tripId=${tripId}`)}
+      onPress={onPress ? onPress : () => {
+        console.log('🔗 Navigation vers detail avec tripId:', tripId);
+        router.push(`/trips/detail?tripId=${tripId}`);
+      }}
     >
       <View style={styles.content}>
         {/* Photo principale du trip */}

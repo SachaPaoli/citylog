@@ -1,21 +1,15 @@
-import { StarRating } from '@/components/StarRating';
 import { TravelPostCard } from '@/components/TravelPostCard';
-import { getCountryName } from '@/constants/CountryNames';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
 import { router, Stack } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

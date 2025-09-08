@@ -520,22 +520,47 @@ export default function CreateTripScreen() {
       // Upload de l'image de couverture vers Firebase Storage
       const firebaseImageURL = await uploadCoverImageToFirebase(doneCoverImage);
       
-      const trip: LocalTrip = {
-        id: `trip-${Date.now()}`,
-        city: '',
-        country: '',
-        coverImage: firebaseImageURL, // URL Firebase au lieu de l'URI locale
-        rating: averageRating,
-        description: doneDescription,
-        stayingItems: [],
-        restaurantItems: [],
-        activitiesItems: [],
-        otherItems: [],
-        isPublic: doneIsPublic,
-        createdAt: Date.now(),
-      };
+      // Créer directement le trip dans Firestore comme les posts
+      const user = auth.currentUser;
+      if (!user) throw new Error('Utilisateur non connecté');
       
-      await postTripToFirestore(trip);
+      const tripDoc = await addDoc(collection(db, 'trips'), {
+        tripName: doneTripName,
+        description: doneDescription,
+        coverImage: firebaseImageURL,
+        isPublic: doneIsPublic,
+        userId: user.uid,
+        userEmail: user.email,
+        userName: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
+        userPhoto: user.photoURL || '',
+        createdAt: Timestamp.now(),
+      });
+
+      // Ajouter toutes les villes visitées dans la sous-collection
+      if (localTrips.length > 0) {
+        for (let i = 0; i < localTrips.length; i++) {
+          const t = localTrips[i];
+          // Segment info: for segment i-1 (between city i-1 and i)
+          let duration = '';
+          let timeUnit = '';
+          let transport = '';
+          if (i > 0 && segments[i - 1]) {
+            duration = segments[i - 1].duration;
+            timeUnit = segments[i - 1].timeUnit;
+            transport = segments[i - 1].transport;
+          }
+          await addDoc(collection(db, 'trips', tripDoc.id, 'cities'), {
+            cityName: t.city,
+            countryName: t.country,
+            rating: t.rating,
+            order: i,
+            duration,
+            timeUnit,
+            transport,
+            createdAt: Timestamp.now(),
+          });
+        }
+      }
       
       // Nettoyer le state et fermer le modal
       setDoneTripName('');
