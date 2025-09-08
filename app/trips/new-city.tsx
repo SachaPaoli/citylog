@@ -4,7 +4,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -41,17 +41,21 @@ type PostTabType = 'staying' | 'restaurant' | 'activities' | 'other';
 const DRAFT_KEY = 'post_draft';
 
 export default function NewCityScreen() {
+  const params = useLocalSearchParams();
+  const editMode = params.editMode === 'true';
+  const tripData = params.tripData ? JSON.parse(params.tripData as string) : null;
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const textActiveColor = useThemeColor({}, 'textActive');
   const borderColor = useThemeColor({}, 'borderColor');
 
-  // Form states
-  const [cityName, setCityName] = useState('');
-  const [countryName, setCountryName] = useState('');
-  const [coverImage, setCoverImage] = useState<string | null>(null);
-  const [tripDescription, setTripDescription] = useState('');
+  // Form states - initialize with existing data if in edit mode
+  const [cityName, setCityName] = useState(editMode && tripData ? tripData.city : '');
+  const [countryName, setCountryName] = useState(editMode && tripData ? tripData.country : '');
+  const [coverImage, setCoverImage] = useState<string | null>(editMode && tripData ? tripData.coverImage : null);
+  const [tripDescription, setTripDescription] = useState(editMode && tripData ? tripData.description : '');
   const [isPublic, setIsPublic] = useState(true);
   const publicPrivateAnimation = useState(new Animated.Value(1))[0];
   const [isSaving, setIsSaving] = useState(false);
@@ -63,10 +67,10 @@ export default function NewCityScreen() {
 
   // Post tab states
   const [postActiveTab, setPostActiveTab] = useState<PostTabType>('staying');
-  const [stayingItems, setStayingItems] = useState<TripItem[]>([]);
-  const [restaurantItems, setRestaurantItems] = useState<TripItem[]>([]);
-  const [activitiesItems, setActivitiesItems] = useState<TripItem[]>([]);
-  const [otherItems, setOtherItems] = useState<TripItem[]>([]);
+  const [stayingItems, setStayingItems] = useState<TripItem[]>(editMode && tripData?.stayingItems ? tripData.stayingItems : []);
+  const [restaurantItems, setRestaurantItems] = useState<TripItem[]>(editMode && tripData?.restaurantItems ? tripData.restaurantItems : []);
+  const [activitiesItems, setActivitiesItems] = useState<TripItem[]>(editMode && tripData?.activitiesItems ? tripData.activitiesItems : []);
+  const [otherItems, setOtherItems] = useState<TripItem[]>(editMode && tripData?.otherItems ? tripData.otherItems : []);
 
   // Modal states
   const [showItemModal, setShowItemModal] = useState(false);
@@ -75,10 +79,12 @@ export default function NewCityScreen() {
   const [tempItem, setTempItem] = useState<TripItem>({ id: '', name: '', rating: 0, description: '', images: [] });
   const [editingItem, setEditingItem] = useState<TripItem | null>(null);
 
-  // Load draft on mount
+  // Load draft on mount (only if not in edit mode)
   useEffect(() => {
-    loadDraft();
-  }, []);
+    if (!editMode) {
+      loadDraft();
+    }
+  }, [editMode]);
 
   // City search effect
   useEffect(() => {
@@ -352,8 +358,8 @@ export default function NewCityScreen() {
     setShowPostModal(false);
 
     // Create trip data
-    const tripData = {
-      id: `trip-${Date.now()}`,
+    const updatedTripData = {
+      id: editMode && tripData ? tripData.id : `trip-${Date.now()}`,
       city: cityName.trim(),
       country: fullCountryName,
       coverImage: coverImage,
@@ -364,17 +370,28 @@ export default function NewCityScreen() {
       activitiesItems,
       otherItems,
       isPublic,
-      createdAt: Date.now()
+      createdAt: editMode && tripData ? tripData.createdAt : Date.now()
     };
 
     try {
       // Save to AsyncStorage
       const existingTrips = await AsyncStorage.getItem('local_trips');
       const trips = existingTrips ? JSON.parse(existingTrips) : [];
-      trips.push(tripData);
+      
+      if (editMode && tripData) {
+        // Update existing trip
+        const tripIndex = trips.findIndex((trip: any) => trip.id === tripData.id);
+        if (tripIndex !== -1) {
+          trips[tripIndex] = updatedTripData;
+        }
+      } else {
+        // Add new trip
+        trips.push(updatedTripData);
+      }
+      
       await AsyncStorage.setItem('local_trips', JSON.stringify(trips));
 
-      console.log('✅ Trip added locally:', tripData);
+      console.log('✅ Trip saved locally:', updatedTripData);
       
       // Remove draft
       await AsyncStorage.removeItem(DRAFT_KEY);
@@ -464,13 +481,13 @@ export default function NewCityScreen() {
             <Text style={[styles.backButtonText, { color: '#fff' }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: '#fff' }]}>
-            New City
+            {editMode ? 'Edit City' : 'New City'}
           </Text>
           <TouchableOpacity
             style={styles.postButton}
             onPress={() => setShowPostModal(true)}
           >
-            <Text style={styles.postButtonText}>Post</Text>
+            <Text style={styles.postButtonText}>{editMode ? 'Update' : 'Post'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -746,7 +763,9 @@ export default function NewCityScreen() {
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { backgroundColor: '#181C24' }]}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: '#fff' }]}>Publish trip</Text>
+                <Text style={[styles.modalTitle, { color: '#fff' }]}>
+                  {editMode ? 'Update trip' : 'Publish trip'}
+                </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setShowPostModal(false)}
@@ -783,7 +802,9 @@ export default function NewCityScreen() {
                   style={[styles.saveButton, { backgroundColor: '#5784BA' }]}
                   onPress={handlePost}
                 >
-                  <Text style={styles.saveButtonText}>Publish</Text>
+                  <Text style={styles.saveButtonText}>
+                    {editMode ? 'Update' : 'Publish'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

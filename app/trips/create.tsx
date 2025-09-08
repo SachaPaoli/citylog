@@ -186,10 +186,13 @@ export default function CreateTripScreen() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [localTrips, setLocalTrips] = useState<LocalTrip[]>([]);
   const [segments, setSegments] = useState<SegmentInput[]>([]);
-  // Save segments to AsyncStorage whenever they or localTrips change
+  // Save segments to AsyncStorage whenever they change
   React.useEffect(() => {
-    AsyncStorage.setItem('local_segments', JSON.stringify(segments));
-  }, [segments, localTrips]);
+    if (segments.length > 0) {
+      AsyncStorage.setItem('local_segments', JSON.stringify(segments));
+      console.log('💾 Segments sauvegardés:', segments);
+    }
+  }, [segments]);
 
   // Always keep segments in sync with localTrips.length - 1
   React.useEffect(() => {
@@ -201,7 +204,7 @@ export default function CreateTripScreen() {
       );
       setSegments(fixed);
     }
-  }, [localTrips, segments]);
+  }, [localTrips]);
   const prevTripCountRef = React.useRef<number>(0);
   const [posting, setPosting] = useState(false);
   // Log à chaque render pour debug
@@ -248,6 +251,11 @@ export default function CreateTripScreen() {
             timeUnit,
             transport,
             order: i,
+            // Add all the detailed items
+            stayingItems: t.stayingItems || [],
+            restaurantItems: t.restaurantItems || [],
+            activitiesItems: t.activitiesItems || [],
+            otherItems: t.otherItems || [],
           });
         }
       }
@@ -307,41 +315,21 @@ export default function CreateTripScreen() {
 
       // If params from visited city, add as new trip if not already present
       if (params.cityName && params.countryName && params.rating) {
-        const newTrip: LocalTrip = {
-          id: `trip-${Date.now()}`,
-          city: params.cityName,
-          country: params.countryName,
-          coverImage: '',
-          rating: Number(params.rating),
-          description: `Voyage à ${params.cityName}, ${params.countryName}`,
-          stayingItems: [],
-          restaurantItems: [],
-          activitiesItems: [],
-          otherItems: [],
-          isPublic: true,
-          createdAt: Date.now(),
-        };
-        trips = [...trips, newTrip];
-        await AsyncStorage.setItem('local_trips', JSON.stringify(trips));
-        added = true;
-      }
-
-      // If params.post is present, add a trip from the TravelPostCard
-      if (params.post) {
-        let postObj = null;
-        try {
-          postObj = typeof params.post === 'string' ? JSON.parse(params.post) : params.post;
-        } catch (e) {
-          postObj = null;
-        }
-        if (postObj && postObj.city && postObj.country) {
+        // Check if this exact trip already exists to avoid duplicates
+        const existingTrip = trips.find((trip: LocalTrip) => 
+          trip.city === params.cityName && 
+          trip.country === params.countryName && 
+          trip.rating === Number(params.rating)
+        );
+        
+        if (!existingTrip) {
           const newTrip: LocalTrip = {
             id: `trip-${Date.now()}`,
-            city: postObj.city,
-            country: postObj.country,
-            coverImage: postObj.photo || '',
-            rating: typeof postObj.rating === 'number' ? postObj.rating : 0,
-            description: postObj.description || `Voyage à ${postObj.city}, ${postObj.country}`,
+            city: params.cityName,
+            country: params.countryName,
+            coverImage: '',
+            rating: Number(params.rating),
+            description: `Voyage à ${params.cityName}, ${params.countryName}`,
             stayingItems: [],
             restaurantItems: [],
             activitiesItems: [],
@@ -355,24 +343,66 @@ export default function CreateTripScreen() {
         }
       }
 
+      // If params.post is present, add a trip from the TravelPostCard
+      if (params.post) {
+        let postObj = null;
+        try {
+          postObj = typeof params.post === 'string' ? JSON.parse(params.post) : params.post;
+        } catch (e) {
+          postObj = null;
+        }
+        if (postObj && postObj.city && postObj.country) {
+          // Check if this exact trip already exists to avoid duplicates
+          const existingTrip = trips.find((trip: LocalTrip) => 
+            trip.city === postObj.city && 
+            trip.country === postObj.country &&
+            trip.coverImage === (postObj.photo || '')
+          );
+          
+          if (!existingTrip) {
+            const newTrip: LocalTrip = {
+              id: `trip-${Date.now()}`,
+              city: postObj.city,
+              country: postObj.country,
+              coverImage: postObj.photo || '',
+              rating: typeof postObj.rating === 'number' ? postObj.rating : 0,
+              description: postObj.description || `Voyage à ${postObj.city}, ${postObj.country}`,
+              stayingItems: [],
+              restaurantItems: [],
+              activitiesItems: [],
+              otherItems: [],
+              isPublic: true,
+              createdAt: Date.now(),
+            };
+            trips = [...trips, newTrip];
+            await AsyncStorage.setItem('local_trips', JSON.stringify(trips));
+            added = true;
+          }
+        }
+      }
+
 
       setLocalTrips(trips);
 
-        // Always ensure segments array matches trips.length - 1
-        const needed = Math.max(0, trips.length - 1);
-        let loadedSegments: SegmentInput[] = [];
-        try {
-          const storedSegments = await AsyncStorage.getItem('local_segments');
-          loadedSegments = storedSegments ? JSON.parse(storedSegments) : [];
-        } catch (e) {
-          loadedSegments = [];
-        }
-        // Fill missing segments with defaults
-        const segmentsFixed = Array.from({ length: needed }, (_, i) =>
-          loadedSegments[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' }
-        );
-        setSegments(segmentsFixed);
-        prevTripCountRef.current = trips.length;
+      // Always ensure segments array matches trips.length - 1
+      const needed = Math.max(0, trips.length - 1);
+      let loadedSegments: SegmentInput[] = [];
+      try {
+        const storedSegments = await AsyncStorage.getItem('local_segments');
+        loadedSegments = storedSegments ? JSON.parse(storedSegments) : [];
+        console.log('📖 Segments chargés depuis AsyncStorage:', loadedSegments);
+      } catch (e) {
+        console.log('⚠️ Aucun segment trouvé dans AsyncStorage');
+        loadedSegments = [];
+      }
+      
+      // Fill missing segments with defaults
+      const segmentsFixed = Array.from({ length: needed }, (_, i) =>
+        loadedSegments[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' }
+      );
+      setSegments(segmentsFixed);
+      console.log('🔧 Segments finaux après ajustement:', segmentsFixed);
+      prevTripCountRef.current = trips.length;
 
       if (added && tripsScrollRef.current) {
         setTimeout(() => {
@@ -393,19 +423,26 @@ export default function CreateTripScreen() {
       const updatedTrips = localTrips.filter(trip => trip.id !== tripId);
       await AsyncStorage.setItem('local_trips', JSON.stringify(updatedTrips));
       setLocalTrips(updatedTrips);
+      
       // Recalculate segments to match new trips length
       const needed = Math.max(0, updatedTrips.length - 1);
-      setSegments(prev => {
-        const fixed = Array.from({ length: needed }, (_, i) =>
-          prev[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' }
-        );
-        return fixed;
+      const newSegments = Array.from({ length: needed }, (_, i) => {
+        // Si on supprime un trip qui n'est pas le dernier, on garde les segments suivants
+        if (i >= idx) {
+          return segments[i + 1] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' };
+        }
+        return segments[i] || { duration: '', timeUnit: 'minutes', transport: 'car-outline' };
       });
-      console.log('🗑️ Trip supprimé:', tripId);
+      
+      setSegments(newSegments);
+      
+      // Sauvegarder les nouveaux segments
+      await AsyncStorage.setItem('local_segments', JSON.stringify(newSegments));
+      console.log('🗑️ Trip supprimé et segments réajustés:', tripId);
     } catch (error) {
       console.error('❌ Erreur suppression trip:', error);
     }
-  }, [localTrips]);
+  }, [localTrips, segments]);
 
   useFocusEffect(
     useCallback(() => {
@@ -513,6 +550,7 @@ export default function CreateTripScreen() {
       setSegments([]);
       
       Alert.alert('Succès', 'Votre voyage a été publié avec succès !');
+      console.log('🧹 Données locales nettoyées après publication');
       
     } catch (error) {
       console.error('❌ Erreur lors de la publication:', error);
@@ -603,14 +641,33 @@ export default function CreateTripScreen() {
                       ) : null}
                       <View style={{ flex: 1 }}>
                         <Text style={styles.cityName}>{trip.city}, {trip.country}</Text>
-                        <Text style={styles.cityRating}>★ {trip.rating}</Text>
+                        {trip.rating === 0 ? (
+                          <Text style={styles.cityBeenThere}>I have been there</Text>
+                        ) : (
+                          <Text style={styles.cityRating}>★ {trip.rating}</Text>
+                        )}
                       </View>
                     </View>
                   ) : (
-                    <View style={styles.tripCard}>
+                    <TouchableOpacity
+                      style={styles.tripCard}
+                      onPress={() => {
+                        // Navigate to new-city with pre-filled data for editing
+                        router.push({
+                          pathname: '/trips/new-city',
+                          params: {
+                            editMode: 'true',
+                            tripData: JSON.stringify(trip)
+                          }
+                        });
+                      }}
+                    >
                       <TouchableOpacity
                         style={styles.deleteButton}
-                        onPress={() => deleteTrip(trip.id)}
+                        onPress={(e) => {
+                          e.stopPropagation(); // Prevent triggering the edit navigation
+                          deleteTrip(trip.id);
+                        }}
                       >
                         <Text style={styles.deleteButtonText}>×</Text>
                       </TouchableOpacity>
@@ -631,18 +688,23 @@ export default function CreateTripScreen() {
                           {trip.description}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   )}
                   {/* Flèche ondulée après chaque trip sauf le dernier */}
                   {index < localTrips.length - 1 && Array.isArray(segments) && segments[index] && typeof segments[index].duration === 'string' && typeof segments[index].timeUnit === 'string' && typeof segments[index].transport === 'string' ? (
                     <WavyArrow
                       segment={segments[index]}
-                      onChange={seg => {
-                        setSegments(prev => {
-                          const newArr = [...prev];
-                          newArr[index] = seg;
-                          return newArr;
-                        });
+                      onChange={async (seg) => {
+                        const newSegments = [...segments];
+                        newSegments[index] = seg;
+                        setSegments(newSegments);
+                        // Sauvegarde immédiate lors du changement
+                        try {
+                          await AsyncStorage.setItem('local_segments', JSON.stringify(newSegments));
+                          console.log('💾 Segment mis à jour et sauvegardé:', seg);
+                        } catch (error) {
+                          console.error('❌ Erreur sauvegarde segment:', error);
+                        }
                       }}
                     />
                   ) : null}
@@ -1206,6 +1268,11 @@ const styles = StyleSheet.create({
   cityRating: {
     color: '#FFD700',
     fontSize: 13,
+  },
+  cityBeenThere: {
+    color: '#bbb',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   cityPlusButton: {
     marginLeft: 8,

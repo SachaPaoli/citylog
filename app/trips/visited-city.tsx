@@ -262,6 +262,9 @@ export default function VisitedCityScreen() {
               {[...displayCities].reverse().map((city, idx) => {
                 const isSimpleRating = city.averageRating !== null && city.manualCount === 1 && city.postCount === 0;
                 const hasPosts = city.postCount > 0;
+                const hasBeenThere = city.hasBeenThere && city.averageRating === null;
+                const isClickable = isSimpleRating || hasPosts || hasBeenThere;
+                
                 const handlePress = () => {
                   if (isSimpleRating) {
                     router.push({
@@ -270,6 +273,16 @@ export default function VisitedCityScreen() {
                         cityName: city.name,
                         countryName: countryCodeToName[city.countryCode] || city.countryCode,
                         rating: city.averageRating,
+                      }
+                    });
+                  } else if (hasBeenThere) {
+                    // For cities with "I have been there" but no rating
+                    router.push({
+                      pathname: '/trips/create',
+                      params: {
+                        cityName: city.name,
+                        countryName: countryCodeToName[city.countryCode] || city.countryCode,
+                        rating: 0, // Default rating for "been there" cities
                       }
                     });
                   } else if (hasPosts) {
@@ -286,9 +299,9 @@ export default function VisitedCityScreen() {
                   <React.Fragment key={`${city.name || 'city'}-${city.countryCode || 'country'}-${idx}`}>
                     <TouchableOpacity
                       style={styles.cityCard}
-                      activeOpacity={isSimpleRating || hasPosts ? 0.7 : 1}
+                      activeOpacity={isClickable ? 0.7 : 1}
                       onPress={handlePress}
-                      disabled={!(isSimpleRating || hasPosts)}
+                      disabled={!isClickable}
                     >
                       <Image
                         source={{
