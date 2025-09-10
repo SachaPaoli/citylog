@@ -1,4 +1,5 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useCountryRanking } from '@/hooks/useCountryRanking';
 import { getInstantUserPhoto } from '@/hooks/useGlobalPhotoPreloader';
 import { useRanking } from '@/hooks/useRanking';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -21,8 +22,9 @@ export default function RankingScreen() {
   const [activeTab, setActiveTab] = React.useState<'city' | 'country'>('city');
   const [refreshing, setRefreshing] = React.useState(false);
   
-  // Utiliser le hook personnalisé pour récupérer les données réelles
-  const { rankingData, loading, error, refreshRanking } = useRanking();
+  // Utiliser les hooks pour récupérer les données réelles
+  const { rankingData: cityRankingData, loading: cityLoading, error: cityError, refreshRanking: refreshCityRanking } = useRanking();
+  const { rankingData: countryRankingData, loading: countryLoading, error: countryError, refreshRanking: refreshCountryRanking } = useCountryRanking();
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -46,8 +48,25 @@ export default function RankingScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refreshRanking();
+    if (activeTab === 'city') {
+      await refreshCityRanking();
+    } else {
+      await refreshCountryRanking();
+    }
     setRefreshing(false);
+  };
+
+  // Obtenir les données selon l'onglet actif
+  const getCurrentRankingData = () => {
+    return activeTab === 'city' ? cityRankingData : countryRankingData;
+  };
+
+  const getCurrentError = () => {
+    return activeTab === 'city' ? cityError : countryError;
+  };
+
+  const getCurrentLoading = () => {
+    return activeTab === 'city' ? cityLoading : countryLoading;
   };
 
   return (
@@ -98,15 +117,15 @@ export default function RankingScreen() {
       >
         {activeTab === 'city' && (
           <>
-            {error && (
+            {getCurrentError() && (
               <View style={styles.errorContainer}>
                 <Text style={[styles.errorText, { color: 'red' }]}>
-                  {error}
+                  {getCurrentError()}
                 </Text>
               </View>
             )}
 
-            {rankingData.length === 0 && !error && (
+            {getCurrentRankingData().length === 0 && !getCurrentError() && (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: textColor }]}>
                   Aucun utilisateur à classer
@@ -117,9 +136,9 @@ export default function RankingScreen() {
               </View>
             )}
 
-            {rankingData.length > 0 && (
+            {getCurrentRankingData().length > 0 && (
               <View style={styles.rankingList}>
-                {rankingData.map((user) => (
+                {getCurrentRankingData().map((user: any) => (
                   <View 
                     key={user.id}
                     style={styles.rankingCard}
@@ -178,7 +197,7 @@ export default function RankingScreen() {
               </View>
             )}
 
-            {rankingData.length > 0 && (
+            {getCurrentRankingData().length > 0 && (
               <View style={styles.footer}>
                 <Text style={[styles.footerText, { color: textColor }]}>
                   Continue à explorer pour grimper dans le classement ! 🌍
@@ -189,14 +208,95 @@ export default function RankingScreen() {
         )}
 
         {activeTab === 'country' && (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyTitle, { color: textColor }]}>
-              Classement par pays
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              Cette fonctionnalité arrive bientôt ! 🌍
-            </Text>
-          </View>
+          <>
+            {getCurrentError() && (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.errorText, { color: 'red' }]}>
+                  {getCurrentError()}
+                </Text>
+              </View>
+            )}
+
+            {getCurrentRankingData().length === 0 && !getCurrentError() && (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
+                  Aucun utilisateur à classer
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  Suivez des utilisateurs pour voir le classement !
+                </Text>
+              </View>
+            )}
+
+            {getCurrentRankingData().length > 0 && (
+              <View style={styles.rankingList}>
+                {getCurrentRankingData().map((user: any) => (
+                  <View 
+                    key={user.id}
+                    style={styles.rankingCard}
+                  >
+                    <View style={styles.rankInfo}>
+                      <Text style={[styles.rankNumber, getRankStyle(user.rank)]}>
+                        {getRankIcon(user.rank)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.avatarContainer}>
+                      {user.avatar && user.avatar.trim() !== '' ? (
+                        <Image 
+                          source={{ uri: user.avatar }}
+                          style={styles.avatar}
+                          onError={() => console.log('Erreur chargement avatar pour:', user.name)}
+                        />
+                      ) : (
+                        // Essayer de récupérer depuis le cache global sinon icône par défaut
+                        (() => {
+                          const cachedPhoto = getInstantUserPhoto(user.id);
+                          return cachedPhoto ? (
+                            <Image 
+                              source={{ uri: cachedPhoto }}
+                              style={styles.avatar}
+                            />
+                          ) : (
+                            <View style={styles.defaultAvatar}>
+                              <Text style={styles.defaultAvatarText}>
+                                {(user.name || '?').charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
+                          );
+                        })()
+                      )}
+                    </View>
+
+                    <View style={styles.userInfo}>
+                      <View style={styles.userInfoRow}>
+                        <Text style={[
+                          styles.userName, 
+                          { color: '#FFFFFF', flex: 1 }, // Blanc pour tous les noms + flex pour prendre l'espace
+                          user.isCurrentUser && { fontWeight: 'bold', color: '#FFFFFF' } // Reste blanc même pour l'utilisateur actuel
+                        ]}>
+                          {user.isCurrentUser ? 'You' : user.name}
+                        </Text>
+                        
+                        <View style={styles.citiesContainer}>
+                          <Text style={styles.citiesNumber}>{user.countriesVisited}</Text>
+                          <IconSymbol size={16} name="flag" color="#FFFFFF" />
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {getCurrentRankingData().length > 0 && (
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: textColor }]}>
+                  Découvre de nouveaux pays pour grimper dans le classement ! �
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </View>

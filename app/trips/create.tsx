@@ -1,11 +1,13 @@
 import { StarRating } from '@/components/StarRating';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BlurView } from 'expo-blur';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
+  Animated,
   Image, InteractionManager, Modal,
   ScrollView,
   StyleSheet,
@@ -278,11 +280,30 @@ export default function CreateTripScreen() {
   };
   const [showDoneModal, setShowDoneModal] = useState(false);
   const [showAddCityModal, setShowAddCityModal] = useState(false);
+  const slideAnim = React.useRef(new Animated.Value(400)).current; // Start below screen
   const [doneCoverImage, setDoneCoverImage] = useState<string | null>(null);
   const [doneDescription, setDoneDescription] = useState('');
   const [doneIsPublic, setDoneIsPublic] = useState(true);
   const beigeColor = '#E5C9A6';
   const tripsScrollRef = React.useRef<ScrollView>(null);
+
+  // Animation for Add City Modal
+  React.useEffect(() => {
+    if (showAddCityModal) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 8,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: 400,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showAddCityModal, slideAnim]);
 
   // Scroll to last trip when localTrips changes
   React.useEffect(() => {
@@ -761,17 +782,24 @@ export default function CreateTripScreen() {
         {/* Add City Selection Modal */}
         <Modal
           visible={showAddCityModal}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowAddCityModal(false)}
         >
-          <View style={styles.addCityModalOverlay}>
+          <BlurView style={styles.addCityModalOverlay} intensity={20} tint="dark">
             <TouchableOpacity 
               style={styles.addCityModalBackground} 
               activeOpacity={1} 
               onPress={() => setShowAddCityModal(false)}
             />
-            <View style={styles.addCityModalContent}>
+            <Animated.View 
+              style={[
+                styles.addCityModalContent,
+                {
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
               <View style={styles.addCityModalHeader}>
                 <View style={styles.addCityModalIndicator} />
                 <Text style={styles.addCityModalTitle}>Add a City</Text>
@@ -814,8 +842,8 @@ export default function CreateTripScreen() {
                   </View>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </Animated.View>
+          </BlurView>
         </Modal>
 
         {/* Done Modal */}
@@ -1570,7 +1598,6 @@ const styles = StyleSheet.create({
   // Add City Modal Styles
   addCityModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   addCityModalBackground: {

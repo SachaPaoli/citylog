@@ -1,14 +1,12 @@
-import { StarRating } from '@/components/StarRating';
 import { ProfileImage } from '@/components/ProfileImage';
+import { TripCityCard } from '@/components/TripCityCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Animated,
   Image,
   Modal,
   ScrollView,
@@ -18,7 +16,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../../config/firebase';
+import { db } from '../../config/firebase';
 
 interface TripSegment {
   duration: string;
@@ -158,10 +156,26 @@ export default function TripDetailScreen() {
         const citiesSnapshot = await getDocs(citiesQuery);
         console.log('🏙️ Nombre de villes trouvées:', citiesSnapshot.docs.length);
         
-        const citiesData = citiesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as TripCity[];
+        const citiesData = citiesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('🏗️ City raw data from Firestore:', data);
+          return {
+            id: doc.id,
+            city: data.city || data.cityName || '', // Handle both field names
+            country: data.country || data.countryName || '', // Handle both field names
+            coverImage: data.coverImage || '',
+            rating: data.rating || 0,
+            description: data.description || '',
+            duration: data.duration || '',
+            timeUnit: data.timeUnit || '',
+            transport: data.transport || '',
+            order: data.order || 0,
+            stayingItems: data.stayingItems || [],
+            restaurantItems: data.restaurantItems || [],
+            activitiesItems: data.activitiesItems || [],
+            otherItems: data.otherItems || []
+          };
+        }) as TripCity[];
         
         // Sort cities by order
         citiesData.sort((a, b) => a.order - b.order);
@@ -329,41 +343,7 @@ export default function TripDetailScreen() {
             {cities.map((city, index) => (
               <View key={city.id}>
                 {/* City Card */}
-                <View style={styles.cityCard}>
-                  {city.coverImage ? (
-                    <Image 
-                      source={{ uri: city.coverImage }} 
-                      style={styles.cityCoverImage} 
-                    />
-                  ) : (
-                    <View style={styles.cityPlaceholder}>
-                      <Text style={styles.cityPlaceholderText}>📍</Text>
-                    </View>
-                  )}
-                  
-                  <View style={styles.cityInfo}>
-                    <Text style={styles.cityName}>{city.city}</Text>
-                    <Text style={styles.cityCountry}>{city.country}</Text>
-                    
-                    {city.rating > 0 && (
-                      <View style={styles.cityRating}>
-                        <StarRating
-                          rating={city.rating}
-                          readonly
-                          size="small"
-                          color="#f5c518"
-                          showRating={true}
-                        />
-                      </View>
-                    )}
-                    
-                    {city.description && (
-                      <Text style={styles.cityDescription} numberOfLines={2}>
-                        {city.description}
-                      </Text>
-                    )}
-                  </View>
-                </View>
+                <TripCityCard city={city} />
 
                 {/* Segment between cities (if not the last city) */}
                 {index < cities.length - 1 && cities[index + 1] && (
@@ -490,12 +470,14 @@ const styles = StyleSheet.create({
   },
   coverImageContainer: {
     width: '100%',
-    height: 250,
+    height: 200,
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   coverImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 16,
   },
   tripInfo: {
     paddingHorizontal: 20,
@@ -522,56 +504,6 @@ const styles = StyleSheet.create({
   },
   citiesContainer: {
     paddingHorizontal: 16,
-  },
-  cityCard: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  cityCoverImage: {
-    width: 80,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  cityPlaceholder: {
-    width: 80,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cityPlaceholderText: {
-    fontSize: 24,
-  },
-  cityInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  cityName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 2,
-  },
-  cityCountry: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 4,
-  },
-  cityRating: {
-    marginBottom: 4,
-  },
-  cityDescription: {
-    fontSize: 12,
-    color: '#ccc',
-    lineHeight: 16,
   },
   // Segment styles
   segmentContainer: {

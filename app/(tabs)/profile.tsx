@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFollowStats } from '@/hooks/useFollowStats';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useUserTravels } from '@/hooks/useUserTravels';
+import { useVisitedCountries } from '@/hooks/useVisitedCountries';
 import { Ionicons } from '@expo/vector-icons';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -61,6 +62,7 @@ export default function ProfileScreen() {
   );
   const { logout, userProfile: authUserProfile } = useAuth();
   const { travelData, loading: travelLoading } = useUserTravels();
+  const { visitedCountries } = useVisitedCountries();
   const { stats: followStats, loading: followStatsLoading } = useFollowStats(authUserProfile?.uid);
 
   // Fetch all posts, then filter by userId (after authUserProfile is defined)
@@ -278,12 +280,12 @@ export default function ProfileScreen() {
                   <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButtonRow}>
+              <TouchableOpacity style={styles.profileButtonRow} onPress={() => router.push('/my-countries')}>
                 <View style={styles.profileButtonLeft}>
                   <Text style={styles.profileButtonText}>Countries</Text>
                 </View>
                 <View style={styles.profileButtonRight}>
-                  <Text style={styles.profileButtonCount}>{travelData?.visitedCountries?.length ?? 0}</Text>
+                  <Text style={styles.profileButtonCount}>{visitedCountries?.length ?? 0}</Text>
                   <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.profileButtonIcon} />
                 </View>
               </TouchableOpacity>
