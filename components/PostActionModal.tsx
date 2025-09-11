@@ -1,5 +1,6 @@
+import { BlurView } from 'expo-blur';
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type PostActionModalProps = {
   visible: boolean;
@@ -9,92 +10,162 @@ type PostActionModalProps = {
 };
 
 export default function PostActionModal({ visible, onClose, onNewPost, onNewTrip }: PostActionModalProps) {
+  const slideAnim = React.useRef(new Animated.Value(400)).current; // Start below screen
+
+  // Animation for Modal
+  React.useEffect(() => {
+    if (visible) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 8,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: 400,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, slideAnim]);
+
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      transparent
+      animationType="fade"
+      transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.bottomModalOverlay}>
-        <View style={styles.bottomModalContent}>
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Choose an action</Text>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.button} onPress={onNewPost}>
-              <Text style={styles.buttonText}>New post</Text>
+      <BlurView style={styles.blurContainer} intensity={20} tint="dark">
+        <TouchableOpacity 
+          style={styles.overlay} 
+          activeOpacity={1} 
+          onPress={onClose}
+        />
+        <Animated.View 
+          style={[
+            styles.modalContent,
+            {
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <View style={styles.modalIndicator} />
+            <Text style={styles.modalTitle}>Choose an action</Text>
+          </View>
+          
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity
+              style={styles.option}
+              onPress={onNewPost}
+            >
+              <View style={styles.optionIcon}>
+                <Text style={styles.optionIconText}>📝</Text>
+              </View>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionTitle}>New post</Text>
+                <Text style={styles.optionDescription}>
+                  Share a single moment or experience
+                </Text>
+              </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={onNewTrip}>
-              <Text style={styles.buttonText}>New trip</Text>
+            
+            <TouchableOpacity
+              style={styles.option}
+              onPress={onNewTrip}
+            >
+              <View style={styles.optionIcon}>
+                <Text style={styles.optionIconText}>🗺️</Text>
+              </View>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionTitle}>New trip</Text>
+                <Text style={styles.optionDescription}>
+                  Create a complete journey with multiple cities
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </BlurView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  bottomModalOverlay: {
+  blurContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'transparent',
   },
-  bottomModalContent: {
-    width: '100%',
+  overlay: {
+    flex: 1,
+  },
+  modalContent: {
     height: '40%',
-  backgroundColor: '#2C3550',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 32,
+    backgroundColor: '#181C24',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 34,
+  },
+  modalHeader: {
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 16,
-    position: 'relative',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 20,
   },
-  cancelButton: {
-    position: 'absolute',
-    top: 16,
-    right: 24,
-    zIndex: 10,
-    padding: 8,
+  modalIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    marginBottom: 16,
   },
-  cancelButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  title: {
-    color: '#fff',
+  modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  button: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#5784BA',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    marginHorizontal: 8,
-  },
-  buttonText: {
     color: '#fff',
+  },
+  optionsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 16,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  optionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  optionIconText: {
+    fontSize: 24,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 20,
   },
 });

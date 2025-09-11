@@ -1,6 +1,8 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface FlatWorldMapProps {
   visitedCountries: string[];
@@ -147,54 +149,59 @@ export function FlatWorldMap({ visitedCountries, onCountryPress }: FlatWorldMapP
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: textColor }]}>
+        <BlurView intensity={50} style={styles.blurContainer}>
+          <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+            <View style={styles.overlay} />
+          </TouchableWithoutFeedback>
+          <View style={styles.modalContent}>
+            <SafeAreaView style={styles.safeAreaContainer}>
+              {/* Handle bar */}
+              <View style={styles.handleBar} />
+              
+              {/* Title */}
+              <Text style={styles.modalTitle}>
                 {selectedCountry && countryData[selectedCountry as keyof typeof countryData]?.flag} {' '}
                 {selectedCountry && countryData[selectedCountry as keyof typeof countryData]?.name}
               </Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.postsScrollView}>
-              {selectedCountry && getCountryPosts(selectedCountry).map((post) => (
-                <View key={post.id} style={styles.postCard}>
-                  <View style={styles.postHeader}>
-                    <Text style={[styles.postCity, { color: textColor }]}>
-                      📍 {post.city}
+              
+              {/* Separator line */}
+              <View style={styles.separator} />
+              
+              {/* Content */}
+              <ScrollView style={styles.postsScrollView} showsVerticalScrollIndicator={false}>
+                {selectedCountry && getCountryPosts(selectedCountry).map((post) => (
+                  <View key={post.id} style={styles.postCard}>
+                    <View style={styles.postHeader}>
+                      <Text style={[styles.postCity, { color: textColor }]}>
+                        📍 {post.city}
+                      </Text>
+                      <Text style={[styles.postRating, { color: ratingColor }]}>
+                        {post.rating}/10
+                      </Text>
+                    </View>
+                    <Text style={[styles.postDescription, { color: textColor }]}>
+                      {post.description}
                     </Text>
-                    <Text style={[styles.postRating, { color: ratingColor }]}>
-                      {post.rating}/10
+                    <Text style={[styles.postRestaurant, { color: textColor }]}>
+                      🍽️ {post.restaurant}
+                    </Text>
+                    <Text style={[styles.postDate, { color: textColor }]}>
+                      📅 {new Date(post.date).toLocaleDateString('en-US')}
                     </Text>
                   </View>
-                  <Text style={[styles.postDescription, { color: textColor }]}>
-                    {post.description}
-                  </Text>
-                  <Text style={[styles.postRestaurant, { color: textColor }]}>
-                    🍽️ {post.restaurant}
-                  </Text>
-                  <Text style={[styles.postDate, { color: textColor }]}>
-                    📅 {new Date(post.date).toLocaleDateString('fr-FR')}
-                  </Text>
-                </View>
-              ))}
-              
-              {selectedCountry && getCountryPosts(selectedCountry).length === 0 && (
-                <View style={styles.noPostsContainer}>
-                  <Text style={[styles.noPostsText, { color: textColor }]}>
-                    Aucun post pour ce pays pour le moment
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
+                ))}
+                
+                {selectedCountry && getCountryPosts(selectedCountry).length === 0 && (
+                  <View style={styles.noPostsContainer}>
+                    <Text style={[styles.noPostsText, { color: textColor }]}>
+                      No posts for this country yet
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            </SafeAreaView>
           </View>
-        </View>
+        </BlurView>
       </Modal>
     </View>
   );
@@ -283,11 +290,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  blurContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    flex: 1,
+  },
   modalContent: {
     height: '75%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    backgroundColor: '#181C24',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  safeAreaContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -299,8 +331,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333333',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   closeButton: {
     width: 30,

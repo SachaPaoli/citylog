@@ -1,14 +1,17 @@
 import { EnrichedRealCityData } from '@/services/RealCitiesService';
+import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { StarRating } from './StarRating';
 
@@ -26,7 +29,7 @@ export function CityRatingModal({ city, visible, onClose, onRatingSubmit }: City
 
   const handleSubmitRating = () => {
     if (userRating === 0) {
-      Alert.alert('Notation requise', 'Veuillez sélectionner une note avant de valider.');
+      Alert.alert('Rating required', 'Please select a rating before submitting.');
       return;
     }
 
@@ -42,121 +45,152 @@ export function CityRatingModal({ city, visible, onClose, onRatingSubmit }: City
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.container}>
-        {/* Header avec drapeau et fermeture */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.flagContainer}>
-            <Image source={{ uri: city.image }} style={styles.flagImage} />
-          </View>
+      <BlurView intensity={50} style={styles.blurContainer}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.overlay} />
+        </TouchableWithoutFeedback>
+        <View style={styles.modalContent}>
+          <SafeAreaView style={styles.safeAreaContainer}>
+            {/* Handle bar */}
+            <View style={styles.handleBar} />
+            
+            {/* Title */}
+            <Text style={styles.title}>Rate {city.name}</Text>
+            
+            {/* Separator line */}
+            <View style={styles.separator} />
+            
+            {/* Content */}
+            <ScrollView 
+              style={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Flag */}
+              <View style={styles.flagContainer}>
+                <Image source={{ uri: city.image }} style={styles.flagImage} />
+              </View>
+
+              {/* City info */}
+              <View style={styles.cityInfo}>
+                <Text style={styles.cityName}>{city.name}</Text>
+                <Text style={styles.countryName}>{city.country}</Text>
+                
+                {/* Average rating */}
+                <View style={styles.currentRatingContainer}>
+                  <Text style={styles.currentRatingLabel}>Average rating:</Text>
+                  <StarRating 
+                    rating={city.averageRating} 
+                    readonly={true} 
+                    size="medium"
+                    color="#FFD700"
+                  />
+                  <Text style={styles.totalRatings}>({city.totalRatings} ratings)</Text>
+                </View>
+              </View>
+
+              {/* User rating section */}
+              <View style={styles.ratingSection}>
+                <Text style={styles.ratingTitle}>Your rating for {city.name}</Text>
+                <Text style={styles.ratingSubtitle}>Tap the stars to rate</Text>
+                
+                <View style={styles.userRatingContainer}>
+                  <StarRating 
+                    rating={userRating} 
+                    onRatingChange={handleRatingChange}
+                    readonly={false} 
+                    size="large"
+                    color="#FFD700"
+                    showRating={true}
+                  />
+                </View>
+
+                {userRating > 0 && (
+                  <Text style={styles.ratingFeedback}>
+                    {getRatingText(userRating)}
+                  </Text>
+                )}
+              </View>
+
+              {/* Buttons */}
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity 
+                  style={[styles.submitButton, userRating === 0 && styles.submitButtonDisabled]}
+                  onPress={handleSubmitRating}
+                  disabled={userRating === 0}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {city.userRating ? 'Update my rating' : 'Validate my rating'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
         </View>
-
-        {/* Informations de la ville */}
-        <View style={styles.cityInfo}>
-          <Text style={styles.cityName}>{city.name}</Text>
-          <Text style={styles.countryName}>{city.country}</Text>
-          
-          {/* Note moyenne actuelle */}
-          <View style={styles.currentRatingContainer}>
-            <Text style={styles.currentRatingLabel}>Note moyenne :</Text>
-            <StarRating 
-              rating={city.averageRating} 
-              readonly={true} 
-              size="medium"
-              color="#FFD700"
-            />
-            <Text style={styles.totalRatings}>({city.totalRatings} notes)</Text>
-          </View>
-        </View>
-
-        {/* Section de notation utilisateur */}
-        <View style={styles.ratingSection}>
-          <Text style={styles.ratingTitle}>Votre note pour {city.name}</Text>
-          <Text style={styles.ratingSubtitle}>Cliquez sur les étoiles pour noter</Text>
-          
-          <View style={styles.userRatingContainer}>
-            <StarRating 
-              rating={userRating} 
-              onRatingChange={handleRatingChange}
-              readonly={false} 
-              size="large"
-              color="#FFD700"
-              showRating={true}
-            />
-          </View>
-
-          {userRating > 0 && (
-            <Text style={styles.ratingFeedback}>
-              {getRatingText(userRating)}
-            </Text>
-          )}
-        </View>
-
-        {/* Bouton de validation */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.submitButton, userRating === 0 && styles.submitButtonDisabled]}
-            onPress={handleSubmitRating}
-            disabled={userRating === 0}
-          >
-            <Text style={styles.submitButtonText}>
-              {city.userRating ? 'Modifier ma note' : 'Valider ma note'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Annuler</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      </BlurView>
     </Modal>
   );
 }
 
 function getRatingText(rating: number): string {
-  if (rating <= 1) return "😞 Décevant";
-  if (rating <= 2) return "😐 Moyen";
+  if (rating <= 1) return "😞 Disappointing";
+  if (rating <= 2) return "😐 Average";
   if (rating <= 3) return "🙂 Correct";
-  if (rating <= 4) return "😊 Bien";
-  return "🤩 Excellent !";
+  if (rating <= 4) return "😊 Good";
+  return "🤩 Excellent!";
 }
 
 const styles = StyleSheet.create({
-  container: {
+  blurContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    justifyContent: 'flex-end',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  overlay: {
+    flex: 1,
   },
-  closeButton: {
+  modalContent: {
+    height: '75%',
+    backgroundColor: '#181C24',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  safeAreaContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  handleBar: {
     width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
   },
-  closeButtonText: {
-    fontSize: 18,
+  title: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#666',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginBottom: 20,
+  },
+  contentContainer: {
+    flex: 1,
   },
   flagContainer: {
-    position: 'absolute',
-    left: '50%',
-    transform: [{ translateX: -25 }],
+    alignItems: 'center',
+    marginBottom: 20,
   },
   flagImage: {
     width: 50,
@@ -165,17 +199,17 @@ const styles = StyleSheet.create({
   },
   cityInfo: {
     alignItems: 'center',
-    padding: 30,
+    marginBottom: 20,
   },
   cityName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   countryName: {
     fontSize: 18,
-    color: '#666',
+    color: '#999',
     marginBottom: 20,
   },
   currentRatingContainer: {
@@ -184,7 +218,7 @@ const styles = StyleSheet.create({
   },
   currentRatingLabel: {
     fontSize: 16,
-    color: '#333',
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   totalRatings: {
@@ -192,20 +226,19 @@ const styles = StyleSheet.create({
     color: '#888',
   },
   ratingSection: {
-    flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 30,
+    alignItems: 'center',
+    marginBottom: 30,
   },
   ratingTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
   },
   ratingSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#999',
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -220,17 +253,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   buttonContainer: {
-    padding: 30,
     gap: 15,
+    paddingBottom: 20,
   },
   submitButton: {
-    backgroundColor: '#FF8C00',
+    backgroundColor: '#2051A4',
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#444',
   },
   submitButtonText: {
     color: '#fff',
@@ -242,10 +275,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   cancelButtonText: {
-    color: '#666',
+    color: '#999',
     fontSize: 16,
     fontWeight: '600',
   },

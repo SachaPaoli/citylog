@@ -52,7 +52,7 @@ export default function TabLayout() {
           name="explore"
           options={{
             title: '',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane" color={color} />,
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
           }}
         />
         <Tabs.Screen
