@@ -3,6 +3,7 @@ import { useCountryRanking } from '@/hooks/useCountryRanking';
 import { getInstantUserPhoto } from '@/hooks/useGlobalPhotoPreloader';
 import { useRanking } from '@/hooks/useRanking';
 import { useThemeColor } from '@/hooks/useThemeColor';
+// import { AdBanner } from '@/components/AdBanner';
 import React from 'react';
 import {
   Image,
@@ -110,6 +111,7 @@ export default function RankingScreen() {
       {/* Content */}
       <ScrollView 
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: 20 }} // Padding normal sans la bannière pub
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -299,6 +301,9 @@ export default function RankingScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Bannière publicitaire en bas - Désactivée pour Expo Go */}
+      {/* <AdBanner position="bottom" /> */}
     </View>
   );
 }
