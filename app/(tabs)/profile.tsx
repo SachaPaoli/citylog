@@ -1,3 +1,21 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useFollowStats } from '@/hooks/useFollowStats';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUserTravels } from '@/hooks/useUserTravels';
+import { useVisitedCountries } from '@/hooks/useVisitedCountries';
+import { Ionicons } from '@expo/vector-icons';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, Animated, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { TravelPostCard } from '../../components/TravelPostCard';
+import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
+import { useWishlist } from '../../contexts/WishlistContext';
+import { usePosts } from '../../hooks/usePosts';
+import { addFavorite as addFavoriteFirestore, getUserFavorites } from '../../services/UserService';
+
 // Utilitaire pour obtenir le code pays ISO2 en minuscule à partir du nom du pays
 function getCountryCode(countryName: string): string {
   const map: Record<string, string> = {
@@ -10,23 +28,6 @@ function getCountryCode(countryName: string): string {
   };
   return map[countryName] || '';
 }
-import { useAuth } from '@/contexts/AuthContext';
-import { useFollowStats } from '@/hooks/useFollowStats';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { useUserTravels } from '@/hooks/useUserTravels';
-import { useVisitedCountries } from '@/hooks/useVisitedCountries';
-import { Ionicons } from '@expo/vector-icons';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { TravelPostCard } from '../../components/TravelPostCard';
-import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
-import { useWishlist } from '../../contexts/WishlistContext';
-import { usePosts } from '../../hooks/usePosts';
-import { addFavorite as addFavoriteFirestore, getUserFavorites } from '../../services/UserService';
 
 export default function ProfileScreen() {
 
@@ -42,6 +43,33 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'profile' | 'wishlist'>('profile');
   type FavoriteType = { city: string; country: string; flag: string; countryCode?: string } | null;
   const [favorites, setFavorites] = useState<FavoriteType[]>([null, null, null]);
+
+  // Animations pour le sliding
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
+  const tabSelectorAnim = React.useRef(new Animated.Value(0)).current;
+
+  const switchTab = (tab: 'profile' | 'wishlist') => {
+    if (tab === activeTab) return;
+    
+    const screenWidth = Dimensions.get('window').width;
+    const targetSlideValue = tab === 'profile' ? 0 : -screenWidth;
+    const targetSelectorValue = tab === 'profile' ? 0 : 116; // 116px pour la largeur exacte d'un onglet
+    
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: targetSlideValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tabSelectorAnim, {
+        toValue: targetSelectorValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    setActiveTab(tab);
+  };
 
   // Charge les favoris depuis Firestore à chaque focus
   useFocusEffect(
@@ -165,34 +193,55 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      {/* Onglets Profile / Wishlist centrés */}
+      {/* Onglets Profile / Wishlist avec container arrondi */}
       <View style={{ backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 4, marginBottom: 10 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24 }}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'profile' && { borderBottomColor: borderColor }]}
-            onPress={() => setActiveTab('profile')}
-          >
-            <Text style={[styles.tabText, { color: activeTab === 'profile' ? textActiveColor : textColor }]}> 
-              Profile
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'wishlist' && { borderBottomColor: borderColor }]}
-            onPress={() => setActiveTab('wishlist')}
-          >
-            <Text style={[styles.tabText, { color: activeTab === 'wishlist' ? textActiveColor : textColor }]}> 
-              Wishlist
-            </Text>
-          </TouchableOpacity>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={styles.tabContainer}>
+            <Animated.View 
+              style={[
+                styles.tabSelector,
+                { transform: [{ translateX: tabSelectorAnim }] }
+              ]} 
+            />
+            <TouchableOpacity 
+              style={styles.tabButton}
+              onPress={() => switchTab('profile')}
+            >
+              <Text style={[styles.tabButtonText, { color: activeTab === 'profile' ? '#FFFFFF' : '#888' }]}> 
+                Profile
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.tabButton}
+              onPress={() => switchTab('wishlist')}
+            >
+              <Text style={[styles.tabButtonText, { color: activeTab === 'wishlist' ? '#FFFFFF' : '#888' }]}> 
+                Wishlist
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
       {/* Ligne de séparation fine */}
       <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
 
-      {activeTab === 'profile' ? (
-      <ScrollView style={[styles.scrollView, { backgroundColor: '#181C24' }]} showsVerticalScrollIndicator={false}>
-          {/* Header du profil avec followers/following autour de la photo */}
-          <View style={styles.profileHeader}>
+      {/* Contenu avec sliding */}
+      <View style={styles.contentContainer}>
+        <Animated.View 
+          style={[
+            styles.slidingContent,
+            { transform: [{ translateX: slideAnim }] }
+          ]}
+        >
+          {/* Tab Profile */}
+          <View style={styles.tabContent}>
+            <ScrollView 
+              style={[styles.scrollView, { backgroundColor: '#181C24' }]} 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              {/* Header du profil avec followers/following autour de la photo */}
+              <View style={styles.profileHeader}>
             <View style={styles.profileRow}>
               <View style={styles.profileStatCol}>
                 <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
@@ -292,32 +341,37 @@ export default function ProfileScreen() {
             </View>
 
           </View>
-        </ScrollView>
-      ) : (
-        <View style={styles.wishlistSection}>
-          <Text style={[styles.sectionTitle, { color: textColor, alignSelf: 'flex-start', marginLeft: 4 }]}>🌟 Mes destinations de rêve</Text>
-          {wishlist.length === 0 ? (
-            <View style={styles.wishlistContent}>
-              <Text style={[styles.wishlistText, { color: textColor }]}>Aucune destination dans ta wishlist.</Text>
-              <Text style={[styles.wishlistSubtext, { color: textColor }]}>Ajoute des voyages à ta wishlist depuis les détails d'un post !</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={wishlist}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <TravelPostCard
-                  post={item}
-                  onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
+            </ScrollView>
+          </View>
+
+          {/* Tab Wishlist */}
+          <View style={styles.tabContent}>
+            <View style={styles.wishlistSection}>
+              <Text style={[styles.sectionTitle, { color: textColor, alignSelf: 'flex-start', marginLeft: 4 }]}>🌟 Mes destinations de rêve</Text>
+              {wishlist.length === 0 ? (
+                <View style={styles.wishlistContent}>
+                  <Text style={[styles.wishlistText, { color: textColor }]}>Aucune destination dans ta wishlist.</Text>
+                  <Text style={[styles.wishlistSubtext, { color: textColor }]}>Ajoute des voyages à ta wishlist depuis les détails d'un post !</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={wishlist}
+                  keyExtractor={item => item.id}
+                  renderItem={({ item }) => (
+                    <TravelPostCard
+                      post={item}
+                      onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
+                    />
+                  )}
+                  ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+                  contentContainerStyle={{ paddingBottom: 30 }}
+                  showsVerticalScrollIndicator={false}
                 />
               )}
-              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-              contentContainerStyle={{ paddingBottom: 30 }}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </View>
-      )}
+            </View>
+          </View>
+        </Animated.View>
+      </View>
       {/* ...modal removed, navigation to /my-posts instead... */}
     </SafeAreaView>
   );
@@ -326,6 +380,16 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  slidingContent: {
+    flexDirection: 'row',
+    width: Dimensions.get('window').width * 2,
+  },
+  tabContent: {
+    width: Dimensions.get('window').width,
   },
   profileRow: {
     flexDirection: 'row',
@@ -418,6 +482,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#666',
+    padding: 0,
+    position: 'relative',
+  },
+  tabSelector: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 116,
+    height: 40,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  tabButton: {
+    width: 116,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   tab: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -429,7 +524,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollView: {
-    flex: 1,
+    paddingHorizontal: 0,
   },
   profileHeader: {
     alignItems: 'center',
