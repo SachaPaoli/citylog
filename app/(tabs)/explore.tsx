@@ -1,7 +1,7 @@
 import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
 import { UserSearchCard } from '@/components/UserSearchCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { RealCitiesService } from '@/services/RealCitiesService';
+import { RealCitiesGeoNamesService } from '@/services/RealCitiesGeoNamesService'; // Nouveau service GeoNames
 import { UserSearchResult, UserSearchService } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -83,7 +83,7 @@ export default function ExploreScreen() {
       .trim();
   };
 
-  // Rechercher des villes avec l'API 154k
+  // Rechercher des villes avec l'API GeoNames (500+ habitants)
   const searchCities = async (query: string) => {
     if (!query.trim()) {
       setCities([]);
@@ -94,36 +94,13 @@ export default function ExploreScreen() {
     setLoading(true);
     setSearchDone(false);
     try {
-      const results = await RealCitiesService.searchCities(query, 50);
+      console.log(`🔍 Recherche GeoNames pour: "${query}"`);
+      const results = await RealCitiesGeoNamesService.searchCities(query, 50);
       
-      // Filtrer les doublons (même nom, même pays)
-      const uniqueCities = [];
-      const seen = new Set();
-      for (const city of results) {
-        const key = `${normalizeString(city.name)}-${normalizeString(city.country)}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueCities.push(city);
-        }
-      }
-      
-      // Tri : d'abord les villes dont le nom correspond exactement à la recherche, puis les autres, le tout trié par population
-      const normalizedQuery = normalizeString(query);
-      const sortedCities = uniqueCities.sort((a, b) => {
-        const aExact = normalizeString(a.name) === normalizedQuery;
-        const bExact = normalizeString(b.name) === normalizedQuery;
-        if (aExact && !bExact) return -1;
-        if (!aExact && bExact) return 1;
-        // Si les deux sont exacts ou les deux ne le sont pas, trie par population décroissante
-        const popA = typeof a.population === 'number' ? a.population : 0;
-        const popB = typeof b.population === 'number' ? b.population : 0;
-        return popB - popA;
-      });
-      
-      console.log(`Trouvé ${sortedCities.length} villes uniques pour: ${query}`);
-      setCities(sortedCities);
+      console.log(`✅ Trouvé ${results.length} villes pour: ${query}`);
+      setCities(results);
     } catch (error) {
-      console.error('Erreur recherche:', error);
+      console.error('❌ Erreur recherche GeoNames:', error);
       setCities([]);
     }
     setLoading(false);
