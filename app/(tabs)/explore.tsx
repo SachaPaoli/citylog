@@ -227,12 +227,7 @@ export default function ExploreScreen() {
       )}
       {/* ...existing code... */}
       
-      {/* Titre Explore */}
-      <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, alignItems: 'center' }}>
-        <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' }}>
-          Explore
-        </Text>
-      </View>
+  
 
       <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, marginTop: 12 }}>
         <View style={{ position: 'relative', justifyContent: 'center' }}>

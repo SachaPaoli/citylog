@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelTripCard } from '../../components/TravelTripCard';
 import { db } from '../../config/firebase';
@@ -100,6 +100,10 @@ export default function HomeScreen() {
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = (screenWidth - 60) / 2;
 
+  // Animations pour le sliding - comme dans ranking
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
+  const tabIndicatorAnim = React.useRef(new Animated.Value(0)).current;
+
   // Précharge les trips dès le montage pour un switch instantané
   useEffect(() => {
     const fetchTrips = async () => {
@@ -182,6 +186,30 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  // Fonction de changement d'onglet avec slide - comme dans ranking
+  const switchTab = (tab: 'cities' | 'trips') => {
+    if (tab === activeTab) return;
+    
+    const screenWidth = Dimensions.get('window').width;
+    const targetSlideValue = tab === 'cities' ? 0 : -screenWidth;
+    const targetIndicatorValue = tab === 'cities' ? 0 : screenWidth / 2;
+    
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: targetSlideValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tabIndicatorAnim, {
+        toValue: targetIndicatorValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    setActiveTab(tab);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
       <View style={{ flex: 1 }}>
@@ -194,74 +222,95 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-        {/* Onglets */}
-        <View style={[styles.tabsContainer, { backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 12 }]}> 
-          <TouchableOpacity 
-            style={[
-              styles.tab, 
-              { borderBottomColor: activeTab === 'cities' ? '#FFFFFF' : 'transparent' }
-            ]}
-            onPress={() => setActiveTab('cities')}
-            activeOpacity={0.7}
-          >
-            <Text style={[
-              styles.tabText, 
-              { color: activeTab === 'cities' ? '#FFFFFF' : '#B0B0B0' }
-            ]}>
-              Cities
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[
-              styles.tab, 
-              { borderBottomColor: activeTab === 'trips' ? '#FFFFFF' : 'transparent' }
-            ]}
-            onPress={() => setActiveTab('trips')}
-            activeOpacity={0.7}
-          >
-            <Text style={[
-              styles.tabText,
-              { color: activeTab === 'trips' ? '#FFFFFF' : '#B0B0B0' }
-            ]}>
-              Trips
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {/* Ligne de séparation fine */}
-        <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
-        <ScrollView 
-          style={[styles.scrollView, { backgroundColor: '#181C24' }]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {/* Messages d'état - Simplifié */}
-          {error && (
-            <View style={styles.centerContent}>
-              <Text style={[styles.errorText, { color: 'red' }]}>
-                {error}
+        {/* Onglets avec sliding indicator - comme dans ranking */}
+        <View style={[styles.tabsContainer, { backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.2)' }]}> 
+          <View style={{ paddingHorizontal: 20, flexDirection: 'row', position: 'relative' }}>
+            <TouchableOpacity 
+              style={[styles.tab]} 
+              onPress={() => switchTab('cities')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.tabText, 
+                { color: activeTab === 'cities' ? '#FFFFFF' : '#888' }
+              ]}>
+                Cities
               </Text>
-            </View>
-          )}
-          {/* Posts */}
-          <View style={styles.postsContainer}>
-            {/* Rendu des deux onglets en permanence, switch instantané avec display */}
-            <View style={{ display: activeTab === 'cities' ? 'flex' : 'none' }}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab]} 
+              onPress={() => switchTab('trips')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'trips' ? '#FFFFFF' : '#888' }
+              ]}>
+                Trips
+              </Text>
+            </TouchableOpacity>
+            
+            {/* Barre blanche de sélection animée */}
+            <Animated.View 
+              style={[
+                styles.tabIndicator,
+                { transform: [{ translateX: tabIndicatorAnim }] }
+              ]} 
+            />
+          </View>
+        </View>
+
+        {/* Contenu avec sliding animation */}
+        <Animated.View 
+          style={[
+            styles.slidingContent,
+            { transform: [{ translateX: slideAnim }] }
+          ]}
+        >
+          {/* Onglet Cities */}
+          <ScrollView 
+            style={[styles.tabContent, { backgroundColor: '#181C24' }]}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {/* Messages d'état - Cities */}
+            {error && (
+              <View style={styles.centerContent}>
+                <Text style={[styles.errorText, { color: 'red' }]}>
+                  {error}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.postsContainer}>
               <CitiesTab 
                 followingPosts={followingPosts} 
                 followingLoading={followingLoading} 
                 textColor={textColor} 
               />
             </View>
-            <View style={{ display: activeTab === 'trips' ? 'flex' : 'none' }}>
+          </ScrollView>
+
+          {/* Onglet Trips */}
+          <ScrollView 
+            style={[styles.tabContent, { backgroundColor: '#181C24' }]}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            <View style={styles.postsContainer}>
               <TripsTab 
                 trips={trips} 
                 textColor={textColor}
               />
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -280,22 +329,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 2,
-    marginTop: 0,
+    position: 'relative',
+    paddingVertical: 15,
   },
   tab: {
-    flex: 1,
+    width: (Dimensions.get('window').width - 40) / 2,
     alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    marginHorizontal: -6,
+    paddingVertical: 10,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: Dimensions.get('window').width / 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  slidingContent: {
+    flexDirection: 'row',
+    width: Dimensions.get('window').width * 2,
+  },
+  tabContent: {
+    width: Dimensions.get('window').width,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },

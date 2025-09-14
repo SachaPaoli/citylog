@@ -44,16 +44,16 @@ export default function ProfileScreen() {
   type FavoriteType = { city: string; country: string; flag: string; countryCode?: string } | null;
   const [favorites, setFavorites] = useState<FavoriteType[]>([null, null, null]);
 
-  // Animations pour le sliding
+  // Animations pour le sliding - même système que index
   const slideAnim = React.useRef(new Animated.Value(0)).current;
-  const tabSelectorAnim = React.useRef(new Animated.Value(0)).current;
+  const tabIndicatorAnim = React.useRef(new Animated.Value(0)).current;
 
   const switchTab = (tab: 'profile' | 'wishlist') => {
     if (tab === activeTab) return;
     
     const screenWidth = Dimensions.get('window').width;
     const targetSlideValue = tab === 'profile' ? 0 : -screenWidth;
-    const targetSelectorValue = tab === 'profile' ? 0 : 116; // 116px pour la largeur exacte d'un onglet
+    const targetIndicatorValue = tab === 'profile' ? 0 : screenWidth / 2;
     
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -61,8 +61,8 @@ export default function ProfileScreen() {
         duration: 300,
         useNativeDriver: true,
       }),
-      Animated.timing(tabSelectorAnim, {
-        toValue: targetSelectorValue,
+      Animated.timing(tabIndicatorAnim, {
+        toValue: targetIndicatorValue,
         duration: 300,
         useNativeDriver: true,
       }),
@@ -193,53 +193,59 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      {/* Onglets Profile / Wishlist avec container arrondi */}
+      {/* Onglets Profile / Wishlist - même style que index */}
       <View style={{ backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 4, marginBottom: 10 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={styles.tabContainer}>
-            <Animated.View 
-              style={[
-                styles.tabSelector,
-                { transform: [{ translateX: tabSelectorAnim }] }
-              ]} 
-            />
+        <View style={[styles.tabsContainer, { backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.2)' }]}> 
+          <View style={{ paddingHorizontal: 20, flexDirection: 'row', position: 'relative' }}>
             <TouchableOpacity 
-              style={styles.tabButton}
+              style={[styles.tab]} 
               onPress={() => switchTab('profile')}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.tabButtonText, { color: activeTab === 'profile' ? '#FFFFFF' : '#888' }]}> 
+              <Text style={[
+                styles.tabText, 
+                { color: activeTab === 'profile' ? '#FFFFFF' : '#888' }
+              ]}>
                 Profile
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.tabButton}
+              style={[styles.tab]} 
               onPress={() => switchTab('wishlist')}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.tabButtonText, { color: activeTab === 'wishlist' ? '#FFFFFF' : '#888' }]}> 
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'wishlist' ? '#FFFFFF' : '#888' }
+              ]}>
                 Wishlist
               </Text>
             </TouchableOpacity>
+            
+            {/* Barre blanche de sélection animée */}
+            <Animated.View 
+              style={[
+                styles.tabIndicator,
+                { transform: [{ translateX: tabIndicatorAnim }] }
+              ]} 
+            />
           </View>
         </View>
       </View>
-      {/* Ligne de séparation fine */}
-      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', width: '100%' }} />
 
-      {/* Contenu avec sliding */}
-      <View style={styles.contentContainer}>
-        <Animated.View 
-          style={[
-            styles.slidingContent,
-            { transform: [{ translateX: slideAnim }] }
-          ]}
+      {/* Contenu avec sliding animation - même structure que index */}
+      <Animated.View 
+        style={[
+          styles.slidingContent,
+          { transform: [{ translateX: slideAnim }] }
+        ]}
+      >
+        {/* Tab Profile */}
+        <ScrollView 
+          style={[styles.tabContent, { backgroundColor: '#181C24' }]}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
         >
-          {/* Tab Profile */}
-          <View style={styles.tabContent}>
-            <ScrollView 
-              style={[styles.scrollView, { backgroundColor: '#181C24' }]} 
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 20 }}
-            >
               {/* Header du profil avec followers/following autour de la photo */}
               <View style={styles.profileHeader}>
             <View style={styles.profileRow}>
@@ -341,47 +347,45 @@ export default function ProfileScreen() {
             </View>
 
           </View>
-            </ScrollView>
-          </View>
+        </ScrollView>
 
-          {/* Tab Wishlist */}
-          <View style={styles.tabContent}>
-            <View style={styles.wishlistSection}>
-              <Text style={[styles.sectionTitle, { color: textColor, alignSelf: 'flex-start', marginLeft: 4 }]}>🌟 Mes destinations de rêve</Text>
-              {wishlist.length === 0 ? (
-                <View style={styles.wishlistContent}>
-                  <Text style={[styles.wishlistText, { color: textColor }]}>Aucune destination dans ta wishlist.</Text>
-                  <Text style={[styles.wishlistSubtext, { color: textColor }]}>Ajoute des voyages à ta wishlist depuis les détails d'un post !</Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={wishlist}
-                  keyExtractor={item => item.id}
-                  renderItem={({ item }) => (
-                    <TravelPostCard
-                      post={item}
-                      onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
-                    />
-                  )}
-                  ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-                  contentContainerStyle={{ paddingBottom: 30 }}
-                  showsVerticalScrollIndicator={false}
-                />
-              )}
-            </View>
+        {/* Tab Wishlist */}
+        <ScrollView 
+          style={[styles.tabContent, { backgroundColor: '#181C24' }]}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.wishlistSection}>
+            <Text style={[styles.sectionTitle, { color: textColor, alignSelf: 'flex-start', marginLeft: 4 }]}>🌟 Mes destinations de rêve</Text>
+            {wishlist.length === 0 ? (
+              <View style={styles.wishlistContent}>
+                <Text style={[styles.wishlistText, { color: textColor }]}>Aucune destination dans ta wishlist.</Text>
+                <Text style={[styles.wishlistSubtext, { color: textColor }]}>Ajoute des voyages à ta wishlist depuis les détails d'un post !</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={wishlist}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                  <TravelPostCard
+                    post={item}
+                    onPress={() => router.push(`/trip-detail?postId=${item.id}`)}
+                  />
+                )}
+                ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+                contentContainerStyle={{ paddingBottom: 30 }}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
           </View>
-        </Animated.View>
-      </View>
-      {/* ...modal removed, navigation to /my-posts instead... */}
+        </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  contentContainer: {
     flex: 1,
   },
   slidingContent: {
@@ -479,49 +483,26 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   tabsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#666',
-    padding: 0,
     position: 'relative',
-  },
-  tabSelector: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 116,
-    height: 40,
-    backgroundColor: 'transparent',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-  },
-  tabButton: {
-    width: 116,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    paddingVertical: 15,
   },
   tab: {
-    paddingHorizontal: 20,
+    width: (Dimensions.get('window').width - 40) / 2,
+    alignItems: 'center',
     paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: Dimensions.get('window').width / 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
   scrollView: {
     paddingHorizontal: 0,
