@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
@@ -53,6 +52,9 @@ export default function CityDetailScreen() {
 
   // État pour savoir si on édite une review existante
   const [isEditingReview, setIsEditingReview] = useState(false);
+  
+  // État pour le menu déroulant
+  const [showMenu, setShowMenu] = useState(false);
 
   // Ouvrir le modal et charger la review existante
   const openCommentModal = () => {
@@ -516,18 +518,24 @@ export default function CityDetailScreen() {
       
       const allRatings: number[] = [];
       
+      console.log('[CityDetail] Total users found:', usersSnapshot.size);
+      
       usersSnapshot.forEach((userDoc) => {
         const userData = userDoc.data();
         const visitedCities = userData.visitedCities || [];
         
+        console.log(`[CityDetail] User ${userDoc.id} has ${visitedCities.length} visited cities`);
+        
         // Cherche toutes les notes pour cette ville de cet utilisateur
         visitedCities.forEach((cityData: any) => {
+          console.log(`[CityDetail] Checking city: ${cityData.name} in ${cityData.country}, rating: ${cityData.rating}`);
+          
           if (cityData.name === city && 
               cityData.country === country && 
               cityData.rating !== undefined && 
               cityData.rating > 0) {
             allRatings.push(cityData.rating);
-            console.log('[CityDetail] Found rating:', cityData.rating, 'from user:', userDoc.id);
+            console.log('[CityDetail] ✅ Found matching rating:', cityData.rating, 'from user:', userDoc.id);
           }
         });
       });
@@ -535,6 +543,7 @@ export default function CityDetailScreen() {
       console.log('[CityDetail] All ratings found:', allRatings);
       
       if (allRatings.length === 0) {
+        console.log('[CityDetail] No ratings found, setting globalAverageRating to null');
         setGlobalAverageRating(null);
         return null;
       }
@@ -803,7 +812,7 @@ export default function CityDetailScreen() {
         </View>
       ) : (
         <View style={[styles.container, { backgroundColor: headerColor }]}> 
-          {/* Header avec bouton retour et drapeau */}
+          {/* Header avec bouton retour */}
           <View style={[styles.header, { backgroundColor: headerColor }]}> 
             <TouchableOpacity 
               style={styles.backButton}
@@ -811,20 +820,58 @@ export default function CityDetailScreen() {
             >
               <Ionicons name="arrow-back" size={24} color={whiteColor} />
             </TouchableOpacity>
-            <Image source={{ uri: flagUrl }} style={[styles.headerFlag, { width: 40, height: 28 }]} />
+            <TouchableOpacity 
+              style={styles.menuButton}
+              onPress={() => setShowMenu(true)}
+            >
+              <Text style={[styles.menuButtonText, { color: whiteColor }]}>⋯</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Image de la ville ou drapeau avec layout adaptatif */}
-          <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 20 }}>
+          {/* Menu popup */}
+          <Modal
+            visible={showMenu}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowMenu(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay}
+              onPress={() => setShowMenu(false)}
+            >
+              <View style={[styles.menuContainer, { backgroundColor }]}> 
+                <TouchableOpacity 
+                  style={styles.menuItem}
+                  onPress={() => setShowMenu(false)}
+                >
+                  <Text style={[styles.menuItemText, { color: textColor }]}>Add to wishlist</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => setShowMenu(false)}
+                >
+                  <Text style={[styles.menuItemText, { color: textColor }]}>Share</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => setShowMenu(false)}
+                >
+                  <Text style={[styles.menuItemText, { color: textColor }]}>Back</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          {/* Image de la ville ou layout pour villes non-capitales */}
+          <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 5 }}>
             {cityImageUrl && cityImageUrl !== require('../assets/images/placeholder.png') && (
               <>
-                {cityImageUrl === flagUrl ? (
-                  // Layout spécial pour les drapeaux : drapeau à gauche + infos à droite
+                {/* Layout spécial pour les villes non-capitales : drapeau à gauche + infos à droite */}
+                {!isCapital(city as string, country as string) ? (
                   <View style={styles.flagLayout}>
                     <Image
-                      source={{ uri: cityImageUrl }}
+                      source={{ uri: flagUrl }}
                       style={styles.smallFlag}
-                      onLoadEnd={() => setIsLoadingImage(false)}
                     />
                     <View style={styles.cityInfoContainer}>
                       <Text style={[styles.cityNameInFlag, { color: textColor }]}>{city}</Text>
@@ -833,95 +880,82 @@ export default function CityDetailScreen() {
                           ? getCountryName(country as string)
                           : country}
                       </Text>
-                      {/* Description de la ville */}
-                      {cityDescription && (
-                        <Text style={[styles.cityDescriptionInFlag, { color: textColor }]}>
-                          {cityDescription}
-                        </Text>
-                      )}
-                      {/* Note moyenne */}
-                      {globalAverageRating !== null && (
-                        <View style={styles.averageRatingInFlag}>
-                          <View style={styles.averageStarsWrapper}>
+                      
+                      {/* Note moyenne avec étoiles */}
+                      <View style={styles.averageRatingInFlag}>
+                        {(globalAverageRating !== null && globalAverageRating > 0) ? (
+                          <>
                             <StarRating 
                               rating={globalAverageRating} 
                               readonly={true} 
-                              size="small"
+                              size="medium"
                               showRating={false}
                               color="#f5c518"
                             />
-                          </View>
-                          <Text style={styles.averageRatingTextInFlag}>
-                            {globalAverageRating.toFixed(1)}
-                          </Text>
-                        </View>
-                      )}
-                      {/* Boutons Comment et Rate */}
-                      <View style={styles.buttonRowInFlag}>
-                        <TouchableOpacity
-                          style={styles.commentButtonInFlag}
-                          onPress={openCommentModal}
-                        >
-                          <Text style={styles.commentButtonTextInFlag}>Comment</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.rateButtonInFlag}
-                          onPress={() => setShowRateModal(true)}
-                        >
-                          <Text style={styles.rateButtonTextInFlag}>Rate</Text>
-                        </TouchableOpacity>
+                            <Text style={styles.averageRatingTextInFlag}>
+                              {globalAverageRating.toFixed(1)}
+                            </Text>
+                          </>
+                        ) : userRating > 0 ? (
+                          <>
+                            <StarRating 
+                              rating={userRating} 
+                              readonly={true} 
+                              size="medium"
+                              showRating={false}
+                              color="#f5c518"
+                            />
+                            <Text style={styles.averageRatingTextInFlag}>
+                              {userRating.toFixed(1)}
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <StarRating 
+                              rating={0} 
+                              readonly={true} 
+                              size="medium"
+                              showRating={false}
+                              color="#666"
+                            />
+                            <Text style={[styles.averageRatingTextInFlag, { color: '#666' }]}>
+                              ...
+                            </Text>
+                          </>
+                        )}
                       </View>
                     </View>
                   </View>
                 ) : (
-                  // Layout normal pour les vraies images de capitales
+                  // Layout normal pour les images de capitales
                   <>
                     <Image
                       source={{ uri: cityImageUrl }}
                       style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
                       onLoadEnd={() => setIsLoadingImage(false)}
                     />
-                    {/* Affiche le gradient seulement quand l'image est chargée */}
-                    {!isLoadingImage && (
-                      <LinearGradient
-                        colors={["rgba(0,0,0,0)", "#181C24"]}
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 50,
-                        }}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
-                      />
-                    )}
                   </>
                 )}
               </>
             )}
           </View>
 
-          <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
-            {/* Nom de la ville - affiché seulement pour les vraies images de capitales */}
-            {cityImageUrl && cityImageUrl !== flagUrl && (
-              <View style={styles.cityHeader}>
-                <Text style={[styles.cityName, { color: textColor }]}>{city}</Text>
-                <Text style={[styles.countryName, { color: textColor }]}> 
+          {/* Sections pour les villes capitales */}
+          {isCapital(city as string, country as string) && cityImageUrl && cityImageUrl !== flagUrl && (
+            <View style={[styles.nonCapitalSections, { backgroundColor }]}>
+              {/* Nom de la ville et du pays */}
+              <View style={styles.capitalCityInfo}>
+                <Text style={[styles.capitalCityName, { color: textColor }]}>{city}</Text>
+                <Text style={[styles.capitalCountryName, { color: textColor }]}>
                   {country && (country as string).length <= 3
                     ? getCountryName(country as string)
                     : country}
                 </Text>
-                {/* Description de la ville */}
-                {cityDescription && (
-                  <Text style={[styles.cityDescription, { color: textColor }]}>
-                    {cityDescription}
-                  </Text>
-                )}
-                {/* Note moyenne sous le pays */}
-                {globalAverageRating !== null && (
-                  <View style={[styles.averageRatingContainer, { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}> 
-                    <View style={styles.averageStarsWrapper}>
+                
+                {/* Note moyenne avec étoiles */}
+                <View style={styles.averageRatingInFlag}>
+                  {(globalAverageRating !== null && globalAverageRating > 0) ? (
+                    <>
                       <StarRating 
                         rating={globalAverageRating} 
                         readonly={true} 
@@ -929,34 +963,117 @@ export default function CityDetailScreen() {
                         showRating={false}
                         color="#f5c518"
                       />
-                    </View>
-                    <Text style={styles.averageRatingText}>
-                      {globalAverageRating.toFixed(1)}
-                    </Text>
-                  </View>
-                )}
-                {/* Boutons Comment et Rate */}
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.commentButton}
-                    onPress={openCommentModal}
-                  >
-                    <Text style={styles.commentButtonText}>Comment</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.rateButtonModal}
-                    onPress={() => setShowRateModal(true)}
-                  >
-                    <Text style={styles.rateButtonModalText}>Rate</Text>
-                  </TouchableOpacity>
+                      <Text style={styles.averageRatingTextInFlag}>
+                        {globalAverageRating.toFixed(1)}
+                      </Text>
+                    </>
+                  ) : userRating > 0 ? (
+                    <>
+                      <StarRating 
+                        rating={userRating} 
+                        readonly={true} 
+                        size="medium"
+                        showRating={false}
+                        color="#f5c518"
+                      />
+                      <Text style={styles.averageRatingTextInFlag}>
+                        {userRating.toFixed(1)}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <StarRating 
+                        rating={0} 
+                        readonly={true} 
+                        size="medium"
+                        showRating={false}
+                        color="#666"
+                      />
+                      <Text style={[styles.averageRatingTextInFlag, { color: '#666' }]}>
+                        ...
+                      </Text>
+                    </>
+                  )}
                 </View>
-                {population && (
-                  <Text style={[styles.population, { color: textColor }]}> 
-                    Population: {population}
-                  </Text>
-                )}
               </View>
-            )}
+              
+              {/* Ligne de séparation */}
+              <View style={styles.separatorLine} />
+              
+              {/* Description de la ville */}
+              {cityDescription && (
+                <View style={styles.descriptionSection}>
+                  <Text style={[styles.descriptionText, { color: textColor }]}>
+                    {cityDescription}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Ligne de séparation après description */}
+              {cityDescription && <View style={styles.separatorLine} />}
+              
+              {/* Boutons Comment et Rate */}
+              <View style={styles.actionButtonsSection}>
+                <TouchableOpacity
+                  style={[styles.actionButtonStyle, styles.commentActionButton]}
+                  onPress={openCommentModal}
+                >
+                  <Text style={styles.actionButtonText}>Comment</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButtonStyle, styles.rateActionButton]}
+                  onPress={() => setShowRateModal(true)}
+                >
+                  <Text style={styles.actionButtonText}>Rate</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Ligne de séparation après boutons */}
+              <View style={styles.separatorLine} />
+            </View>
+          )}
+
+          {/* Sections pour les villes non-capitales */}
+          {!isCapital(city as string, country as string) && (
+            <View style={[styles.nonCapitalSections, { backgroundColor }]}>
+              {/* Ligne de séparation */}
+              <View style={styles.separatorLine} />
+              
+              {/* Description de la ville */}
+              {cityDescription && (
+                <View style={styles.descriptionSection}>
+                  <Text style={[styles.descriptionText, { color: textColor }]}>
+                    {cityDescription}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Ligne de séparation après description */}
+              {cityDescription && <View style={styles.separatorLine} />}
+              
+              {/* Boutons Comment et Rate */}
+              <View style={styles.actionButtonsSection}>
+                <TouchableOpacity
+                  style={[styles.actionButtonStyle, styles.commentActionButton]}
+                  onPress={openCommentModal}
+                >
+                  <Text style={styles.actionButtonText}>Comment</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButtonStyle, styles.rateActionButton]}
+                  onPress={() => setShowRateModal(true)}
+                >
+                  <Text style={styles.actionButtonText}>Rate</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Ligne de séparation après boutons */}
+              <View style={styles.separatorLine} />
+            </View>
+          )}
+
+          <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
+            {/* Le contenu spécifique aux villes est maintenant géré par les sections au-dessus */}
       
       {/* Modal 40% pour le système de rating avec animation slide */}
       <Modal
@@ -1201,7 +1318,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingTop: 50, // Espace pour la status bar
     borderBottomWidth: 0.5,
-    borderBottomColor: 'transparent',
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -1212,11 +1329,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  headerFlag: {
-    width: 32,
-    height: 22,
-    borderRadius: 3,
   },
   content: {
     flex: 1,
@@ -1432,12 +1544,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 20,
-    gap: 20,
+    gap: 24,
   },
   smallFlag: {
-    width: 80,
-    height: 54,
-    borderRadius: 8,
+    width: 100,
+    height: 67,
+    borderRadius: 10,
   },
   cityInfoContainer: {
     flex: 1,
@@ -1502,5 +1614,109 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Styles pour les sections des villes non-capitales
+  nonCapitalSections: {
+    paddingHorizontal: 0,
+  },
+  separatorLine: {
+    height: 0.5,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  descriptionSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  descriptionText: {
+    fontSize: 15,
+    lineHeight: 22,
+    opacity: 0.8,
+    textAlign: 'center',
+  },
+  actionButtonsSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  actionButtonStyle: {
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  commentActionButton: {
+    backgroundColor: '#666',
+  },
+  rateActionButton: {
+    backgroundColor: '#2051A4',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Styles pour le menu trois points
+  menuButton: {
+    padding: 8,
+    width: 50,
+    height: 40,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingLeft: 5,
+    paddingTop: -5,
+  },
+  menuButtonText: {
+    fontSize: 40,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  menuItemText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  // Styles pour les infos des capitales
+  capitalCityInfo: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  capitalCityName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  capitalCountryName: {
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    opacity: 0.8,
+    marginBottom: 8,
   },
 });
