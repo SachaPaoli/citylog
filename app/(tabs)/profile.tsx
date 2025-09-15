@@ -5,12 +5,16 @@ import { useUserTravels } from '@/hooks/useUserTravels';
 import { useVisitedCountries } from '@/hooks/useVisitedCountries';
 import { Ionicons } from '@expo/vector-icons';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getFollowersList, getFollowingList } from '@/services/FollowService';
+import { UserSearchResult } from '@/services/UserSearchService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { Alert, Animated, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelPostCard } from '../../components/TravelPostCard';
+import { db } from '../../config/firebase';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { usePosts } from '../../hooks/usePosts';
@@ -44,9 +48,29 @@ export default function ProfileScreen() {
   type FavoriteType = { city: string; country: string; flag: string; countryCode?: string } | null;
   const [favorites, setFavorites] = useState<FavoriteType[]>([null, null, null]);
 
+  // États pour la modal followers
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followers, setFollowers] = useState<UserSearchResult[]>([]);
+  const [filteredFollowers, setFilteredFollowers] = useState<UserSearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [followersLoading, setFollowersLoading] = useState(false);
+
+  // États pour la modal following
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [following, setFollowing] = useState<UserSearchResult[]>([]);
+  const [filteredFollowing, setFilteredFollowing] = useState<UserSearchResult[]>([]);
+  const [followingSearchQuery, setFollowingSearchQuery] = useState('');
+  const [followingLoading, setFollowingLoading] = useState(false);
+
   // Animations pour le sliding - même système que index
   const slideAnim = React.useRef(new Animated.Value(0)).current;
   const tabIndicatorAnim = React.useRef(new Animated.Value(0)).current;
+  
+  // Animation pour la modal followers
+  const followersModalAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  
+  // Animation pour la modal following
+  const followingModalAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
 
   const switchTab = (tab: 'profile' | 'wishlist') => {
     if (tab === activeTab) return;
@@ -71,6 +95,164 @@ export default function ProfileScreen() {
     setActiveTab(tab);
   };
 
+  // Fonction pour afficher la modal followers
+  const showFollowers = async () => {
+    if (!authUserProfile?.uid) return;
+    
+    setShowFollowersModal(true);
+    setFollowersLoading(true);
+    
+    // Animation d'entrée fluide depuis le bas de l'écran
+    Animated.spring(followersModalAnim, {
+      toValue: 20, // Position finale plus haut (20px depuis le haut)
+      damping: 20,
+      stiffness: 90,
+      useNativeDriver: true,
+    }).start();
+    
+    try {
+      const followersList = await getFollowersList(authUserProfile.uid);
+      
+      // Récupérer les détails de chaque follower
+      const followersDetails = await Promise.all(
+        followersList.map(async (followerId: string) => {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', followerId));
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              return {
+                uid: userDoc.id,
+                displayName: data.displayName || 'Utilisateur',
+                email: data.email,
+                photoURL: data.photoURL,
+                profileImage: data.profileImage,
+                followers: data.followers ? data.followers.length : 0,
+                following: data.following ? data.following.length : 0
+              } as UserSearchResult;
+            }
+            return null;
+          } catch (error) {
+            console.error(`Erreur lors de la récupération du follower ${followerId}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      const validFollowers = followersDetails.filter((f: any) => f !== null) as UserSearchResult[];
+      setFollowers(validFollowers);
+      setFilteredFollowers(validFollowers);
+    } catch (error) {
+      console.error('Erreur lors du chargement des followers:', error);
+    } finally {
+      setFollowersLoading(false);
+    }
+  };
+
+  // Fonction pour fermer la modal followers
+  const hideFollowers = () => {
+    Animated.spring(followersModalAnim, {
+      toValue: Dimensions.get('window').height,
+      damping: 20,
+      stiffness: 90,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowFollowersModal(false);
+      setSearchQuery('');
+    });
+  };
+
+  // Fonction pour afficher la modal following
+  const showFollowing = async () => {
+    if (!authUserProfile?.uid) return;
+    
+    setShowFollowingModal(true);
+    setFollowingLoading(true);
+    
+    // Animation d'entrée fluide depuis le bas de l'écran
+    Animated.spring(followingModalAnim, {
+      toValue: 20, // Position finale plus haut (20px depuis le haut)
+      damping: 20,
+      stiffness: 90,
+      useNativeDriver: true,
+    }).start();
+    
+    try {
+      const followingList = await getFollowingList(authUserProfile.uid);
+      
+      // Récupérer les détails de chaque personne suivie
+      const followingDetails = await Promise.all(
+        followingList.map(async (followingId: string) => {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', followingId));
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              return {
+                uid: userDoc.id,
+                displayName: data.displayName || 'Utilisateur',
+                email: data.email,
+                photoURL: data.photoURL,
+                profileImage: data.profileImage,
+                followers: data.followers ? data.followers.length : 0,
+                following: data.following ? data.following.length : 0
+              } as UserSearchResult;
+            }
+            return null;
+          } catch (error) {
+            console.error(`Erreur lors de la récupération du following ${followingId}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      const validFollowing = followingDetails.filter((f: any) => f !== null) as UserSearchResult[];
+      setFollowing(validFollowing);
+      setFilteredFollowing(validFollowing);
+    } catch (error) {
+      console.error('Erreur lors du chargement des following:', error);
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
+
+  // Fonction pour fermer la modal following
+  const hideFollowing = () => {
+    Animated.spring(followingModalAnim, {
+      toValue: Dimensions.get('window').height,
+      damping: 20,
+      stiffness: 90,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowFollowingModal(false);
+      setFollowingSearchQuery('');
+    });
+  };
+
+  // Filtrer les followers selon la recherche
+  React.useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredFollowers(followers);
+    } else {
+      const filtered = followers.filter(follower =>
+        follower.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (follower.email && follower.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      setFilteredFollowers(filtered);
+    }
+  }, [searchQuery, followers]);
+
+  // Filtrer les following selon la recherche
+  React.useEffect(() => {
+    if (followingSearchQuery.trim() === '') {
+      setFilteredFollowing(following);
+    } else {
+      const filtered = following.filter(followingUser =>
+        followingUser.displayName.toLowerCase().includes(followingSearchQuery.toLowerCase()) ||
+        (followingUser.email && followingUser.email.toLowerCase().includes(followingSearchQuery.toLowerCase()))
+      );
+      setFilteredFollowing(filtered);
+    }
+  }, [followingSearchQuery, following]);
+
   // Charge les favoris depuis Firestore à chaque focus
   useFocusEffect(
     React.useCallback(() => {
@@ -82,6 +264,7 @@ export default function ProfileScreen() {
       })();
     }, [])
   );
+  
   // Force a re-render when the screen is focused (to avoid stale state)
   useFocusEffect(
     React.useCallback(() => {
@@ -249,15 +432,23 @@ export default function ProfileScreen() {
               {/* Header du profil avec followers/following autour de la photo */}
               <View style={styles.profileHeader}>
             <View style={styles.profileRow}>
-              <View style={styles.profileStatCol}>
+              <TouchableOpacity 
+                style={styles.profileStatCol}
+                onPress={showFollowers}
+                activeOpacity={0.7}
+              >
                 <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
                 <Text style={[styles.profileStatLabel, { color: textColor }]}>Followers</Text>
-              </View>
+              </TouchableOpacity>
               <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
-              <View style={styles.profileStatCol}>
+              <TouchableOpacity 
+                style={styles.profileStatCol}
+                onPress={showFollowing}
+                activeOpacity={0.7}
+              >
                 <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.following}</Text>
                 <Text style={[styles.profileStatLabel, { color: textColor }]}>Following</Text>
-              </View>
+              </TouchableOpacity>
             </View>
             {/* Ligne de séparation fine grise au-dessus des Favorites */}
             <View style={{ height: 1, backgroundColor: '#444', width: '100%', opacity: 0.5, marginVertical: 12 }} />
@@ -279,13 +470,13 @@ export default function ProfileScreen() {
                     ) : (
                       (fav.countryCode && fav.countryCode.length === 2)
                         ? <Image
-                            source={{ uri: `https://flagcdn.com/w80/${fav.countryCode}.png` }}
+                            source={{ uri: `https://flagcdn.com/w320/${fav.countryCode}.png` }}
                             style={styles.favoriteFlagImg}
                             resizeMode="cover"
                           />
                         : getCountryCode(fav.country)
                           ? <Image
-                              source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
+                              source={{ uri: `https://flagcdn.com/w320/${getCountryCode(fav.country)}.png` }}
                               style={styles.favoriteFlagImg}
                               resizeMode="cover"
                             />
@@ -380,6 +571,174 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </Animated.View>
+
+      {/* Modal Followers */}
+      {showFollowersModal && (
+        <Animated.View
+          style={[
+            styles.followersModal,
+            {
+              transform: [{ translateY: followersModalAnim }],
+            },
+          ]}
+        >
+          {/* Header de la modal */}
+          <View style={styles.followersHeader}>
+            <TouchableOpacity onPress={hideFollowers} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>⌄</Text>
+            </TouchableOpacity>
+            <Text style={styles.followersTitle}>Followers</Text>
+            <View style={{ width: 70 }} />
+          </View>
+
+          {/* Barre de recherche */}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher un follower..."
+              placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {/* Liste des followers */}
+          <ScrollView style={styles.followersScrollView} showsVerticalScrollIndicator={false}>
+            {followersLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={styles.loadingText}>Chargement des followers...</Text>
+              </View>
+            ) : filteredFollowers.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'Aucun follower trouvé' : 'Aucun follower pour le moment'}
+                </Text>
+              </View>
+            ) : (
+              filteredFollowers.map((follower) => (
+                <TouchableOpacity
+                  key={follower.uid}
+                  style={styles.userCard}
+                  onPress={() => {
+                    hideFollowers();
+                    setTimeout(() => {
+                      if (follower.uid === authUserProfile?.uid) {
+                        router.push('/(tabs)/profile');
+                      } else {
+                        router.push(`/user-profile?userId=${follower.uid}`);
+                      }
+                    }, 300);
+                  }}
+                >
+                  <View style={styles.userInfo}>
+                    <Image 
+                      source={{ uri: follower.photoURL || follower.profileImage || '' }}
+                      style={styles.userPhoto}
+                    />
+                    <View style={styles.userTextInfo}>
+                      <Text style={styles.userDisplayName}>
+                        {follower.displayName}
+                        {follower.uid === authUserProfile?.uid && <Text style={styles.youIndicator}> (You)</Text>}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {follower.uid !== authUserProfile?.uid && (
+                    <View style={styles.followButtonContainer}>
+                      <Text style={styles.followButtonText}>Voir profil</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </Animated.View>
+      )}
+
+      {/* Modal Following */}
+      {showFollowingModal && (
+        <Animated.View
+          style={[
+            styles.followersModal, // Même style que followers
+            {
+              transform: [{ translateY: followingModalAnim }],
+            },
+          ]}
+        >
+          {/* Header de la modal */}
+          <View style={styles.followersHeader}>
+            <TouchableOpacity onPress={hideFollowing} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>⌄</Text>
+            </TouchableOpacity>
+            <Text style={styles.followersTitle}>Following</Text>
+            <View style={{ width: 70 }} />
+          </View>
+
+          {/* Barre de recherche */}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher dans following..."
+              placeholderTextColor="#888"
+              value={followingSearchQuery}
+              onChangeText={setFollowingSearchQuery}
+            />
+          </View>
+
+          {/* Liste des following */}
+          <ScrollView style={styles.followersScrollView} showsVerticalScrollIndicator={false}>
+            {followingLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={styles.loadingText}>Chargement des following...</Text>
+              </View>
+            ) : filteredFollowing.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {followingSearchQuery ? 'Aucun following trouvé' : 'Tu ne suis personne pour le moment'}
+                </Text>
+              </View>
+            ) : (
+              filteredFollowing.map((followingUser) => (
+                <TouchableOpacity
+                  key={followingUser.uid}
+                  style={styles.userCard}
+                  onPress={() => {
+                    hideFollowing();
+                    setTimeout(() => {
+                      if (followingUser.uid === authUserProfile?.uid) {
+                        router.push('/(tabs)/profile');
+                      } else {
+                        router.push(`/user-profile?userId=${followingUser.uid}`);
+                      }
+                    }, 300);
+                  }}
+                >
+                  <View style={styles.userInfo}>
+                    <Image 
+                      source={{ uri: followingUser.photoURL || followingUser.profileImage || '' }}
+                      style={styles.userPhoto}
+                    />
+                    <View style={styles.userTextInfo}>
+                      <Text style={styles.userDisplayName}>
+                        {followingUser.displayName}
+                        {followingUser.uid === authUserProfile?.uid && <Text style={styles.youIndicator}> (You)</Text>}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {followingUser.uid !== authUserProfile?.uid && (
+                    <View style={styles.followButtonContainer}>
+                      <Text style={styles.followButtonText}>Voir profil</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -449,10 +808,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   favoriteFlagImg: {
-    width: 48,
-    height: 36,
-    borderRadius: 8,
+    width: 50,
+    height: 38,
+    borderRadius: 6,
     marginBottom: 0,
+    borderWidth: 0.5,
+    borderColor: '#333',
   },
   flag: {
     fontSize: 44,
@@ -567,15 +928,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: 'transparent',
   },
   closeButtonText: {
-    fontSize: 16,
+    fontSize: 36,
+    color: '#fff',
     fontWeight: 'bold',
   },
   cityCard: {
@@ -664,5 +1026,120 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  // Styles pour la modal followers
+  followersModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#181C24',
+    zIndex: 9999, // Z-index très élevé pour survol complet
+    elevation: 20, // Pour Android
+  },
+  followersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  followersTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  searchInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#fff',
+  },
+  followersScrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#888',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+  },
+  // Styles pour les cartes utilisateur dans les modals
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 0.7,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  userPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#333',
+  },
+  userTextInfo: {
+    flex: 1,
+  },
+  userDisplayName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+    color: '#fff',
+  },
+  youIndicator: {
+    fontSize: 14,
+    fontWeight: '400',
+    opacity: 0.7,
+    color: '#fff',
+  },
+  followButtonContainer: {
+    backgroundColor: '#2051A4',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  followButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
