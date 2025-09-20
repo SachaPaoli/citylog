@@ -32,9 +32,15 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
 
   // Précharger les images pour l'affichage instantané avec expo-image
   React.useEffect(() => {
-    Image.prefetch(post.photo);
+    if (post.photo) {
+      Image.prefetch(post.photo).catch(error => 
+        console.log('TravelPostCard prefetch error for main image:', error)
+      );
+    }
     if (userPhoto) {
-      Image.prefetch(userPhoto);
+      Image.prefetch(userPhoto).catch(error => 
+        console.log('TravelPostCard prefetch error for user photo:', error)
+      );
     }
   }, [post.photo, userPhoto]);
 
@@ -52,7 +58,8 @@ export function TravelPostCard({ post, onPress }: TravelPostCardProps) {
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={200}
-            placeholder={require('@/assets/images/placeholder.png')}
+            onError={(error) => console.log('TravelPostCard image load error:', error)}
+            onLoad={() => console.log('TravelPostCard image loaded successfully')}
           />
         </View>
         

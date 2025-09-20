@@ -4,7 +4,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesGeoNamesService } from '@/services/RealCitiesGeoNamesService'; // Nouveau service GeoNames
 import { UserSearchResult, UserSearchService } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
@@ -33,45 +33,10 @@ export default function ExploreScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  
-  // Animation pour les onglets
-  const tabsOpacity = useState(new Animated.Value(0))[0];
-  
-  // Animation pour la ligne de séparation
-  const separatorMarginTop = useState(new Animated.Value(20))[0];
 
-  // Animation quand searchFocused change
-  useEffect(() => {
-    if (searchFocused) {
-      // Apparition des onglets + ligne qui descend
-      Animated.parallel([
-        Animated.timing(tabsOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        Animated.timing(separatorMarginTop, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    } else {
-      // Disparition des onglets + ligne qui remonte
-      Animated.parallel([
-        Animated.timing(tabsOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        Animated.timing(separatorMarginTop, {
-          toValue: 20,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    }
-  }, [searchFocused]);
+  // Animations pour le sliding - comme dans index
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
+  const tabIndicatorAnim = React.useRef(new Animated.Value(0)).current;
 
   // Fonction pour normaliser les chaînes (insensible à la casse et aux accents)
   const normalizeString = (str: string) => {
@@ -209,6 +174,30 @@ export default function ExploreScreen() {
     }, 800);
   };
 
+  // Fonction de changement d'onglet avec slide - comme dans index
+  const switchTab = (tab: 'cities' | 'members') => {
+    if (tab === activeTab) return;
+    
+    const screenWidth = Dimensions.get('window').width;
+    const targetSlideValue = tab === 'cities' ? 0 : -screenWidth;
+    const targetIndicatorValue = tab === 'cities' ? 0 : screenWidth / 2;
+    
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: targetSlideValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tabIndicatorAnim, {
+        toValue: targetIndicatorValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    setActiveTab(tab);
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <SafeAreaView style={[styles.container, { backgroundColor: headerColor }]}> 
@@ -248,12 +237,7 @@ export default function ExploreScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             onFocus={() => setSearchFocused(true)}
-            onBlur={() => {
-              // Fermer les onglets si pas de texte dans la barre de recherche
-              if (searchQuery.trim().length === 0) {
-                setSearchFocused(false);
-              }
-            }}
+            onBlur={() => setSearchFocused(false)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity 
@@ -268,66 +252,79 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      {/* Onglets avec animation fluide */}
-      {searchFocused && (
-        <Animated.View 
-          style={[
-            styles.tabsContainer, 
-            { 
-              backgroundColor: headerColor,
-              opacity: tabsOpacity,
-            }
-          ]}
-        > 
+      {/* Onglets avec sliding indicator - comme dans index */}
+      <View 
+        style={[
+          styles.tabsContainer, 
+          { 
+            backgroundColor: headerColor,
+            paddingTop: 0, 
+            paddingBottom: 0, 
+            borderBottomWidth: 1, 
+            borderBottomColor: 'rgba(255,255,255,0.2)'
+          }
+        ]}
+      > 
+        <View style={{ flexDirection: 'row', position: 'relative', width: '100%' }}>
           <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === 'cities' && styles.activeTab
-            ]}
-            onPress={() => setActiveTab('cities')}
+            style={[styles.tab]}
+            onPress={() => switchTab('cities')}
+            activeOpacity={0.7}
           >
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'cities' ? '#FFFFFF' : textColor }
+              { color: activeTab === 'cities' ? '#FFFFFF' : '#888' }
             ]}>
               Cities
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === 'members' && styles.activeTab
-            ]}
-            onPress={() => setActiveTab('members')}
+            style={[styles.tab]}
+            onPress={() => switchTab('members')}
+            activeOpacity={0.7}
           >
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'members' ? '#FFFFFF' : textColor }
+              { color: activeTab === 'members' ? '#FFFFFF' : '#888' }
             ]}>
               Members
             </Text>
           </TouchableOpacity>
-        </Animated.View>
-      )}
 
-      {/* Ligne de séparation avec animation fluide */}
-      <Animated.View 
+          {/* Barre blanche de sélection animée */}
+          <Animated.View 
+            style={[
+              styles.tabIndicator,
+              { transform: [{ translateX: tabIndicatorAnim }] }
+            ]} 
+          />
+        </View>
+      </View>
+
+      {/* Ligne de séparation */}
+      <View 
         style={{ 
           backgroundColor: '#181C24', 
           borderBottomWidth: 1, 
           borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-          marginTop: separatorMarginTop
         }} 
       />
 
-      {/* ...existing code... */}
-      <ScrollView style={[styles.content, { backgroundColor: headerColor }]} showsVerticalScrollIndicator={false}> 
-        <View>
-          {searchFocused ? (
-            <>
-              {activeTab === 'cities' && (
-              <>
+      {/* Contenu avec sliding animation */}
+      <Animated.View 
+        style={[
+          styles.slidingContent,
+          { transform: [{ translateX: slideAnim }] }
+        ]}
+      >
+        {/* Onglet Cities */}
+        <ScrollView 
+          style={[styles.tabContentSlide, { backgroundColor: headerColor }]} 
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <View>
                 {loading && searchQuery.length > 0 && (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={textActiveColor} />
@@ -391,52 +388,46 @@ export default function ExploreScreen() {
                 </Text>
               </View>
             )}
-          </>
-        )}
+          </View>
+          </View>
+        </ScrollView>
 
-        {/* ...existing code... */}
-        {activeTab === 'members' && (
-          <View style={{ flex: 1 }}>
-            {users.length > 0 ? (
-              <View style={{ paddingTop: 16 }}>
-                {users.map((user) => (
-                  <UserSearchCard key={user.uid} user={user} />
-                ))}
-              </View>
-            ) : searchQuery.trim() === '' && !userLoading ? (
-              <View style={styles.instructionContainer}>
-                <Text style={[styles.instructionText, { color: textColor }]}> 
-                  Rechercher des voyageurs
-                </Text>
-                <Text style={[styles.instructionSubtext, { color: textColor }]}> 
-                  Utilisez la barre de recherche pour trouver d'autres utilisateurs
-                </Text>
-              </View>
-            ) : searchQuery.trim() !== '' && !userLoading && users.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: textColor }]}>
-                  Aucun utilisateur trouvé
-                </Text>
-                <Text style={[styles.instructionSubtext, { color: textColor }]}>
-                  Essayez un autre terme de recherche
-                </Text>
-              </View>
-            ) : null}
+        {/* Onglet Members */}
+        <ScrollView 
+          style={[styles.tabContentSlide, { backgroundColor: headerColor }]} 
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <View style={{ flex: 1 }}>
+              {users.length > 0 ? (
+                <View style={{ paddingTop: 16 }}>
+                  {users.map((user) => (
+                    <UserSearchCard key={user.uid} user={user} />
+                  ))}
+                </View>
+              ) : searchQuery.trim() === '' && !userLoading ? (
+                <View style={styles.instructionContainer}>
+                  <Text style={[styles.instructionText, { color: textColor }]}> 
+                    Rechercher des voyageurs
+                  </Text>
+                  <Text style={[styles.instructionSubtext, { color: textColor }]}> 
+                    Utilisez la barre de recherche pour trouver d'autres utilisateurs
+                  </Text>
+                </View>
+              ) : searchQuery.trim() !== '' && !userLoading && users.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={[styles.emptyText, { color: textColor }]}>
+                    Aucun utilisateur trouvé
+                  </Text>
+                  <Text style={[styles.instructionSubtext, { color: textColor }]}>
+                    Essayez un autre terme de recherche
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </View>
-        )}
-          </>
-        ) : (
-          <View style={styles.instructionContainer}>
-            <Text style={[styles.instructionText, { color: textColor }]}>
-              Bienvenue dans Explore
-            </Text>
-            <Text style={[styles.instructionSubtext, { color: textColor }]}>
-              Cliquez sur la barre de recherche pour commencer à explorer
-            </Text>
-          </View>
-        )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
 
       {/* ...existing code... */}
       <SimpleCityRatingModal
@@ -525,15 +516,31 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingBottom: 12,
+    position: 'relative',
+    paddingVertical: 15,
   },
   tab: {
-    flex: 1,
-    paddingVertical: 8,
+    width: Dimensions.get('window').width / 2,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    paddingVertical: 10,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: Dimensions.get('window').width / 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  slidingContent: {
+    flexDirection: 'row',
+    width: Dimensions.get('window').width * 2,
+    flex: 1,
+  },
+  tabContentSlide: {
+    width: Dimensions.get('window').width,
   },
   activeTab: {
     borderBottomColor: '#FFFFFF',

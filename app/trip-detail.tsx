@@ -51,9 +51,12 @@ export default function TripDetailScreen() {
           onPress: async () => {
             let postDeleted = false;
             try {
+              console.log('🔐 Tentative de suppression - User:', userProfile?.uid, 'Post owner:', post.userId);
+              console.log('🔐 User match:', userProfile?.uid === post.userId);
               await deletePost(post.id);
               postDeleted = true;
             } catch (err) {
+              console.error('Erreur suppression:', err);
               Alert.alert('Erreur', "Impossible de supprimer le post.");
               return;
             }
@@ -128,6 +131,35 @@ export default function TripDetailScreen() {
       }
     }
   }, [postId, posts]);
+
+  // Prefetch des images pour un affichage instantané
+  useEffect(() => {
+    if (post?.photo) {
+      console.log('🖼️ Prefetching main image:', post.photo);
+      Image.prefetch(post.photo);
+    }
+    if (post?.userPhoto) {
+      Image.prefetch(post.userPhoto);
+    }
+    // Prefetch des images des items
+    if (post) {
+      const allItems = [
+        ...(post.stayingItems || []),
+        ...(post.restaurantItems || []),
+        ...(post.activitiesItems || []),
+        ...(post.otherItems || [])
+      ];
+      allItems.forEach(item => {
+        if (item.images) {
+          item.images.forEach(img => {
+            if (img.uri) {
+              Image.prefetch(img.uri);
+            }
+          });
+        }
+      });
+    }
+  }, [post]);
 
   const loadPost = async () => {
     if (!postId) return;
@@ -382,6 +414,8 @@ export default function TripDetailScreen() {
                 contentFit="cover"
                 cachePolicy="memory-disk"
                 transition={200}
+                onError={(error) => console.log('Image load error in trip-detail:', error)}
+                onLoad={() => console.log('Image loaded successfully in trip-detail')}
               />
             </TouchableOpacity>
             {/* Gradient fade at the bottom, like city-detail */}
@@ -536,6 +570,7 @@ export default function TripDetailScreen() {
                                   contentFit="cover"
                                   cachePolicy="memory-disk"
                                   transition={200}
+                                  onError={(error) => console.log('Item image load error:', error)}
                                 />
                               </TouchableOpacity>
                             );

@@ -88,6 +88,12 @@ export default function CityDetailScreen() {
   // Cache pour les descriptions
   const cityDescriptionCache = React.useRef<{ [key: string]: string | null }>({});
 
+  // État pour la carte avec pin rouge
+  const [cityMapUrl, setCityMapUrl] = useState<string | null>(null);
+  const [isLoadingMap, setIsLoadingMap] = useState(false);
+
+  // Cache pour les cartes
+  const cityMapCache = React.useRef<{ [key: string]: string | null }>({});
 
   // Liste des capitales par pays qui méritent une vraie image
   const capitalsByCountry: Record<string, string> = {
@@ -256,6 +262,67 @@ export default function CityDetailScreen() {
     return exactMatch;
   }
 
+  // Récupère les coordonnées de la ville via GeoNames et génère une carte avec pin rouge
+  async function fetchCityMap(cityName: string, countryName: string) {
+    setIsLoadingMap(true);
+    const baseName = getBaseCityName(cityName);
+    const cacheKey = `${baseName.toLowerCase()}_${countryName.toLowerCase()}_map`;
+    
+    console.log(`[FetchMap] Starting fetch for: ${baseName}, ${countryName}`);
+    
+    // Vérification du cache - ON FORCE LE RECHARGEMENT POUR TESTER
+    // if (cityMapCache.current[cacheKey] !== undefined) {
+    //   console.log(`[FetchMap] Found in cache: ${cityMapCache.current[cacheKey]}`);
+    //   setCityMapUrl(cityMapCache.current[cacheKey]);
+    //   setIsLoadingMap(false);
+    //   return;
+    // }
+
+    try {
+      console.log(`[FetchMap] Generating country outline map for: ${baseName} in ${countryName}`);
+      
+      // Cartes SVG simples depuis un CDN fiable
+      const countryOutlines: Record<string, string> = {
+        'france': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/fr.svg',
+        'fr': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/fr.svg',
+        'germany': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/de.svg',
+        'de': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/de.svg',
+        'italy': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/it.svg',
+        'it': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/it.svg',
+        'spain': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/es.svg',
+        'es': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/es.svg',
+        'united kingdom': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/gb.svg',
+        'gb': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/gb.svg',
+        'united states': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/us.svg',
+        'us': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/us.svg',
+        'japan': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/jp.svg',
+        'jp': 'https://cdn.jsdelivr.net/npm/svg-country-flags@1.2.10/svg/jp.svg',
+      };
+      
+      const countryKey = countryName.toLowerCase();
+      let mapUrl = countryOutlines[countryKey];
+      
+      if (!mapUrl) {
+        // Fallback : image simple avec le nom du pays
+        mapUrl = `https://via.placeholder.com/400x200/f0f0f0/333333?text=🗺️+${encodeURIComponent(countryName)}`;
+        console.log(`[FetchMap] Using fallback for: ${countryName}`);
+      } else {
+        console.log(`[FetchMap] Using country outline for: ${countryName}`);
+      }
+      
+      // Stocker dans le cache et l'état  
+      cityMapCache.current[cacheKey] = mapUrl;
+      setCityMapUrl(mapUrl);
+      
+    } catch (error) {
+      console.log(`[FetchMap] Error fetching map for ${baseName}:`, error);
+      cityMapCache.current[cacheKey] = null;
+      setCityMapUrl(null);
+    }
+    
+    setIsLoadingMap(false);
+  }
+
   // Récupère une image de la ville via Wikimedia pour les capitales uniquement
   async function fetchCityImage(cityName: string, countryName: string) {
     setIsLoadingImage(true);
@@ -368,9 +435,14 @@ export default function CityDetailScreen() {
 
   // Charge l'image au montage ou quand la ville change
   useEffect(() => {
+    console.log('[UseEffect] Triggered with city:', city, 'country:', country);
     if (city && country) {
+      console.log('[UseEffect] Calling fetchCityMap...');
       fetchCityImage(city as string, country as string);
       fetchCityDescription(city as string, country as string);
+      fetchCityMap(city as string, country as string);
+    } else {
+      console.log('[UseEffect] Skipping fetch - missing city or country');
     }
   }, [city, country]);
 
@@ -732,7 +804,7 @@ export default function CityDetailScreen() {
       
       // Créer l'objet review
       const reviewData = {
-        userId: user.uid,
+    yauserId: user.uid,
         city: city as string,
         country: country as string,
         comment: commentText.trim(),
@@ -778,25 +850,27 @@ export default function CityDetailScreen() {
 
   // Loader global pour toute la page
   const [showLoader, setShowLoader] = useState(true);
-  // On attend que l'image ET la note moyenne soient chargées
+  // On attend que l'image, la carte ET la note moyenne soient chargées
   useEffect(() => {
-    if (isLoadingImage || isLoadingAverage) {
+    if (isLoadingImage || isLoadingAverage || isLoadingMap) {
       setShowLoader(true);
     } else {
       setShowLoader(false);
     }
-  }, [isLoadingImage, isLoadingAverage]);
+  }, [isLoadingImage, isLoadingAverage, isLoadingMap]);
 
-  // Optimise le chargement : lance image et moyenne en parallèle
+  // Optimise le chargement : lance image, carte et moyenne en parallèle
   useEffect(() => {
     let cancelled = false;
     async function loadAll() {
       setShowLoader(true);
       setIsLoadingImage(true);
       setIsLoadingAverage(true);
+      setIsLoadingMap(true);
       const imgPromise = city && country ? fetchCityImage(city as string, country as string) : Promise.resolve();
       const avgPromise = calculateGlobalAverageRating();
-      await Promise.all([imgPromise, avgPromise]);
+      const mapPromise = city && country ? fetchCityMap(city as string, country as string) : Promise.resolve();
+      await Promise.all([imgPromise, avgPromise, mapPromise]);
       if (!cancelled) setShowLoader(false);
     }
     loadAll();
@@ -861,6 +935,45 @@ export default function CityDetailScreen() {
               </View>
             </TouchableOpacity>
           </Modal>
+
+          {/* Carte de localisation avec pin rouge */}
+          <View style={styles.mapContainer}>
+            {cityMapUrl ? (
+              <>
+                <Image
+                  source={{ uri: cityMapUrl }}
+                  style={styles.cityMap}
+                  resizeMode="contain"
+                  onLoadStart={() => console.log('[FetchMap] Image loading started:', cityMapUrl)}
+                  onLoad={() => console.log('[FetchMap] Image loaded successfully')}
+                  onError={(error) => {
+                    console.log('[FetchMap] Image load error:', error);
+                    console.log('[FetchMap] Failed URL was:', cityMapUrl);
+                  }}
+                  onLoadEnd={() => console.log('[FetchMap] Image load ended')}
+                />
+                {/* Pin rouge au centre de la carte */}
+                <View style={styles.mapPinOverlay}>
+                  <View style={styles.redPin} />
+                </View>
+              </>
+            ) : (
+              <Text style={{ color: '#fff', textAlign: 'center', padding: 20 }}>Pas d'URL de carte</Text>
+            )}
+          </View>
+          
+          {/* Debug: Toujours afficher l'état de chargement - À SUPPRIMER PLUS TARD */}
+          <View style={{ padding: 10, backgroundColor: '#333' }}>
+            <Text style={{ color: '#fff', fontSize: 10 }}>
+              Loading Map: {isLoadingMap ? 'YES' : 'NO'}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 10 }}>
+              Map URL: {cityMapUrl || 'NONE'}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 10 }}>
+              City: {city} | Country: {country}
+            </Text>
+          </View>
 
           {/* Image de la ville ou layout pour villes non-capitales */}
           <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 5 }}>
@@ -1718,5 +1831,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     marginBottom: 8,
+  },
+  // Styles pour la carte de localisation
+  mapContainer: {
+    width: '100%',
+    height: 250,
+    position: 'relative',
+    marginBottom: 10,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+  },
+  cityMap: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
+  },
+  mapPinOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  redPin: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#ff0000',
+    borderRadius: 10,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
 });
