@@ -224,7 +224,7 @@ export default function HomeScreen() {
         </View>
         {/* Onglets avec sliding indicator - comme dans ranking */}
         <View style={[styles.tabsContainer, { backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.2)' }]}> 
-          <View style={{ paddingHorizontal: 20, flexDirection: 'row', position: 'relative' }}>
+          <View style={{ paddingHorizontal: 0, flexDirection: 'row', position: 'relative' }}>
             <TouchableOpacity 
               style={[styles.tab]} 
               onPress={() => switchTab('cities')}
@@ -330,10 +330,10 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     position: 'relative',
-    paddingVertical: 15,
+    paddingVertical: 10,
   },
   tab: {
-    width: (Dimensions.get('window').width - 40) / 2,
+    width: Dimensions.get('window').width / 2,
     alignItems: 'center',
     paddingVertical: 10,
   },

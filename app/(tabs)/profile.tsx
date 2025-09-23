@@ -379,7 +379,7 @@ export default function ProfileScreen() {
       {/* Onglets Profile / Wishlist - même style que index */}
       <View style={{ backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 4, marginBottom: 10 }}>
         <View style={[styles.tabsContainer, { backgroundColor: '#181C24', paddingTop: 0, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.2)' }]}> 
-          <View style={{ paddingHorizontal: 20, flexDirection: 'row', position: 'relative' }}>
+          <View style={{ paddingHorizontal: 0, flexDirection: 'row', position: 'relative' }}>
             <TouchableOpacity 
               style={[styles.tab]} 
               onPress={() => switchTab('profile')}
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   tab: {
-    width: (Dimensions.get('window').width - 40) / 2,
+    width: Dimensions.get('window').width / 2,
     alignItems: 'center',
     paddingVertical: 10,
   },
