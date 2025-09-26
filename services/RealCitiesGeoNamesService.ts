@@ -11,6 +11,7 @@ export interface GeoNamesCity {
   lng: string;
   population: number;
   flag: string;
+  featureCode?: string; // Added to identify city type (e.g., PPLC for capitals)
 }
 
 export class RealCitiesGeoNamesService {
@@ -142,6 +143,7 @@ export class RealCitiesGeoNamesService {
             lng: city.lng,
             population: city.population || 0,
             flag: city.countryCode ? `https://flagcdn.com/w80/${city.countryCode.toLowerCase()}.png` : '',
+            featureCode: city.fcode || '', // Map featureCode from API response
           }));
 
         // Application du tri intelligent

@@ -34,6 +34,9 @@ export default function ExploreScreen() {
   const [showError, setShowError] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
+  // Ajouter un état pour les villes récemment consultées
+  const [recentCities, setRecentCities] = useState<any[]>([]);
+
   // Animations pour le sliding - comme dans index
   const slideAnim = React.useRef(new Animated.Value(0)).current;
   const tabIndicatorAnim = React.useRef(new Animated.Value(0)).current;
@@ -61,9 +64,30 @@ export default function ExploreScreen() {
     try {
       console.log(`🔍 Recherche GeoNames pour: "${query}"`);
       const results = await RealCitiesGeoNamesService.searchCities(query, 50);
-      
-      console.log(`✅ Trouvé ${results.length} villes pour: ${query}`);
-      setCities(results);
+
+      // Prioritize exact matches and capitals
+      const normalizedQuery = normalizeString(query);
+      const prioritizedResults = results.sort((a, b) => {
+        const isExactMatchA = normalizeString(a.name) === normalizedQuery ? 1 : 0;
+        const isExactMatchB = normalizeString(b.name) === normalizedQuery ? 1 : 0;
+
+        const isCapitalA = a.featureCode === 'PPLC' ? 1 : 0; // Check if the city is a capital based on featureCode
+        const isCapitalB = b.featureCode === 'PPLC' ? 1 : 0;
+
+        // Prioritize exact matches first, then capitals
+        if (isExactMatchA !== isExactMatchB) {
+          return isExactMatchB - isExactMatchA;
+        }
+        if (isCapitalA !== isCapitalB) {
+          return isCapitalB - isCapitalA;
+        }
+
+        // Fallback to alphabetical order
+        return a.name.localeCompare(b.name);
+      });
+
+      console.log(`✅ Résultats triés pour: ${query}`);
+      setCities(prioritizedResults);
     } catch (error) {
       console.error('❌ Erreur recherche GeoNames:', error);
       setCities([]);
@@ -119,8 +143,15 @@ export default function ExploreScreen() {
     }
   }, [activeTab]);
 
-  // Injecte le rating et beenThere du contexte dans la modale
+  // Mettre à jour les villes récemment consultées dans handleCityPress
   const handleCityPress = (city: any) => {
+    // Ajouter la ville à la liste des villes récemment consultées
+    setRecentCities((prev) => {
+      const updated = prev.filter((c) => c.name !== city.name);
+      updated.unshift(city);
+      return updated.slice(0, 5); // Limiter à 5 villes
+    });
+
     router.push({
       pathname: '/city-detail',
       params: {
@@ -214,7 +245,6 @@ export default function ExploreScreen() {
           </View>
         </View>
       )}
-      {/* ...existing code... */}
       
   
 
@@ -232,7 +262,7 @@ export default function ExploreScreen() {
               borderColor: borderColor,
               backgroundColor: 'rgba(255,255,255,0.04)',
             }}
-            placeholder="Rechercher une ville..."
+            placeholder="Search..." // Updated placeholder text
             placeholderTextColor={`${textColor}80`}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -311,6 +341,34 @@ export default function ExploreScreen() {
         }} 
       />
 
+      {/* Section pour les villes récemment consultées */}
+      {activeTab === 'cities' && searchQuery.trim().length === 0 && recentCities.length > 0 && (
+        <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
+          <Text style={{ color: textColor, fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+            Recently Viewed Cities
+          </Text>
+          <View>
+            {recentCities.map((city, index) => (
+              <TouchableOpacity
+                key={`${city.name}-${index}`}
+                style={styles.cityCard}
+                onPress={() => handleCityPress(city)}
+              >
+                <Image
+                  source={{ uri: city.flag }}
+                  style={styles.countryFlag}
+                  resizeMode="cover"
+                />
+                <View style={styles.cityTextInfo}>
+                  <Text style={[styles.cityName, { color: '#FFFFFF' }]}>{city.name}</Text>
+                  <Text style={[styles.countryName, { color: '#CCCCCC' }]}>{city.country}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
       {/* Contenu avec sliding animation */}
       <Animated.View 
         style={[
@@ -381,10 +439,10 @@ export default function ExploreScreen() {
             )}
 
             {/* ...existing code... */}
-            {searchQuery.length === 0 && (
+            {activeTab === 'cities' && searchQuery.length === 0 && recentCities.length === 0 && (
               <View style={styles.instructionContainer}>
                 <Text style={[styles.instructionText, { color: textColor }]}> 
-                  Tapez le nom d'une ville pour commencer votre recherche
+                  Search the name of a city
                 </Text>
               </View>
             )}
@@ -429,7 +487,6 @@ export default function ExploreScreen() {
         </ScrollView>
       </Animated.View>
 
-      {/* ...existing code... */}
       <SimpleCityRatingModal
         visible={modalVisible}
         city={selectedCity}
