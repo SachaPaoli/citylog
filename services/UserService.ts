@@ -40,7 +40,7 @@ export async function removeVisitedCity(city: string, country: string, source: '
   }
 }
 import { getAuth } from 'firebase/auth';
-import { arrayRemove, arrayUnion, doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
 export async function getUserFavorites(userId?: string) {
   const user = getAuth().currentUser;
   const targetUserId = userId || user?.uid;
@@ -77,9 +77,18 @@ export async function removeFavorite(city: string, country: string) {
   const user = getAuth().currentUser;
   if (!user) throw new Error('Not authenticated');
   const ref = doc(db, 'users', user.uid);
-  await updateDoc(ref, {
-    favorites: arrayRemove({ city, country })
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const favorites = snap.data()?.favorites || [];
+  const updatedFavorites = favorites.map((fav: any) => {
+    if (fav?.city === city && fav?.country === country) {
+      return null; // Replace the matching favorite with null
+    }
+    return fav;
   });
+
+  await updateDoc(ref, { favorites: updatedFavorites });
 }
 
 export async function addVisitedCity(city: string, country: string, source: 'post' | 'note', postId?: string) {

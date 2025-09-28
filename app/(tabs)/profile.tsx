@@ -18,7 +18,7 @@ import { db } from '../../config/firebase';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { usePosts } from '../../hooks/usePosts';
-import { addFavorite as addFavoriteFirestore, getUserFavorites } from '../../services/UserService';
+import { addFavorite as addFavoriteFirestore, getUserFavorites, removeFavorite } from '../../services/UserService';
 
 // Utilitaire pour obtenir le code pays ISO2 en minuscule à partir du nom du pays
 function getCountryCode(countryName: string): string {
@@ -359,6 +359,37 @@ export default function ProfileScreen() {
 
   const screenWidth = Dimensions.get('window').width;
 
+  // Add state for managing the popup visibility and selected favorite
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [selectedFavorite, setSelectedFavorite] = useState<number | null>(null);
+
+  // Function to handle showing the popup
+  const showFavoritePopup = (index: number) => {
+    setSelectedFavorite(index);
+    setPopupVisible(true);
+  };
+
+  // Function to handle deleting a favorite
+  const handleDeleteFavorite = async () => {
+    if (selectedFavorite === null || !favorites[selectedFavorite]) return;
+    try {
+      await removeFavorite(favorites[selectedFavorite].city, favorites[selectedFavorite].country);
+      const updatedFavorites = await getUserFavorites();
+      setFavorites(updatedFavorites);
+    } catch (error) {
+      console.error('Error deleting favorite:', error);
+    } finally {
+      setPopupVisible(false);
+    }
+  };
+
+  // Function to handle updating a favorite
+  const handleUpdateFavorite = () => {
+    if (selectedFavorite === null) return;
+    router.push({ pathname: '../search-city', params: { favoriteIndex: selectedFavorite } });
+    setPopupVisible(false);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}> 
       {/* Header Explore-like avec nom d'utilisateur et boutons, fond foncé partout */}
@@ -460,9 +491,10 @@ export default function ProfileScreen() {
                   <TouchableOpacity
                     style={[
                       styles.favoriteBox,
+                      !fav && { marginTop: 10 }, // Add margin only if no city is chosen
                       fav && { borderWidth: 0, borderColor: 'transparent' }
                     ]}
-                    onPress={() => handleAddFavorite(idx)}
+                    onPress={() => showFavoritePopup(idx)}
                     activeOpacity={0.7}
                   >
                     {!fav ? (
@@ -738,6 +770,24 @@ export default function ProfileScreen() {
             )}
           </ScrollView>
         </Animated.View>
+      )}
+
+      {/* Popup for managing favorite cities */}
+      {popupVisible && (
+        <View style={styles.popupContainer}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupTitle}>Manage Favorite</Text>
+            <TouchableOpacity style={styles.popupButton} onPress={handleDeleteFavorite}>
+              <Text style={styles.popupButtonText}>Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.popupButton} onPress={handleUpdateFavorite}>
+              <Text style={styles.popupButtonText}>Update</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.popupButton} onPress={() => setPopupVisible(false)}>
+              <Text style={styles.popupButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -1140,6 +1190,46 @@ const styles = StyleSheet.create({
   followButtonText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  // Styles pour le popup de gestion des favoris
+  popupContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000,
+  },
+  popupContent: {
+    width: '80%',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 10,
+  },
+  popupTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  popupButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    backgroundColor: '#2051A4',
+  },
+  popupButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

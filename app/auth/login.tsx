@@ -71,7 +71,7 @@ export default function LoginScreen() {
               CityLog
             </Text>
             <Text style={[styles.subtitle, { color: textColor }]}>
-              Connecte-toi pour continuer ton voyage
+              Login to continue your journey
             </Text>
           </View>
 
@@ -115,11 +115,11 @@ export default function LoginScreen() {
             {/* Lien vers inscription */}
             <View style={styles.signupContainer}>
               <Text style={[styles.signupText, { color: textColor }]}>
-                Pas encore de compte ?{' '}
+                Don't have an account ?{' '}
               </Text>
               <TouchableOpacity onPress={() => router.push('./register')}>
                 <Text style={[styles.signupLink, { color: textActiveColor }]}>
-                  Créer un compte
+                  Create an account
                 </Text>
               </TouchableOpacity>
             </View>

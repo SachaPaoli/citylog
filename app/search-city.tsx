@@ -1,4 +1,3 @@
-
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RealCitiesService } from '@/services/RealCitiesService';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -119,42 +118,40 @@ export default function SearchCityScreen() {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={[styles.container, { backgroundColor }]}> 
       {/* Nouveau header style my-posts */}
-      <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, marginTop: 12 }}>
+      <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 4, marginTop: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Bouton retour */}
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
-            <Text style={{ color: '#fff', fontSize: 18 }}>←</Text>
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 16, marginLeft: -30 }}>
+            <Text style={{ color: '#fff', fontSize: 28 }}>←</Text>
           </TouchableOpacity>
-          {/* Titre centré */}
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22, textAlign: 'center', flex: 1 }} numberOfLines={1}>Search City</Text>
-          {/* Espace à droite */}
-          <View style={{ width: 30 }} />
+          {/* Barre de recherche avec croix à l'intérieur */}
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <TextInput
+              style={{
+                width: '110%',
+                borderWidth: 1,
+                borderRadius: 8,
+                padding: 12,
+                paddingRight: 36,
+                fontSize: 16,
+                color: textColor,
+                borderColor: borderColor,
+                backgroundColor: 'rgba(255,255,255,0.04)'
+              }}
+              placeholder="Search..."
+              placeholderTextColor={`${textColor}80`}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={{ position: 'absolute', right: 10, top: 0, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 18 }}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-        {/* Barre de recherche avec croix à l'intérieur */}
-        <View style={{ position: 'relative', justifyContent: 'center', marginTop: 8 }}>
-          <TextInput
-            style={{
-              width: '100%',
-              borderWidth: 1,
-              borderRadius: 8,
-              padding: 12,
-              paddingRight: 36,
-              fontSize: 16,
-              color: textColor,
-              borderColor: borderColor,
-              backgroundColor: 'rgba(255,255,255,0.04)',
-            }}
-            placeholder="Rechercher une ville..."
-            placeholderTextColor={`${textColor}80`}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ position: 'absolute', right: 10, top: 0, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 18 }}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Ligne de séparation */}
+        <View style={{ height: 1, backgroundColor: borderColor, marginTop: 10, width: '100%' }} />
       </View>
       {loading && searchQuery.length > 0 && (
         <View style={styles.loadingContainer}>
@@ -203,7 +200,7 @@ export default function SearchCityScreen() {
       {/* Instructions initiales */}
       {searchQuery.length === 0 && (
         <View style={styles.instructionContainer}>
-          <Text style={[styles.instructionText, { color: textColor }]}>Tapez le nom d'une ville pour commencer votre recherche</Text>
+          <Text style={[styles.instructionText, { color: textColor }]}>Search the name of a city</Text>
         </View>
       )}
     </View>
