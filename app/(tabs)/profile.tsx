@@ -395,8 +395,8 @@ export default function ProfileScreen() {
       {/* Header Explore-like avec nom d'utilisateur et boutons, fond foncé partout */}
       <View style={{ backgroundColor: '#181C24', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Bouton logout (porte) */}
-          <TouchableOpacity onPress={handleLogout} style={{ padding: 8 }}>
+          {/* Bouton réglages (settings) */}
+          <TouchableOpacity onPress={() => router.push('/settings')} style={{ padding: 8 }}>
             <Ionicons name="settings-outline" size={22} color="#fff" />
           </TouchableOpacity>
           {/* Nom d'utilisateur centré */}
