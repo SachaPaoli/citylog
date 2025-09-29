@@ -51,6 +51,7 @@ export default function PostActionModal({ visible, onClose, onNewPost, onNewTrip
             }
           ]}
         >
+          <View style={styles.topSeparator} />
           <View style={styles.modalHeader}>
             <View style={styles.modalIndicator} />
             <Text style={styles.modalTitle}>Choose an action</Text>
@@ -108,6 +109,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingBottom: 34,
+  },
+  topSeparator: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   modalHeader: {
     alignItems: 'center',

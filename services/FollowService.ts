@@ -9,25 +9,18 @@ export interface FollowStats {
 // Suivre un utilisateur
 export const followUser = async (currentUserId: string, targetUserId: string): Promise<void> => {
   if (currentUserId === targetUserId) {
-    throw new Error('Impossible de se suivre soi-même');
+    throw new Error('Cannot follow yourself');
   }
 
   try {
-    // Ajouter targetUserId à la liste following de currentUser
+    // Only add targetUserId to the following list of currentUser
     const currentUserRef = doc(db, 'users', currentUserId);
     await updateDoc(currentUserRef, {
       following: arrayUnion(targetUserId)
     });
-
-    // Ajouter currentUserId à la liste followers de targetUser
-    const targetUserRef = doc(db, 'users', targetUserId);
-    await updateDoc(targetUserRef, {
-      followers: arrayUnion(currentUserId)
-    });
-
-    console.log(`${currentUserId} suit maintenant ${targetUserId}`);
+    console.log(`${currentUserId} now follows ${targetUserId}`);
   } catch (error) {
-    console.error('Erreur lors du follow:', error);
+    console.error('Error during follow:', error);
     throw error;
   }
 };
@@ -35,21 +28,14 @@ export const followUser = async (currentUserId: string, targetUserId: string): P
 // Ne plus suivre un utilisateur
 export const unfollowUser = async (currentUserId: string, targetUserId: string): Promise<void> => {
   try {
-    // Retirer targetUserId de la liste following de currentUser
+    // Only remove targetUserId from the following list of currentUser
     const currentUserRef = doc(db, 'users', currentUserId);
     await updateDoc(currentUserRef, {
       following: arrayRemove(targetUserId)
     });
-
-    // Retirer currentUserId de la liste followers de targetUser
-    const targetUserRef = doc(db, 'users', targetUserId);
-    await updateDoc(targetUserRef, {
-      followers: arrayRemove(currentUserId)
-    });
-
-    console.log(`${currentUserId} ne suit plus ${targetUserId}`);
+    console.log(`${currentUserId} no longer follows ${targetUserId}`);
   } catch (error) {
-    console.error('Erreur lors du unfollow:', error);
+    console.error('Error during unfollow:', error);
     throw error;
   }
 };
