@@ -66,7 +66,7 @@ export default function UserCitiesScreen() {
     );
   }, [posts, selectedCity, userId]);
 
-  return (
+  return (  
     <SafeAreaView style={{ flex: 1, backgroundColor: '#181C24' }}>
       <View style={[styles.header, { backgroundColor: '#181C24' }]}> 
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>

@@ -1,10 +1,12 @@
+import { CachedImage } from '@/components/CachedImage';
 import { SimpleCityRatingModal } from '@/components/SimpleCityRatingModal';
 import { UserSearchCard } from '@/components/UserSearchCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { imageCacheService } from '@/services/ImageCacheService';
 import { RealCitiesGeoNamesService } from '@/services/RealCitiesGeoNamesService'; // Nouveau service GeoNames
 import { UserSearchResult, UserSearchService } from '@/services/UserSearchService';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 
@@ -142,6 +144,34 @@ export default function ExploreScreen() {
       searchUsers(''); // Chargera les utilisateurs populaires
     }
   }, [activeTab]);
+
+  // Précharge les drapeaux des villes pour un affichage instantané
+  useEffect(() => {
+    const preloadImages = async () => {
+      const imagesToPreload: string[] = [];
+      
+      // Ajouter les drapeaux des villes récentes
+      recentCities.forEach(city => {
+        if (city.flag) imagesToPreload.push(city.flag);
+      });
+      
+      // Ajouter les drapeaux des résultats de recherche
+      cities.forEach(city => {
+        if (city.countryCode) {
+          imagesToPreload.push(`https://flagcdn.com/w80/${city.countryCode.toLowerCase()}.png`);
+        } else if (city.country) {
+          imagesToPreload.push(`https://flagcdn.com/w80/${city.country.toLowerCase()}.png`);
+        }
+      });
+      
+      // Précharger toutes les images en parallèle
+      if (imagesToPreload.length > 0) {
+        await imageCacheService.preloadMultiple(imagesToPreload);
+      }
+    };
+    
+    preloadImages();
+  }, [recentCities, cities]);
 
   // Mettre à jour les villes récemment consultées dans handleCityPress
   const handleCityPress = (city: any) => {
@@ -354,8 +384,8 @@ export default function ExploreScreen() {
                 style={styles.cityCard}
                 onPress={() => handleCityPress(city)}
               >
-                <Image
-                  source={{ uri: city.flag }}
+                <CachedImage
+                  uri={city.flag}
                   style={styles.countryFlag}
                   resizeMode="cover"
                 />
@@ -410,8 +440,8 @@ export default function ExploreScreen() {
                       style={styles.cityCard}
                       onPress={() => handleCityPress(city)}
                     >
-                      <Image
-                        source={{ uri: `https://flagcdn.com/w80/${city.countryCode ? city.countryCode.toLowerCase() : city.country.toLowerCase()}.png` }}
+                      <CachedImage
+                        uri={`https://flagcdn.com/w80/${city.countryCode ? city.countryCode.toLowerCase() : city.country.toLowerCase()}.png`}
                         style={styles.countryFlag}
                         resizeMode="cover"
                       />

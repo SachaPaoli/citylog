@@ -1,13 +1,14 @@
+import { CachedImage } from '@/components/CachedImage';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useCountryRanking } from '@/hooks/useCountryRanking';
 import { getInstantUserPhoto } from '@/hooks/useGlobalPhotoPreloader';
 import { useRanking } from '@/hooks/useRanking';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { imageCacheService } from '@/services/ImageCacheService';
 import React from 'react';
 import {
   Animated,
   Dimensions,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -29,6 +30,44 @@ export default function RankingScreen() {
   
   const { rankingData: cityRankingData, loading: cityLoading, error: cityError, refreshRanking: refreshCityRanking } = useRanking();
   const { rankingData: countryRankingData, loading: countryLoading, error: countryError, refreshRanking: refreshCountryRanking } = useCountryRanking();
+
+  // Précharge les avatars des utilisateurs pour un affichage instantané
+  React.useEffect(() => {
+    const preloadAvatars = async () => {
+      const avatarsToPreload: string[] = [];
+      
+      // Ajouter les avatars du classement des villes
+      if (cityRankingData) {
+        cityRankingData.forEach(user => {
+          if (user.avatar && user.avatar.trim() !== '') {
+            avatarsToPreload.push(user.avatar);
+          } else {
+            const cachedPhoto = getInstantUserPhoto(user.id);
+            if (cachedPhoto) avatarsToPreload.push(cachedPhoto);
+          }
+        });
+      }
+      
+      // Ajouter les avatars du classement des pays
+      if (countryRankingData) {
+        countryRankingData.forEach(user => {
+          if (user.avatar && user.avatar.trim() !== '') {
+            avatarsToPreload.push(user.avatar);
+          } else {
+            const cachedPhoto = getInstantUserPhoto(user.id);
+            if (cachedPhoto) avatarsToPreload.push(cachedPhoto);
+          }
+        });
+      }
+      
+      // Précharger tous les avatars en parallèle
+      if (avatarsToPreload.length > 0) {
+        await imageCacheService.preloadMultiple(avatarsToPreload);
+      }
+    };
+    
+    preloadAvatars();
+  }, [cityRankingData, countryRankingData]);
 
   // Fonctions pour obtenir les données selon l'onglet actif
   const getCurrentRankingData = () => {
@@ -122,8 +161,8 @@ export default function RankingScreen() {
 
                   <View style={styles.avatarContainer}>
                     {user.avatar && user.avatar.trim() !== '' ? (
-                      <Image 
-                        source={{ uri: user.avatar }}
+                      <CachedImage 
+                        uri={user.avatar}
                         style={styles.avatar}
                         onError={() => console.log('Erreur chargement avatar pour:', user.name)}
                       />
@@ -131,8 +170,8 @@ export default function RankingScreen() {
                       (() => {
                         const cachedPhoto = getInstantUserPhoto(user.id);
                         return cachedPhoto ? (
-                          <Image 
-                            source={{ uri: cachedPhoto }}
+                          <CachedImage 
+                            uri={cachedPhoto}
                             style={styles.avatar}
                           />
                         ) : (

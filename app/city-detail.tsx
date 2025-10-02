@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { addDoc, collection, getDocs, query } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { CachedImage } from '../components/CachedImage';
 import { StarRating } from '../components/StarRating';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useVisitedCities } from '../contexts/VisitedCitiesContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { imageCacheService } from '../services/ImageCacheService';
 // Mapping code -> nom complet
 const countryCodeToName: Record<string, string> = {
   AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AS: 'American Samoa', AD: 'Andorra', AO: 'Angola', AI: 'Anguilla', AQ: 'Antarctica', AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh', BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin', BM: 'Bermuda', BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia and Herzegovina', BW: 'Botswana', BV: 'Bouvet Island', BR: 'Brazil', IO: 'British Indian Ocean Territory', BN: 'Brunei Darussalam', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia', CM: 'Cameroon', CA: 'Canada', CV: 'Cape Verde', KY: 'Cayman Islands', CF: 'Central African Republic', TD: 'Chad', CL: 'Chile', CN: 'China', CX: 'Christmas Island', CC: 'Cocos (Keeling) Islands', CO: 'Colombia', KM: 'Comoros', CG: 'Congo', CD: 'Congo, the Democratic Republic of the', CK: 'Cook Islands', CR: 'Costa Rica', CI: "Cote d'Ivoire", HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus', CZ: 'Czech Republic', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic', EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea', EE: 'Estonia', ET: 'Ethiopia', FK: 'Falkland Islands (Malvinas)', FO: 'Faroe Islands', FJ: 'Fiji', FI: 'Finland', FR: 'France', GF: 'French Guiana', PF: 'French Polynesia', TF: 'French Southern Territories', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany', GH: 'Ghana', GI: 'Gibraltar', GR: 'Greece', GL: 'Greenland', GD: 'Grenada', GP: 'Guadeloupe', GU: 'Guam', GT: 'Guatemala', GG: 'Guernsey', GN: 'Guinea', GW: 'Guinea-Bissau', GY: 'Guyana', HT: 'Haiti', HM: 'Heard Island and McDonald Islands', VA: 'Holy See (Vatican City State)', HN: 'Honduras', HK: 'Hong Kong', HU: 'Hungary', IS: 'Iceland', IN: 'India', ID: 'Indonesia', IR: 'Iran, Islamic Republic of', IQ: 'Iraq', IE: 'Ireland', IM: 'Isle of Man', IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JE: 'Jersey', JO: 'Jordan', KZ: 'Kazakhstan', KE: 'Kenya', KI: 'Kiribati', KP: "Korea, Democratic People's Republic of", KR: 'Korea, Republic of', KW: 'Kuwait', KG: 'Kyrgyzstan', LA: 'Lao People\'s Democratic Republic', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia', LY: 'Libyan Arab Jamahiriya', LI: 'Liechtenstein', LT: 'Lithuania', LU: 'Luxembourg', MO: 'Macao', MK: 'Macedonia, the Former Yugoslav Republic of', MG: 'Madagascar', MW: 'Malawi', MY: 'Malaysia', MV: 'Maldives', ML: 'Mali', MT: 'Malta', MH: 'Marshall Islands', MQ: 'Martinique', MR: 'Mauritania', MU: 'Mauritius', YT: 'Mayotte', MX: 'Mexico', FM: 'Micronesia, Federated States of', MD: 'Moldova, Republic of', MC: 'Monaco', MN: 'Mongolia', ME: 'Montenegro', MS: 'Montserrat', MA: 'Morocco', MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NR: 'Nauru', NP: 'Nepal', NL: 'Netherlands', AN: 'Netherlands Antilles', NC: 'New Caledonia', NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', NU: 'Niue', NF: 'Norfolk Island', MP: 'Northern Mariana Islands', NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PW: 'Palau', PS: 'Palestinian Territory, Occupied', PA: 'Panama', PG: 'Papua New Guinea', PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PN: 'Pitcairn', PL: 'Poland', PT: 'Portugal', PR: 'Puerto Rico', QA: 'Qatar', RE: 'Reunion', RO: 'Romania', RU: 'Russian Federation', RW: 'Rwanda', BL: 'Saint Barthelemy', SH: 'Saint Helena', KN: 'Saint Kitts and Nevis', LC: 'Saint Lucia', MF: 'Saint Martin', PM: 'Saint Pierre and Miquelon', VC: 'Saint Vincent and the Grenadines', WS: 'Samoa', SM: 'San Marino', ST: 'Sao Tome and Principe', SA: 'Saudi Arabia', SN: 'Senegal', RS: 'Serbia', SC: 'Seychelles', SL: 'Sierra Leone', SG: 'Singapore', SK: 'Slovakia', SI: 'Slovenia', SB: 'Solomon Islands', SO: 'Somalia', ZA: 'South Africa', GS: 'South Georgia and the South Sandwich Islands', ES: 'Spain', LK: 'Sri Lanka', SD: 'Sudan', SR: 'Suriname', SJ: 'Svalbard and Jan Mayen', SZ: 'Swaziland', SE: 'Sweden', CH: 'Switzerland', SY: 'Syrian Arab Republic', TW: 'Taiwan, Province of China', TJ: 'Tajikistan', TZ: 'Tanzania, United Republic of', TH: 'Thailand', TL: 'Timor-Leste', TG: 'Togo', TK: 'Tokelau', TO: 'Tonga', TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan', TC: 'Turks and Caicos Islands', TV: 'Tuvalu', UG: 'Uganda', UA: 'Ukraine', AE: 'United Arab Emirates', GB: 'United Kingdom', US: 'United States', UM: 'United States Minor Outlying Islands', UY: 'Uruguay', UZ: 'Uzbekistan', VU: 'Vanuatu', VE: 'Venezuela', VN: 'Viet Nam', VG: 'Virgin Islands, British', VI: 'Virgin Islands, U.S.', WF: 'Wallis and Futuna', EH: 'Western Sahara', YE: 'Yemen', ZM: 'Zambia', ZW: 'Zimbabwe'
@@ -27,6 +29,8 @@ export default function CityDetailScreen() {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  // État pour l'expansion de la description
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // Fonction pour charger la review existante quand on ouvre le modal
   const loadExistingReview = () => {
@@ -65,28 +69,30 @@ export default function CityDetailScreen() {
   
   const { user } = useAuth();
   const { city, country, countryCode, flag, population } = useLocalSearchParams();
+  
+  // États pour les activités des amis
+  const [friendsActivity, setFriendsActivity] = useState<any[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  
+  // États pour les posts et reviews de la ville
+  const [cityPostsCount, setCityPostsCount] = useState(0);
+  const [cityReviewsCount, setCityReviewsCount] = useState(0);
+
+  // États pour l'image et la description de la ville
+  const [cityImageUrl, setCityImageUrl] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+  const [cityDescription, setCityDescription] = useState<string | null>(null);
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false);
+
+  // Caches pour éviter les requêtes répétées
+  const cityImageCache = React.useRef<{ [key: string]: string | null }>({});
+  const cityDescriptionCache = React.useRef<{ [key: string]: string | null }>({});
 
   // Nettoie le nom pour obtenir le nom de base (ex: "Marseille 01" -> "Marseille")
   function getBaseCityName(name: string): string {
     if (!name) return '';
-    // Prend le premier mot avant un chiffre ou un séparateur
     return name.replace(/([\s-]?\d+.*$)/, '').trim();
   }
-
-  // Cache local pour les images de villes (évite les requêtes inutiles)
-  const cityImageCache = React.useRef<{ [key: string]: string | null }>({});
-
-
-  // État pour l'URL de l'image de la ville
-  const [cityImageUrl, setCityImageUrl] = useState<string | null>(null);
-  const [isLoadingImage, setIsLoadingImage] = useState(false);
-  
-  // État pour la description de la ville
-  const [cityDescription, setCityDescription] = useState<string | null>(null);
-  const [isLoadingDescription, setIsLoadingDescription] = useState(false);
-
-  // Cache pour les descriptions
-  const cityDescriptionCache = React.useRef<{ [key: string]: string | null }>({});
 
 
 
@@ -226,35 +232,12 @@ export default function CityDetailScreen() {
     const baseName = getBaseCityName(cityName);
     const capital = capitalsByCountry[countryName];
     
-    console.log(`[Capital] Checking: "${cityName}" (base: "${baseName}") in ${countryName}`);
-    console.log(`[Capital] Capital of ${countryName}:`, capital);
-    
-    // Si pas de capitale définie pour ce pays
-    if (!capital) {
-      console.log(`[Capital] REJECTED: No capital defined for ${countryName}`);
-      return false;
-    }
-    
-    // Si le nom original contient des chiffres/suffixes, ce n'est pas la ville principale
-    if (cityName !== baseName) {
-      console.log(`[Capital] REJECTED: "${cityName}" is not the main city (base would be "${baseName}")`);
-      return false;
-    }
+    if (!capital || cityName !== baseName) return false;
     
     const normalizedBaseName = normalizeString(baseName);
     const normalizedCapital = normalizeString(capital);
     
-    // SEULEMENT match exact avec la capitale
-    const exactMatch = normalizedCapital === normalizedBaseName;
-    
-    if (exactMatch) {
-      console.log(`[Capital] EXACT MATCH found: ${capital} (${normalizedCapital}) === ${baseName} (${normalizedBaseName})`);
-    } else {
-      console.log(`[Capital] NO MATCH: ${capital} (${normalizedCapital}) !== ${baseName} (${normalizedBaseName})`);
-    }
-    
-    console.log(`[Capital] Result for ${baseName}: ${exactMatch}`);
-    return exactMatch;
+    return normalizedCapital === normalizedBaseName;
   }
 
 
@@ -265,36 +248,23 @@ export default function CityDetailScreen() {
     const baseName = getBaseCityName(cityName);
     const cacheKey = `${baseName.toLowerCase()}_${countryName.toLowerCase()}`;
     
-    console.log(`[FetchImage] Starting fetch for: ${baseName}, ${countryName}`);
-    
-    // Vérification du cache
     if (cityImageCache.current[cacheKey] !== undefined) {
-      console.log(`[FetchImage] Found in cache: ${cityImageCache.current[cacheKey]}`);
       setCityImageUrl(cityImageCache.current[cacheKey]);
       setIsLoadingImage(false);
       return;
     }
 
-    // Vérifier si la ville est une capitale
-    const isFamous = isCapital(cityName, countryName);
-    console.log(`[FetchImage] Is ${baseName} a capital? ${isFamous}`);
-
-    // Si la ville n'est pas une capitale, affiche directement le drapeau
-    if (!isFamous) {
-      console.log(`[FetchImage] Not a capital, using flag for: ${baseName}`);
+    if (!isCapital(cityName, countryName)) {
       cityImageCache.current[cacheKey] = flagUrl;
       setCityImageUrl(flagUrl);
       setIsLoadingImage(false);
       return;
     }
 
-    console.log(`[FetchImage] Fetching real image for capital city: ${baseName}`);
     let imgUrl: string | null = null;
     let wikidataId: string | null = null;
 
-    // 1. Cherche la page Wikipedia pour la ville célèbre
     try {
-      console.log(`[FetchImage] Searching Wikipedia for: ${baseName}, ${countryName}`);
       const searchRes = await axios.get('https://en.wikipedia.org/w/api.php', {
         params: {
           action: 'query',
@@ -306,10 +276,8 @@ export default function CityDetailScreen() {
         timeout: 10000
       });
       const page = searchRes.data?.query?.search?.[0];
-      console.log(`[FetchImage] Wikipedia search result:`, page?.title);
       
       if (page) {
-        // 2. Récupère l'ID Wikidata via la page Wikipedia
         const pageInfoRes = await axios.get('https://en.wikipedia.org/w/api.php', {
           params: {
             action: 'query',
@@ -322,16 +290,13 @@ export default function CityDetailScreen() {
         });
         const pageData = pageInfoRes.data?.query?.pages?.[page.pageid];
         wikidataId = pageData?.pageprops?.wikibase_item || null;
-        console.log(`[FetchImage] Wikidata ID found: ${wikidataId}`);
       }
     } catch (e) {
-      console.log('[FetchImage] Wikipedia search failed for famous city:', baseName, e);
+      // Silently fail
     }
 
-    // 3. Si Wikidata trouvé, récupère l'image officielle (P18)
     if (wikidataId) {
       try {
-        console.log(`[FetchImage] Fetching Wikidata image for: ${wikidataId}`);
         const wikidataRes = await axios.get(`https://www.wikidata.org/w/api.php`, {
           params: {
             action: 'wbgetclaims',
@@ -344,40 +309,24 @@ export default function CityDetailScreen() {
         });
         const claims = wikidataRes.data?.claims?.P18;
         if (claims && claims.length > 0) {
-          // P18 = nom du fichier image sur Wikimedia Commons
           const fileName = claims[0].mainsnak.datavalue.value;
-          // Transforme le nom en URL
           imgUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
-          console.log(`[FetchImage] Image URL found: ${imgUrl}`);
         }
       } catch (e) {
-        console.log('[FetchImage] Wikidata image fetch failed for famous city:', baseName, e);
+        // Silently fail
       }
     }
 
-    // 4. Résultat final
-    if (imgUrl) {
-      console.log(`[FetchImage] SUCCESS: Real image found for ${baseName}`);
-      cityImageCache.current[cacheKey] = imgUrl;
-      setCityImageUrl(imgUrl);
-    } else {
-      console.log(`[FetchImage] FALLBACK: Using flag for famous city ${baseName} (no image found)`);
-      cityImageCache.current[cacheKey] = flagUrl;
-      setCityImageUrl(flagUrl);
-    }
-    
+    cityImageCache.current[cacheKey] = imgUrl || flagUrl;
+    setCityImageUrl(imgUrl || flagUrl);
     setIsLoadingImage(false);
   }
 
-  // Charge l'image au montage ou quand la ville change
+  // Charge l'image et la description au montage
   useEffect(() => {
-    console.log('[UseEffect] Triggered with city:', city, 'country:', country);
     if (city && country) {
-      console.log('[UseEffect] Calling fetchCityImage and fetchCityDescription...');
       fetchCityImage(city as string, country as string);
       fetchCityDescription(city as string, country as string);
-    } else {
-      console.log('[UseEffect] Skipping fetch - missing city or country');
     }
   }, [city, country]);
 
@@ -387,11 +336,7 @@ export default function CityDetailScreen() {
     const baseName = getBaseCityName(cityName);
     const cacheKey = `${baseName.toLowerCase()}_${countryName.toLowerCase()}_desc`;
     
-    console.log(`[FetchDescription] Starting fetch for: ${baseName}, ${countryName}`);
-    
-    // Vérification du cache
     if (cityDescriptionCache.current[cacheKey] !== undefined) {
-      console.log(`[FetchDescription] Found in cache: ${cityDescriptionCache.current[cacheKey]}`);
       setCityDescription(cityDescriptionCache.current[cacheKey]);
       setIsLoadingDescription(false);
       return;
@@ -399,35 +344,24 @@ export default function CityDetailScreen() {
 
     try {
       let description: string | null = null;
-      
-      // Construire différentes variantes de recherche pour être plus précis
       const countryLong = getCountryName(countryName);
       const searchQueries = [
-        `${baseName}, ${countryLong}`,  // Ex: "Paris, France"
-        `${baseName}, ${countryName}`,  // Ex: "Paris, FR" 
-        `${baseName} ${countryLong}`,   // Ex: "Paris France"
-        `${baseName} ${countryName}`    // Ex: "Paris FR"
+        `${baseName}, ${countryLong}`,
+        `${baseName}, ${countryName}`,
+        `${baseName} ${countryLong}`,
+        `${baseName} ${countryName}`
       ];
       
-      console.log(`[FetchDescription] Trying search queries for ${baseName}:`, searchQueries);
-      
-      // Essayer chaque variante de recherche jusqu'à trouver une description
       for (const searchQuery of searchQueries) {
         try {
           const searchApiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=0&gsrlimit=3&gsrsearch=${encodeURIComponent(searchQuery)}&prop=extracts&exintro=true&explaintext=true&exsentences=3&origin=*`;
-          
-          console.log(`[FetchDescription] Trying search: "${searchQuery}"`);
           const searchResponse = await axios.get(searchApiUrl, { timeout: 8000 });
           
           if (searchResponse.data?.query?.pages) {
             const pages = Object.values(searchResponse.data.query.pages) as any[];
             
-            // Chercher la page qui correspond le mieux (contient le nom du pays)
             for (const page of pages) {
               if (page.extract && page.title) {
-                console.log(`[FetchDescription] Found page: "${page.title}"`);
-                
-                // Vérifier que la page correspond bien à notre ville/pays
                 const pageTitle = page.title.toLowerCase();
                 const cityLower = baseName.toLowerCase();
                 const countryLower = countryLong.toLowerCase();
@@ -436,41 +370,32 @@ export default function CityDetailScreen() {
                 if (pageTitle.includes(cityLower) && 
                     (pageTitle.includes(countryLower) || pageTitle.includes(countryCodeLower))) {
                   description = page.extract;
-                  console.log(`[FetchDescription] Perfect match found: "${page.title}"`);
                   break;
                 } else if (pageTitle.includes(cityLower) && !description) {
-                  // Si pas de match parfait, garder comme fallback
                   description = page.extract;
-                  console.log(`[FetchDescription] Partial match as fallback: "${page.title}"`);
                 }
               }
             }
             
-            if (description) break; // Si on a trouvé une description, arrêter
+            if (description) break;
           }
         } catch (queryError) {
-          console.log(`[FetchDescription] Search query failed: "${searchQuery}"`, queryError);
           continue;
         }
       }
       
-      // Si aucune recherche spécifique n'a fonctionné, essayer juste le nom de la ville
       if (!description) {
         try {
           const directUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(baseName)}`;
-          console.log(`[FetchDescription] Trying direct summary for: ${baseName}`);
-          
           const summaryResponse = await axios.get(directUrl, { timeout: 8000 });
           if (summaryResponse.data && summaryResponse.data.extract) {
             description = summaryResponse.data.extract;
-            console.log(`[FetchDescription] Got direct summary as last resort`);
           }
         } catch (directError) {
-          console.log(`[FetchDescription] Direct summary also failed`);
+          // Silently fail
         }
       }
       
-      // Limiter à 3 phrases maximum
       if (description) {
         const sentences = description.split('. ');
         if (sentences.length > 3) {
@@ -478,18 +403,10 @@ export default function CityDetailScreen() {
         }
       }
       
-      // Sauvegarder dans le cache
       cityDescriptionCache.current[cacheKey] = description;
       setCityDescription(description);
       
-      if (description) {
-        console.log(`[FetchDescription] SUCCESS: Description found for ${baseName}, ${countryName}`);
-      } else {
-        console.log(`[FetchDescription] NO DESCRIPTION: No summary found for ${baseName}, ${countryName}`);
-      }
-      
     } catch (error) {
-      console.log(`[FetchDescription] ERROR: Failed to fetch description for ${baseName}, ${countryName}:`, error);
       cityDescriptionCache.current[cacheKey] = null;
       setCityDescription(null);
     }
@@ -517,51 +434,34 @@ export default function CityDetailScreen() {
     
     try {
       setIsLoadingAverage(true);
-      console.log('[CityDetail] Calculating global average for:', city, country);
-      
-      // Récupère tous les utilisateurs
       const usersQuery = query(collection(db, 'users'));
       const usersSnapshot = await getDocs(usersQuery);
-      
       const allRatings: number[] = [];
-      
-      console.log('[CityDetail] Total users found:', usersSnapshot.size);
       
       usersSnapshot.forEach((userDoc) => {
         const userData = userDoc.data();
         const visitedCities = userData.visitedCities || [];
         
-        console.log(`[CityDetail] User ${userDoc.id} has ${visitedCities.length} visited cities`);
-        
-        // Cherche toutes les notes pour cette ville de cet utilisateur
         visitedCities.forEach((cityData: any) => {
-          console.log(`[CityDetail] Checking city: ${cityData.name} in ${cityData.country}, rating: ${cityData.rating}`);
-          
           if (cityData.name === city && 
               cityData.country === country && 
               cityData.rating !== undefined && 
               cityData.rating > 0) {
             allRatings.push(cityData.rating);
-            console.log('[CityDetail] ✅ Found matching rating:', cityData.rating, 'from user:', userDoc.id);
           }
         });
       });
       
-      console.log('[CityDetail] All ratings found:', allRatings);
-      
       if (allRatings.length === 0) {
-        console.log('[CityDetail] No ratings found, setting globalAverageRating to null');
         setGlobalAverageRating(null);
         return null;
       }
       
       const average = allRatings.reduce((sum, rating) => sum + rating, 0) / allRatings.length;
-      console.log('[CityDetail] Global average calculated:', average);
       setGlobalAverageRating(average);
       return average;
       
     } catch (error) {
-      console.error('[CityDetail] Error calculating global average:', error);
       setGlobalAverageRating(null);
       return null;
     } finally {
@@ -572,7 +472,110 @@ export default function CityDetailScreen() {
   // Charge la note moyenne au montage du composant
   useEffect(() => {
     calculateGlobalAverageRating();
+    fetchFriendsActivity();
+    fetchCityPostsAndReviews();
   }, [city, country]);
+  
+  // Récupère les activités des amis pour cette ville
+  const fetchFriendsActivity = async () => {
+    if (!city || !country || !user?.uid) return;
+    
+    try {
+      setIsLoadingFriends(true);
+      
+      // Récupère la liste des utilisateurs suivis
+      const currentUserDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!currentUserDoc.exists()) {
+        setFriendsActivity([]);
+        return;
+      }
+      
+      const following = currentUserDoc.data().following || [];
+      if (following.length === 0) {
+        setFriendsActivity([]);
+        return;
+      }
+      
+      // Pour chaque ami, vérifie s'il a une activité pour cette ville
+      const activities: any[] = [];
+      
+      for (const friendId of following) {
+        const friendDoc = await getDoc(doc(db, 'users', friendId));
+        if (!friendDoc.exists()) continue;
+        
+        const friendData = friendDoc.data();
+        const visitedCities = friendData.visitedCities || [];
+        
+        // Cherche si cet ami a visité/noté/commenté cette ville
+        const cityActivity = visitedCities.find((c: any) => 
+          c.name === city && c.country === country
+        );
+        
+        if (cityActivity && (cityActivity.rating > 0 || cityActivity.hasReview || cityActivity.reviewText)) {
+          activities.push({
+            userId: friendId,
+            displayName: friendData.displayName || friendData.email || 'Anonymous',
+            photoURL: friendData.photoURL || null,
+            rating: cityActivity.rating || 0,
+            hasComment: Boolean(cityActivity.hasReview || cityActivity.reviewText),
+          });
+        }
+      }
+      
+      setFriendsActivity(activities);
+      
+    } catch (error) {
+      setFriendsActivity([]);
+    } finally {
+      setIsLoadingFriends(false);
+    }
+  };
+  
+  // Récupère le nombre de posts et de reviews pour cette ville
+  const fetchCityPostsAndReviews = async () => {
+    if (!city || !country) return;
+    
+    try {
+      // Récupère tous les posts
+      const postsQuery = query(collection(db, 'posts'));
+      const postsSnapshot = await getDocs(postsQuery);
+      
+      // Compte les posts pour cette ville
+      let postsCount = 0;
+      postsSnapshot.forEach((postDoc) => {
+        const postData = postDoc.data();
+        // Vérifie si le post contient cette ville (soit city, soit dans cities array)
+        if (postData.city === city && postData.country === country) {
+          postsCount++;
+        } else if (postData.cities && Array.isArray(postData.cities)) {
+          const hasCity = postData.cities.some((c: any) => 
+            c.name === city && c.country === country
+          );
+          if (hasCity) postsCount++;
+        }
+      });
+      
+      // Récupère toutes les reviews
+      const reviewsQuery = query(collection(db, 'cityReviews'));
+      const reviewsSnapshot = await getDocs(reviewsQuery);
+      
+      // Compte les reviews pour cette ville
+      let reviewsCount = 0;
+      reviewsSnapshot.forEach((reviewDoc) => {
+        const reviewData = reviewDoc.data();
+        if (reviewData.city === city && reviewData.country === country) {
+          reviewsCount++;
+        }
+      });
+      
+      setCityPostsCount(postsCount);
+      setCityReviewsCount(reviewsCount);
+      
+    } catch (error) {
+      setCityPostsCount(0);
+      setCityReviewsCount(0);
+    }
+  };
 
   // Récupère la note et le statut pour cette ville
   const manualEntry = visitedCities.find(
@@ -591,9 +594,6 @@ export default function CityDetailScreen() {
 
   // Synchronise les états avec les données du contexte quand elles changent
   useEffect(() => {
-    console.log('[CityDetail] visitedCities changed:', visitedCities);
-    console.log('[CityDetail] Looking for city:', city, 'country:', country);
-    
     const manualEntry = visitedCities.find(
       c => c.name === city && c.country === country && c.source === 'note'
     );
@@ -601,19 +601,12 @@ export default function CityDetailScreen() {
       c => c.name === city && c.country === country && c.source === 'post'
     );
     
-    console.log('[CityDetail] Found manualEntry:', manualEntry);
-    console.log('[CityDetail] Found postEntry:', postEntry);
-    
     const currentRating = manualEntry?.rating ?? postEntry?.rating ?? 0;
-    // Vérifie beenThere pour toutes les entrées de cette ville
     const currentBeenThere = Boolean(manualEntry?.beenThere || postEntry?.beenThere);
-    
-    console.log('[CityDetail] Setting userRating to:', currentRating);
-    console.log('[CityDetail] Setting hasBeenThere to:', currentBeenThere);
     
     setUserRating(currentRating);
     setHasBeenThere(currentBeenThere);
-    setPrevHasBeenThere(currentBeenThere); // Évite l'animation lors de la sync
+    setPrevHasBeenThere(currentBeenThere);
   }, [visitedCities, city, country]);
 
   // Animation du rideau - évite l'animation inutile quand on est déjà dans le bon état
@@ -630,90 +623,66 @@ export default function CityDetailScreen() {
   }, [hasBeenThere, prevHasBeenThere, curtainAnimation]);
 
   const handleRatingChange = (rating: number) => {
-    console.log('[CityDetail] handleRatingChange called with:', rating);
     setUserRating(rating);
   };
 
   const handleSubmitRating = () => {
-    console.log('[CityDetail] handleSubmitRating called with userRating:', userRating);
     if (!city || !country) return;
     if (!userRating || userRating < 1) {
-      console.log('[CityDetail] Removing city source (rating < 1)');
-      // Supprime la note comme dans l'ancienne version
       removeCitySource(city as string, country as string, 'note');
       setUserRating(0);
       setHasBeenThere(false);
-      setPrevHasBeenThere(false); // Évite l'animation
+      setPrevHasBeenThere(false);
       return;
     }
     
-    console.log('[CityDetail] Adding/updating city with rating:', userRating);
-    
-    // Vérifie si la ville était déjà marquée comme visitée
     const wasAlreadyVisited = hasBeenThere;
     
-    // Ajoute/met à jour la ville avec la note
     addOrUpdateCity({
       name: city as string,
       country: country as string,
-      flag: (flag as string) || '', // Évite undefined
+      flag: (flag as string) || '',
       rating: userRating,
-      beenThere: true, // TOUJOURS true quand on donne une note
+      beenThere: true,
       source: 'note',
     });
     
     if (wasAlreadyVisited) {
-      // Ville déjà visitée → retour immédiat sans animation
       router.back();
     } else {
-      // Ville vierge → animation puis retour après un délai
       setHasBeenThere(true);
-      // Retour automatique après l'animation
       setTimeout(() => {
         router.back();
-      }, 500); // 500ms pour laisser le temps à l'animation de se jouer
+      }, 500);
     }
   };
 
   const toggleHasBeenThere = () => {
     if (!city || !country) return;
     
-    console.log('[CityDetail] toggleHasBeenThere called, current hasBeenThere:', hasBeenThere);
-    
-    // Vérifie s'il y a une note manuelle (comme dans l'ancienne version)
     const manualNote = visitedCities.find(
       c => (c.name === city || c.city === city) && c.country === country && c.source === 'note' && typeof c.rating === 'number'
     );
     
-    console.log('[CityDetail] Found manualNote:', manualNote);
-    
     const newValue = !hasBeenThere;
-    console.log('[CityDetail] newValue will be:', newValue);
     
     if (!newValue && manualNote) {
-      // Si on essaie de retirer "beenThere" mais qu'il y a une note, on ne fait rien
-      // (dans l'ancienne version ça affichait une erreur)
-      console.log('[CityDetail] Cannot remove beenThere because there is a manual note');
       return;
     }
     
     setHasBeenThere(newValue);
-    setPrevHasBeenThere(newValue); // Met à jour immédiatement pour éviter l'animation
+    setPrevHasBeenThere(newValue);
     
     if (newValue) {
-      console.log('[CityDetail] Adding city as visited without rating');
-      // Ajoute la ville comme visitée (comme dans l'ancienne version)
       addOrUpdateCity({
         name: city as string,
         country: country as string,
-        flag: (flag as string) || '', // Évite undefined
-        rating: userRating > 0 ? userRating : undefined, // Seulement si rating > 0
+        flag: (flag as string) || '',
+        rating: userRating > 0 ? userRating : undefined,
         beenThere: true,
         source: 'note',
       });
     } else {
-      console.log('[CityDetail] Removing city completely');
-      // Retire complètement la ville (comme dans l'ancienne version)
       removeCity(city as string, country as string);
       setUserRating(0);
     }
@@ -810,6 +779,33 @@ export default function CityDetailScreen() {
     return () => { cancelled = true; };
   }, [city, country]);
 
+  // Précharge toutes les images de la page pour un affichage instantané
+  useEffect(() => {
+    const preloadImages = async () => {
+      const imagesToPreload: string[] = [];
+      
+      // Ajouter l'image du drapeau
+      if (flagUrl) imagesToPreload.push(flagUrl);
+      
+      // Ajouter l'image de la ville
+      if (cityImageUrl && cityImageUrl !== flagUrl) imagesToPreload.push(cityImageUrl);
+      
+      // Ajouter les photos des amis
+      if (friendsActivity && friendsActivity.length > 0) {
+        friendsActivity.forEach(friend => {
+          if (friend.photoURL) imagesToPreload.push(friend.photoURL);
+        });
+      }
+      
+      // Précharger toutes les images en parallèle
+      if (imagesToPreload.length > 0) {
+        await imageCacheService.preloadMultiple(imagesToPreload);
+      }
+    };
+    
+    preloadImages();
+  }, [flagUrl, cityImageUrl, friendsActivity]);
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -876,8 +872,8 @@ export default function CityDetailScreen() {
                 {/* Layout spécial pour les villes non-capitales : drapeau à gauche + infos à droite */}
                 {!isCapital(city as string, country as string) ? (
                   <View style={styles.flagLayout}>
-                    <Image
-                      source={{ uri: flagUrl }}
+                    <CachedImage
+                      uri={flagUrl}
                       style={styles.smallFlag}
                     />
                     <View style={styles.cityInfoContainer}>
@@ -937,8 +933,8 @@ export default function CityDetailScreen() {
                 ) : (
                   // Layout normal pour les images de capitales
                   <>
-                    <Image
-                      source={{ uri: cityImageUrl }}
+                    <CachedImage
+                      uri={cityImageUrl}
                       style={{ width: '100%', height: 200, borderRadius: 0, resizeMode: 'cover' }}
                       onLoadEnd={() => setIsLoadingImage(false)}
                     />
@@ -1008,18 +1004,27 @@ export default function CityDetailScreen() {
               {/* Ligne de séparation */}
               <View style={styles.separatorLine} />
               
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Description</Text>
               {/* Description de la ville */}
               {cityDescription && (
-                <View style={styles.descriptionSection}>
-                  <Text style={[styles.descriptionText, { color: textColor }]}>
+                <TouchableOpacity 
+                  style={styles.descriptionSection}
+                  onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <Text 
+                    style={[styles.descriptionText, { color: textColor }]}
+                    numberOfLines={isDescriptionExpanded ? undefined : 4}
+                  >
                     {cityDescription}
                   </Text>
-                </View>
+                </TouchableOpacity>
               )}
               
               {/* Ligne de séparation après description */}
               {cityDescription && <View style={styles.separatorLine} />}
               
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Actions</Text>
               {/* Boutons Comment et Rate */}
               <View style={styles.actionButtonsSection}>
                 <TouchableOpacity
@@ -1038,6 +1043,41 @@ export default function CityDetailScreen() {
               
               {/* Ligne de séparation après boutons */}
               <View style={styles.separatorLine} />
+              
+              {/* Section Friends' Activity */}
+              {!isLoadingFriends && friendsActivity.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: textColor }]}>Friends' Activity</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.friendsActivityScroll}
+                  >
+                    {friendsActivity.map((friend) => (
+                      <View key={friend.userId} style={styles.friendActivityCard}>
+                        <CachedImage 
+                          uri={friend.photoURL || ''}
+                          style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#333', marginBottom: 8 }}
+                        />
+                        <Text style={styles.friendName} numberOfLines={1}>{friend.displayName}</Text>
+                        <View style={styles.friendRatingRow}>
+                          {friend.rating > 0 ? (
+                            <>
+                              <Text style={styles.friendRating}>★ {friend.rating.toFixed(1)}</Text>
+                              {friend.hasComment && (
+                                <Ionicons name="chatbubble" size={14} color="#2051A4" style={{ marginLeft: 4 }} />
+                              )}
+                            </>
+                          ) : friend.hasComment ? (
+                            <Ionicons name="chatbubble" size={16} color="#2051A4" />
+                          ) : null}
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <View style={styles.separatorLine} />
+                </>
+              )}
             </View>
           )}
 
@@ -1047,19 +1087,26 @@ export default function CityDetailScreen() {
               {/* Ligne de séparation */}
               <View style={styles.separatorLine} />
               
-              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Description</Text>
               {/* Description de la ville */}
               {cityDescription && (
-                <View style={styles.descriptionSection}>
-                  <Text style={[styles.descriptionText, { color: textColor }]}>
+                <TouchableOpacity 
+                  style={styles.descriptionSection}
+                  onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <Text 
+                    style={[styles.descriptionText, { color: textColor }]}
+                    numberOfLines={isDescriptionExpanded ? undefined : 4}
+                  >
                     {cityDescription}
                   </Text>
-                </View>
+                </TouchableOpacity>
               )}
               {/* Ligne de séparation après description */}
               {cityDescription && <View style={styles.separatorLine} />}
               
-              <Text style={styles.sectionTitle}>Actions</Text>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Actions</Text>
               {/* Boutons Comment et Rate */}
               <View style={styles.actionButtonsSection}>
                 <TouchableOpacity
@@ -1078,6 +1125,41 @@ export default function CityDetailScreen() {
               
               {/* Ligne de séparation après boutons */}
               <View style={styles.separatorLine} />
+              
+              {/* Section Friends' Activity */}
+              {!isLoadingFriends && friendsActivity.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: textColor }]}>Friends' Activity</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.friendsActivityScroll}
+                  >
+                    {friendsActivity.map((friend) => (
+                      <View key={friend.userId} style={styles.friendActivityCard}>
+                        <CachedImage 
+                          uri={friend.photoURL || ''}
+                          style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#333', marginBottom: 8 }}
+                        />
+                        <Text style={styles.friendName} numberOfLines={1}>{friend.displayName}</Text>
+                        <View style={styles.friendRatingRow}>
+                          {friend.rating > 0 ? (
+                            <>
+                              <Text style={styles.friendRating}>★ {friend.rating.toFixed(1)}</Text>
+                              {friend.hasComment && (
+                                <Ionicons name="chatbubble" size={14} color="#2051A4" style={{ marginLeft: 4 }} />
+                              )}
+                            </>
+                          ) : friend.hasComment ? (
+                            <Ionicons name="chatbubble" size={16} color="#2051A4" />
+                          ) : null}
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <View style={styles.separatorLine} />
+                </>
+              )}
             </View>
           )}
 
@@ -1371,11 +1453,11 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   sectionTitle: {
-    fontSize: 16, // Match the exact font size from "favoritesTitle" in profile.tsx
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 8, // Match the exact margin from "favoritesTitle"
-    color: '#FFFFFF', // Ensure the color matches
-    alignSelf: 'flex-start', // Match alignment
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 20,
   },
   userRatingContainer: {
     alignItems: 'center',
@@ -1644,7 +1726,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     opacity: 0.8,
-    textAlign: 'center',
   },
   actionButtonsSection: {
     flexDirection: 'row',
@@ -1765,5 +1846,44 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
+  },
+  // Styles pour Friends' Activity
+  friendsActivityScroll: {
+    paddingLeft: 8,
+    paddingRight: 20,
+    paddingVertical: 4,
+    gap: 12,
+  },
+  friendActivityCard: {
+    width: 100,
+    padding: 0,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  friendPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 1,
+    backgroundColor: '#333',
+  },
+  friendName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginBottom: 0,
+  },
+  friendRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendRating: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFD700',
   },
 });

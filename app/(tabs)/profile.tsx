@@ -11,13 +11,15 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CachedImage } from '../../components/CachedImage';
 import { TravelPostCard } from '../../components/TravelPostCard';
 import { db } from '../../config/firebase';
 import { useVisitedCities } from '../../contexts/VisitedCitiesContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { usePosts } from '../../hooks/usePosts';
+import { imageCacheService } from '../../services/ImageCacheService';
 import { addFavorite as addFavoriteFirestore, getUserFavorites, removeFavorite } from '../../services/UserService';
 
 // Utilitaire pour obtenir le code pays ISO2 en minuscule à partir du nom du pays
@@ -334,6 +336,46 @@ export default function ProfileScreen() {
     }
   }, [paramReload, params]);
 
+  // Précharge toutes les images du profil pour un affichage instantané
+  React.useEffect(() => {
+    const preloadImages = async () => {
+      const imagesToPreload: string[] = [];
+      
+      // Ajouter la photo de profil
+      if (displayProfile.photo) imagesToPreload.push(displayProfile.photo);
+      
+      // Ajouter les drapeaux des favoris
+      favorites.forEach(fav => {
+        if (fav) {
+          if (fav.countryCode && fav.countryCode.length === 2) {
+            imagesToPreload.push(`https://flagcdn.com/w320/${fav.countryCode}.png`);
+          } else if (getCountryCode(fav.country)) {
+            imagesToPreload.push(`https://flagcdn.com/w320/${getCountryCode(fav.country)}.png`);
+          }
+        }
+      });
+      
+      // Ajouter les photos des followers
+      followers.forEach((follower: UserSearchResult) => {
+        if (follower.photoURL) imagesToPreload.push(follower.photoURL);
+        if (follower.profileImage) imagesToPreload.push(follower.profileImage);
+      });
+      
+      // Ajouter les photos des following
+      following.forEach((followingUser: UserSearchResult) => {
+        if (followingUser.photoURL) imagesToPreload.push(followingUser.photoURL);
+        if (followingUser.profileImage) imagesToPreload.push(followingUser.profileImage);
+      });
+      
+      // Précharger toutes les images en parallèle
+      if (imagesToPreload.length > 0) {
+        await imageCacheService.preloadMultiple(imagesToPreload);
+      }
+    };
+    
+    preloadImages();
+  }, [displayProfile.photo, favorites, followers, following]);
+
   // Fonction pour gérer le clic sur un pays
   const handleCountryPress = (country: string) => {
     setSelectedCountry(country);
@@ -471,7 +513,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.profileStatNumber, { color: textColor }]}>{displayProfile.followers}</Text>
                 <Text style={[styles.profileStatLabel, { color: textColor }]}>Followers</Text>
               </TouchableOpacity>
-              <Image source={{ uri: displayProfile.photo }} style={styles.profilePhoto} />
+              <CachedImage uri={displayProfile.photo} style={styles.profilePhoto} />
               <TouchableOpacity 
                 style={styles.profileStatCol}
                 onPress={showFollowing}
@@ -501,14 +543,14 @@ export default function ProfileScreen() {
                       <Text style={styles.plus}>+</Text>
                     ) : (
                       (fav.countryCode && fav.countryCode.length === 2)
-                        ? <Image
-                            source={{ uri: `https://flagcdn.com/w320/${fav.countryCode}.png` }}
+                        ? <CachedImage
+                            uri={`https://flagcdn.com/w320/${fav.countryCode}.png`}
                             style={styles.favoriteFlagImg}
                             resizeMode="cover"
                           />
                         : getCountryCode(fav.country)
-                          ? <Image
-                              source={{ uri: `https://flagcdn.com/w320/${getCountryCode(fav.country)}.png` }}
+                          ? <CachedImage
+                              uri={`https://flagcdn.com/w320/${getCountryCode(fav.country)}.png`}
                               style={styles.favoriteFlagImg}
                               resizeMode="cover"
                             />
@@ -664,8 +706,8 @@ export default function ProfileScreen() {
                   }}
                 >
                   <View style={styles.userInfo}>
-                    <Image 
-                      source={{ uri: follower.photoURL || follower.profileImage || '' }}
+                    <CachedImage 
+                      uri={follower.photoURL || follower.profileImage || ''}
                       style={styles.userPhoto}
                     />
                     <View style={styles.userTextInfo}>
@@ -748,8 +790,8 @@ export default function ProfileScreen() {
                   }}
                 >
                   <View style={styles.userInfo}>
-                    <Image 
-                      source={{ uri: followingUser.photoURL || followingUser.profileImage || '' }}
+                    <CachedImage 
+                      uri={followingUser.photoURL || followingUser.profileImage || ''}
                       style={styles.userPhoto}
                     />
                     <View style={styles.userTextInfo}>

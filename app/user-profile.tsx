@@ -11,17 +11,18 @@ function getCountryCode(countryName: string): string {
   return map[countryName] || '';
 }
 
+import { CachedImage } from '@/components/CachedImage';
 import { ProfileImage } from '@/components/ProfileImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFollow } from '@/hooks/useFollow';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePosts } from '../hooks/usePosts';
+import { imageCacheService } from '../services/ImageCacheService';
 import { getUserFavorites, getUserProfile } from '../services/UserService';
 
 interface UserProfile {
@@ -297,6 +298,47 @@ export default function UserProfileScreen() {
     loadUserProfile();
   }, [userId, posts]);
 
+  // Précharge toutes les images du profil utilisateur pour un affichage instantané
+  useEffect(() => {
+    const preloadImages = async () => {
+      const imagesToPreload: string[] = [];
+      
+      // Ajouter la photo de profil
+      if (userProfile?.photoURL) imagesToPreload.push(userProfile.photoURL);
+      if (userProfile?.profileImage) imagesToPreload.push(userProfile.profileImage);
+      
+      // Ajouter les drapeaux des favoris
+      favorites.forEach(fav => {
+        if (fav) {
+          if (fav.countryCode && fav.countryCode.length === 2) {
+            imagesToPreload.push(`https://flagcdn.com/w80/${fav.countryCode}.png`);
+          } else if (getCountryCode(fav.country)) {
+            imagesToPreload.push(`https://flagcdn.com/w80/${getCountryCode(fav.country)}.png`);
+          }
+        }
+      });
+      
+      // Ajouter les photos des followers
+      followers.forEach((follower: any) => {
+        if (follower.photoURL) imagesToPreload.push(follower.photoURL);
+        if (follower.profileImage) imagesToPreload.push(follower.profileImage);
+      });
+      
+      // Ajouter les photos des following
+      following.forEach((followingUser: any) => {
+        if (followingUser.photoURL) imagesToPreload.push(followingUser.photoURL);
+        if (followingUser.profileImage) imagesToPreload.push(followingUser.profileImage);
+      });
+      
+      // Précharger toutes les images en parallèle
+      if (imagesToPreload.length > 0) {
+        await imageCacheService.preloadMultiple(imagesToPreload);
+      }
+    };
+    
+    preloadImages();
+  }, [userProfile, favorites, followers, following]);
+
   if (loading || !userProfile) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: '#181C24' }]}>
@@ -423,8 +465,8 @@ export default function UserProfileScreen() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
-                    <Image 
-                      source={{ uri: follower.photoURL || follower.profileImage || '' }}
+                    <CachedImage 
+                      uri={follower.photoURL || follower.profileImage || ''}
                       style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#333' }}
                     />
                     <View style={{ flex: 1 }}>
@@ -506,8 +548,8 @@ export default function UserProfileScreen() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
-                    <Image 
-                      source={{ uri: followingUser.photoURL || followingUser.profileImage || '' }}
+                    <CachedImage 
+                      uri={followingUser.photoURL || followingUser.profileImage || ''}
                       style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#333' }}
                     />
                     <View style={{ flex: 1 }}>
@@ -561,18 +603,16 @@ export default function UserProfileScreen() {
                           <Text style={styles.emptyFavorite}>—</Text>
                         ) : (
                           (fav.countryCode && fav.countryCode.length === 2)
-                            ? <Image
-                                source={{ uri: `https://flagcdn.com/w80/${fav.countryCode}.png` }}
+                            ? <CachedImage
+                                uri={`https://flagcdn.com/w80/${fav.countryCode}.png`}
                                 style={styles.favoriteFlagImg}
-                                contentFit="cover"
-                                cachePolicy="memory-disk"
+                                resizeMode="cover"
                               />
                             : getCountryCode(fav.country)
-                              ? <Image
-                                  source={{ uri: `https://flagcdn.com/w80/${getCountryCode(fav.country)}.png` }}
+                              ? <CachedImage
+                                  uri={`https://flagcdn.com/w80/${getCountryCode(fav.country)}.png`}
                                   style={styles.favoriteFlagImg}
-                                  contentFit="cover"
-                                  cachePolicy="memory-disk"
+                                  resizeMode="cover"
                                 />
                               : fav.flag
                                 ? <Text style={styles.flag}>{fav.flag}</Text>
