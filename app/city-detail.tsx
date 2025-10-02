@@ -708,7 +708,7 @@ export default function CityDetailScreen() {
       
       // Créer l'objet review
       const reviewData = {
-    yauserId: user.uid,
+        userId: user.uid,
         city: city as string,
         country: country as string,
         comment: commentText.trim(),
@@ -778,6 +778,13 @@ export default function CityDetailScreen() {
     loadAll();
     return () => { cancelled = true; };
   }, [city, country]);
+
+  // États pour le scroll personnalisé
+  const [scrollY, setScrollY] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+  const scrollIndicatorOpacity = React.useRef(new Animated.Value(0)).current;
 
   // Précharge toutes les images de la page pour un affichage instantané
   useEffect(() => {
@@ -865,6 +872,58 @@ export default function CityDetailScreen() {
             </TouchableOpacity>
           </Modal>
 
+          <ScrollView 
+            style={[styles.content, { backgroundColor }]} 
+            showsVerticalScrollIndicator={false}
+            onScrollBeginDrag={() => {
+              setShowScrollIndicator(true);
+              Animated.timing(scrollIndicatorOpacity, {
+                toValue: 0.8,
+                duration: 150,
+                useNativeDriver: true,
+              }).start();
+            }}
+            onScrollEndDrag={() => {
+              setTimeout(() => {
+                setShowScrollIndicator(false);
+                Animated.timing(scrollIndicatorOpacity, {
+                  toValue: 0,
+                  duration: 600,
+                  useNativeDriver: true,
+                }).start();
+              }, 600);
+            }}
+            onMomentumScrollBegin={() => {
+              setShowScrollIndicator(true);
+              Animated.timing(scrollIndicatorOpacity, {
+                toValue: 0.8,
+                duration: 150,
+                useNativeDriver: true,
+              }).start();
+            }}
+            onMomentumScrollEnd={() => {
+              setTimeout(() => {
+                setShowScrollIndicator(false);
+                Animated.timing(scrollIndicatorOpacity, {
+                  toValue: 0,
+                  duration: 600,
+                  useNativeDriver: true,
+                }).start();
+              }, 600);
+            }}
+            onScroll={(event) => {
+              const offsetY = event.nativeEvent.contentOffset.y;
+              setScrollY(offsetY);
+            }}
+            onContentSizeChange={(contentWidth, contentHeight) => {
+              setContentHeight(contentHeight);
+            }}
+            onLayout={(event) => {
+              const height = event.nativeEvent.layout.height;
+              setScrollViewHeight(height);
+            }}
+            scrollEventThrottle={16}
+          >
           {/* Image de la ville ou layout pour villes non-capitales */}
           <View style={{ position: 'relative', width: '100%', marginTop: 0, marginBottom: 5 }}>
             {cityImageUrl && cityImageUrl !== require('../assets/images/placeholder.png') && (
@@ -1160,11 +1219,70 @@ export default function CityDetailScreen() {
                   <View style={styles.separatorLine} />
                 </>
               )}
+              
+              {/* Posts and Reviews Section */}
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Posts and Reviews</Text>
+              <View style={styles.postsReviewsSection}>
+                <TouchableOpacity
+                  style={styles.postsReviewsButton}
+                  onPress={() => router.push({
+                    pathname: '/city-posts',
+                    params: { city, country, countryCode }
+                  })}
+                >
+                  <View style={styles.postsReviewsButtonContent}>
+                    <Text style={styles.postsReviewsButtonText}>Posts</Text>
+                  </View>
+                  <View style={styles.postsReviewsButtonRight}>
+                    <Text style={styles.postsReviewsButtonCount}>{cityPostsCount}</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.postsReviewsButtonIcon} />
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.postsReviewsButton}
+                  onPress={() => router.push({
+                    pathname: '/city-reviews',
+                    params: { city, country, countryCode }
+                  })}
+                >
+                  <View style={styles.postsReviewsButtonContent}>
+                    <Text style={styles.postsReviewsButtonText}>Reviews</Text>
+                  </View>
+                  <View style={styles.postsReviewsButtonRight}>
+                    <Text style={styles.postsReviewsButtonCount}>{cityReviewsCount}</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#bbb" style={styles.postsReviewsButtonIcon} />
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
-          <ScrollView style={[styles.content, { backgroundColor }]} showsVerticalScrollIndicator={false}>
-            {/* Le contenu spécifique aux villes est maintenant géré par les sections au-dessus */}
+          {/* Espacement en bas */}
+          <View style={styles.bottomSpacing} />
+          </ScrollView>
+
+          {/* Indicateur de scroll personnalisé */}
+          {contentHeight > scrollViewHeight && (
+            <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, justifyContent: 'center', pointerEvents: 'none' }}>
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  right: 1,
+                  width: 2,
+                  borderRadius: 1,
+                  backgroundColor: '#fff',
+                  opacity: scrollIndicatorOpacity,
+                  height: Math.max(12, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.15)),
+                  top:
+                    (scrollViewHeight / 2) +
+                    (scrollY / (contentHeight - scrollViewHeight)) * ((scrollViewHeight / 2) - Math.max(12, (scrollViewHeight / contentHeight) * (scrollViewHeight * 0.15))),
+                }}
+              />
+            </View>
+          )}
+
+          {/* Modals en dehors du ScrollView */}
       
       {/* Modal 40% pour le système de rating avec animation slide */}
       <Modal
@@ -1300,7 +1418,6 @@ export default function CityDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-          </ScrollView>
         </View>
       )}
     </>
@@ -1423,8 +1540,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
-    marginTop: -10,
+  },
+  bottomSpacing: {
+    height: 30,
   },
   cityHeader: {
     alignItems: 'center',
@@ -1885,5 +2003,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#FFD700',
+  },
+  // Styles pour Posts and Reviews Section
+  postsReviewsSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  postsReviewsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+    borderWidth: 0.35,
+    borderColor: '#bbb',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  postsReviewsButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  postsReviewsButtonText: {
+    color: '#bbb',
+    fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.5,
+    marginRight: 6,
+  },
+  postsReviewsButtonCount: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    opacity: 0.85,
+  },
+  postsReviewsButtonIcon: {
+    marginLeft: 8,
+  },
+  postsReviewsButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });

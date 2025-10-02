@@ -227,16 +227,49 @@ export class RealCitiesService {
       }
 
       const normalizedQuery = this.normalizeString(query);
-      const results = this.cities
-        .filter(city => {
-          const normalizedCityName = this.normalizeString(city.name);
-          const normalizedCountryName = this.normalizeString(city.country);
-          return normalizedCityName.includes(normalizedQuery) ||
-                 normalizedCountryName.includes(normalizedQuery);
-        })
+      
+      // Filtrer puis dédupliquer
+      const filteredCities = this.cities.filter(city => {
+        const normalizedCityName = this.normalizeString(city.name);
+        const normalizedCountryName = this.normalizeString(city.country);
+        return normalizedCityName.includes(normalizedQuery) ||
+               normalizedCountryName.includes(normalizedQuery);
+      });
+
+      // Déduplication au niveau du service aussi
+      const uniqueCities = [];
+      const seen = new Set();
+      
+      for (const city of filteredCities) {
+        const normalizedName = this.normalizeString(city.name);
+        const normalizedCountry = this.normalizeString(city.country);
+        const key = `${normalizedName}###${normalizedCountry}`;
+        
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueCities.push(city);
+        }
+      }
+
+      // Trier par pertinence (correspondance exacte d'abord, puis par population si disponible)
+      const sortedCities = uniqueCities.sort((a, b) => {
+        const aExact = this.normalizeString(a.name) === normalizedQuery;
+        const bExact = this.normalizeString(b.name) === normalizedQuery;
+        
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        
+        // Trier par population si disponible
+        const popA = a.population || 0;
+        const popB = b.population || 0;
+        return popB - popA;
+      });
+
+      const results = sortedCities
         .slice(0, limit)
         .map(city => this.enrichCity(city));
       
+      console.log(`🏙️ Service: ${filteredCities.length} → ${uniqueCities.length} villes uniques trouvées`);
       resolve(results);
     });
   }

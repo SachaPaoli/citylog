@@ -31,7 +31,20 @@ export default function SearchCityScreen() {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
       .replace(/[^a-z0-9\s]/g, '') // Garde seulement lettres, chiffres et espaces
+      .replace(/\s+/g, ' ') // Remplace plusieurs espaces par un seul
       .trim();
+  };
+
+  // Fonction améliorée pour créer une clé unique de déduplication
+  const createDeduplicationKey = (city: any) => {
+    const normalizedName = normalizeString(city.name);
+    const normalizedCountry = normalizeString(city.country || '');
+    const normalizedCountryCode = (city.countryCode || '').toLowerCase().trim();
+    
+    // Utilise le code pays en priorité car il est plus fiable que le nom complet
+    const countryKey = normalizedCountryCode || normalizedCountry;
+    
+    return `${normalizedName}###${countryKey}`;
   };
 
   // Recherche des villes via l'API (comme Explore)
@@ -46,33 +59,49 @@ export default function SearchCityScreen() {
     try {
       const results = await RealCitiesService.searchCities(query, 50);
       
-      // Filtrer les doublons (même nom, même pays)
+      // Filtrer les doublons avec un algorithme amélioré
       const uniqueCities = [];
       const seen = new Set();
+      const duplicateDebug = new Map(); // Pour débugger les doublons
+      
       for (const city of results) {
-        const key = `${normalizeString(city.name)}-${normalizeString(city.country)}`;
+        const key = createDeduplicationKey(city);
+        
         if (!seen.has(key)) {
           seen.add(key);
           uniqueCities.push(city);
+          duplicateDebug.set(key, 1);
+        } else {
+          // Compte les doublons pour debug
+          duplicateDebug.set(key, (duplicateDebug.get(key) || 0) + 1);
+          console.log(`🔄 Doublon détecté: ${city.name}, ${city.country} (${city.countryCode})`);
         }
       }
       
-      // Tri : d'abord les villes dont le nom correspond exactement à la recherche, puis les autres, le tout trié par population
+      // Log des statistiques de déduplication
+      const totalDuplicates = Array.from(duplicateDebug.values()).reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+      console.log(`🧹 Déduplication: ${results.length} → ${uniqueCities.length} villes (${totalDuplicates} doublons supprimés)`);
+      
+      // Tri amélioré : d'abord les correspondances exactes, puis par population
       const normalizedQuery = normalizeString(query);
       const sortedCities = uniqueCities.sort((a, b) => {
         const aExact = normalizeString(a.name) === normalizedQuery;
         const bExact = normalizeString(b.name) === normalizedQuery;
+        
+        // Correspondances exactes en premier
         if (aExact && !bExact) return -1;
         if (!aExact && bExact) return 1;
-        // Si les deux sont exacts ou les deux ne le sont pas, trie par population décroissante
+        
+        // Ensuite tri par population (plus grande en premier)
         const popA = typeof a.population === 'number' ? a.population : 0;
         const popB = typeof b.population === 'number' ? b.population : 0;
         return popB - popA;
       });
       
-      console.log(`Trouvé ${sortedCities.length} villes uniques pour: ${query}`);
+      console.log(`🔍 Trouvé ${sortedCities.length} villes uniques pour: "${query}"`);
       setCities(sortedCities);
     } catch (error) {
+      console.error('❌ Erreur lors de la recherche:', error);
       setCities([]);
     }
     setLoading(false);

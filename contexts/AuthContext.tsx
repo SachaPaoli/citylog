@@ -12,6 +12,8 @@ interface UserProfile {
   username: string;
   profileImage?: string;
   photoURL?: string;
+  role?: 'user' | 'admin' | 'founder';
+  premiumFeatures?: string[];
   createdAt: Date;
   visitedCities: string[];
   totalTrips: number;
